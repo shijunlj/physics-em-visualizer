@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>大学物理 · 电磁学三维交互可视化实验室 | Physics EM Visualizer</title>
+  <!-- 引入 KaTeX 渲染物理公式 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '\\(', right: '\\)', display: false}]});"></script>
+  <style>
+    :root {
+      --bg-deep: #070b14;
+      --bg-surface: #0f172a;
+      --card-bg: rgba(15, 23, 42, 0.78);
+      --card-hover: rgba(30, 41, 59, 0.92);
+      --border: rgba(148, 163, 184, 0.18);
+      --border-hover: rgba(56, 189, 248, 0.55);
+      --cyan: #38bdf8;
+      --emerald: #10b981;
+      --amber: #fbbf24;
+      --rose: #f43f5e;
+      --purple: #a855f7;
+      --text: #f8fafc;
+      --text-secondary: #cbd5e1;
+      --text-dim: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-deep);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+      line-height: 1.6;
+    }
+
+    /* 3D 实验室透视网格背景 */
+    .bg-grid {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      background-image:
+        radial-gradient(circle at 20% 15%, rgba(56, 189, 248, 0.12) 0%, transparent 45%),
+        radial-gradient(circle at 80% 80%, rgba(16, 185, 129, 0.10) 0%, transparent 45%),
+        linear-gradient(rgba(30, 41, 59, 0.35) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(30, 41, 59, 0.35) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 44px 44px, 44px 44px;
+      pointer-events: none;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 48px 24px 72px;
+    }
+
+    /* 顶部英雄标题区 */
+    .hero {
+      text-align: center;
+      margin-bottom: 48px;
+      padding: 36px 24px;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.85) 0%, rgba(15, 23, 42, 0.45) 100%);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 15%;
+      right: 15%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--cyan), var(--emerald), transparent);
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      margin-bottom: 16px;
+    }
+
+    .hero h1 {
+      font-size: clamp(26px, 4vw, 38px);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #ffffff 0%, #bae6fd 55%, #6ee7b7 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 12px;
+    }
+
+    .hero p {
+      color: var(--text-dim);
+      font-size: 15px;
+      max-width: 720px;
+      margin: 0 auto 22px;
+    }
+
+    /* 顶部核心公式条 */
+    .formula-strip {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .formula-pill {
+      background: rgba(9, 13, 22, 0.75);
+      border: 1px solid var(--border);
+      padding: 6px 15px;
+      border-radius: 10px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .formula-pill span.dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+    }
+
+    /* 7 大实验卡片网格 */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 24px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      backdrop-filter: blur(14px);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+      position: relative;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .card:hover {
+      transform: translateY(-6px);
+      background: var(--card-hover);
+      border-color: var(--border-hover);
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.55), 0 0 25px rgba(56, 189, 248, 0.12);
+    }
+
+    /* 卡片顶部微缩矢量示意画布 */
+    .card-visual {
+      height: 175px;
+      background: radial-gradient(circle at 50% 50%, rgba(30, 41, 59, 0.7) 0%, rgba(9, 13, 22, 0.95) 100%);
+      border-bottom: 1px solid var(--border);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .card-visual svg {
+      width: 100%;
+      height: 100%;
+      transition: transform 0.4s ease;
+    }
+
+    .card:hover .card-visual svg {
+      transform: scale(1.05);
+    }
+
+    .card-num {
+      position: absolute;
+      top: 12px;
+      left: 14px;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 6px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      letter-spacing: 0.05em;
+    }
+
+    .card-formula-tag {
+      position: absolute;
+      bottom: 10px;
+      right: 12px;
+      font-size: 12px;
+      padding: 3px 10px;
+      border-radius: 6px;
+      background: rgba(9, 13, 22, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      color: var(--cyan);
+      backdrop-filter: blur(6px);
+    }
+
+    .card-body {
+      padding: 20px 22px 22px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      gap: 10px;
+    }
+
+    .card-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .card-desc {
+      font-size: 13.5px;
+      color: var(--text-dim);
+      line-height: 1.65;
+      flex: 1;
+    }
+
+    .card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .tag {
+      font-size: 11px;
+      padding: 3px 9px;
+      border-radius: 6px;
+      background: rgba(30, 41, 59, 0.75);
+      color: var(--text-secondary);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+    }
+
+    .card-actions {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      margin-top: 10px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(148, 163, 184, 0.12);
+    }
+
+    .btn-launch {
+      padding: 9px 14px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.22) 0%, rgba(16, 185, 129, 0.22) 100%);
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      color: #e0f2fe;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .btn-launch:hover {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.38) 0%, rgba(16, 185, 129, 0.38) 100%);
+      border-color: var(--cyan);
+      color: #ffffff;
+    }
+
+    .btn-preview {
+      padding: 9px 12px;
+      border-radius: 9px;
+      background: rgba(30, 41, 59, 0.75);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-size: 12.5px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-preview:hover {
+      background: rgba(51, 65, 85, 0.9);
+      color: #ffffff;
+      border-color: rgba(148, 163, 184, 0.45);
+    }
+
+    /* 底部页脚 */
+    footer {
+      margin-top: 56px;
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 13px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    footer a {
+      color: var(--cyan);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+
+    /* 页内沉浸式切换预览弹窗 */
+    .viewer-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: rgba(7, 11, 20, 0.92);
+      backdrop-filter: blur(12px);
+      display: none;
+      flex-direction: column;
+    }
+
+    .viewer-modal.open {
+      display: flex;
+    }
+
+    .viewer-topbar {
+      height: 54px;
+      background: rgba(15, 23, 42, 0.95);
+      border-bottom: 1px solid var(--border);
+      padding: 0 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .viewer-tabs {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding: 4px 0;
+    }
+
+    .viewer-tab {
+      padding: 6px 12px;
+      border-radius: 7px;
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .viewer-tab:hover {
+      color: var(--text);
+      background: rgba(51, 65, 85, 0.8);
+    }
+
+    .viewer-tab.active {
+      background: rgba(56, 189, 248, 0.2);
+      border-color: var(--cyan);
+      color: var(--cyan);
+      font-weight: 600;
+    }
+
+    .viewer-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .viewer-btn {
+      padding: 6px 12px;
+      border-radius: 7px;
+      background: rgba(30, 41, 59, 0.85);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 12px;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .viewer-btn.close {
+      background: rgba(244, 63, 94, 0.2);
+      border-color: rgba(244, 63, 94, 0.5);
+      color: #fda4af;
+    }
+
+    .viewer-frame {
+      flex: 1;
+      width: 100%;
+      border: none;
+      background: var(--bg-deep);
+    }
+
+    @media (max-width: 768px) {
+      .cards-grid {
+        grid-template-columns: 1fr;
+      }
+      .container {
+        padding: 24px 16px 48px;
+      }
+      footer {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="bg-grid"></div>
+
+  <div class="container">
+    <!-- 顶部实验室横幅 -->
+    <header class="hero">
+      <div class="hero-badge">
+        <span>⚡ Interactive 3D Physics Lab · WebGL / Three.js</span>
+      </div>
+      <h1>大学物理 · 电磁学三维交互演示合集</h1>
+      <p>
+        通过实时三维建模、矢量场分解与阻尼动力学仿真，直观呈现稳恒磁场的核心实验与麦克斯韦方程组物理图像。支持 360° 自由旋转视角与参数实时交互。
+      </p>
+      <div class="formula-strip">
+        <div class="formula-pill">
+          <span class="dot" style="background: var(--cyan);"></span>
+          <span>毕奥-萨伐尔定律：\(\mathrm{d}\vec{B} = \frac{\mu_0}{4\pi}\frac{I\mathrm{d}\vec{l}\times\hat{r}}{r^2}\)</span>
+        </div>
+        <div class="formula-pill">
+          <span class="dot" style="background: var(--emerald);"></span>
+          <span>磁场高斯定理：\(\oint_S \vec{B}\cdot\mathrm{d}\vec{A} \equiv 0\)</span>
+        </div>
+        <div class="formula-pill">
+          <span class="dot" style="background: var(--amber);"></span>
+          <span>安培环路定理：\(\oint_L \vec{B}\cdot\mathrm{d}\vec{l} = \mu_0 \sum I\)</span>
+        </div>
+        <div class="formula-pill">
+          <span class="dot" style="background: var(--rose);"></span>
+          <span>安培力定律：\(\vec{F} = \int I\mathrm{d}\vec{l}\times\vec{B}\)</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- 7 个交互实验卡片 -->
+    <main class="cards-grid">
+
+      <!-- 01 奥斯特实验 -->
+      <article class="card">
+        <div class="card-visual">
+          <span class="card-num">EXP 01</span>
+          <svg viewBox="0 0 360 175" fill="none">
+            <!-- 环形磁感线椭圆 -->
+            <ellipse cx="180" cy="95" rx="95" ry="32" stroke="#38bdf8" stroke-width="1.8" stroke-dasharray="5 4" opacity="0.65"/>
+            <ellipse cx="180" cy="95" rx="60" ry="20" stroke="#38bdf8" stroke-width="1.5" opacity="0.45"/>
+            <!-- 顶部直导线 -->
+            <line x1="60" y1="52" x2="300" y2="52" stroke="#fbbf24" stroke-width="7" stroke-linecap="round"/>
+            <path d="M165 36 L198 36 M190 30 L198 36 L190 42" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <!-- 小磁针支架与磁针 -->
+            <line x1="180" y1="95" x2="180" y2="145" stroke="#94a3b8" stroke-width="3"/>
+            <polygon points="180,95 228,76 184,87" fill="#ef4444"/>
+            <polygon points="180,95 132,114 176,103" fill="#3b82f6"/>
+            <circle cx="180" cy="95" r="4.5" fill="#f8fafc"/>
+          </svg>
+          <span class="card-formula-tag">\(\vec{\tau} = \vec{m} \times \vec{B}\)</span>
+        </div>
+        <div class="card-body">
+          <div class="card-title">
+            <span>🧲 奥斯特电流磁效应实验</span>
+          </div>
+          <p class="card-desc">
+            重现 1820 年奥斯特经典实验：直导线通电瞬间激发同心圆环形磁场，下方小磁针受磁力矩作用发生偏转并伴随真实欠阻尼摆动。
+          </p>
+          <div class="card-tags">
+            <span class="tag">右手螺旋定则</span>
+            <span class="tag">小磁针阻尼振荡</span>
+            <span class="tag">电流正反向切换</span>
+          </div>
+          <div class="card-actions">
+            <a class="btn-launch" href="./oersted_experiment.html">🚀 进入 3D 实验</a>
+            <button class="btn-preview" onclick="openPreview(0)">页内速览</button>
+          </div>
+        </div>
+      </article>
+
+      <!-- 02 毕奥-萨伐尔定律：直导线 -->
+      <article class="card">
+        <div class="card-visual">
+          <span class="card-num">EXP 02</span>
+          <svg viewBox="0 0 360 175" fill="none">
+            <!-- 竖直载流直导线 -->
+            <line x1="115" y1="20" x2="115" y2="155" stroke="#fbbf24" stroke-width="6" stroke-linecap="round"/>
+            <!-- 高亮电流元 Idl -->
+            <line x1="115" y1="115" x2="115" y2="85" stroke="#ef4444" stroke-width="8" stroke-linecap="round"/>
+            <!-- 位矢 r -->
+            <line x1="115" y1="100" x2="235" y2="68" stroke="#c084fc" stroke-width="2" stroke-dasharray="4 4"/>
+            <!-- 场点 P 磁感线圆环与 dB 矢量 -->
+            <ellipse cx="115" cy="68" rx="120" ry="26" stroke="#38bdf8" stroke-width="1.6" opacity="0.55"/>
+            <circle cx="235" cy="68" r="5" fill="#38bdf8"/>
+            <path d="M235 68 L268 42 M258 41 L268 42 L265 51" stroke="#10b981" stroke-width="2.8" stroke-linecap="round"/>
+          </svg>
+          <span class="card-formula-tag">\(B = \frac{\mu_0 I}{4\pi a}(\cos\theta_1 - \cos\theta_2)\)</span>
+        </div>
+        <div class="card-body">
+          <div class="card-title">
+            <span>📏 毕奥-萨伐尔定律（载流直导线）</span>
+          </div>
+          <p class="card-desc">
+            动态扫描直导线上的电流元 \(I\mathrm{d}\vec{l}\)，实时展示位矢 \(\vec{r}\)、张角 \(\theta\) 与元磁场 \(\mathrm{d}\vec{B}\) 的三维叉乘关系及全段积分过程。
+          </p>
+          <div class="card-tags">
+            <span class="tag">电流元扫描积分</span>
+            <span class="tag">叉乘方向图解</span>
+            <span class="tag">场强分布曲线</span>
+          </div>
+          <div class="card-actions">
+            <a class="btn-launch" href="./biot_savart_wire.html">🚀 进入 3D 实验</a>
+            <button class="btn-preview" onclick="openPreview(1)">页内速览</button>
+          </div>
+        </div>
+      </article>
+
+      <!-- 03 毕奥-萨伐尔定律：圆线圈 -->
+      <article class="card">
+        <div class="card-visual">
+          <span class="card-num">EXP 03</span>
+          <svg viewBox="0 0 360 175" fill="none">
+            <!-- 中心轴线 -->
+            <line x1="40" y1="88" x2="320" y2="88" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4 4"/>
+            <!-- 载流圆环 -->
+            <ellipse cx="115" cy="88" rx="26" ry="62" stroke="#fbbf24" stroke-width="5"/>
+            <!-- 上下对称位矢 r -->
+            <line x1="115" y1="26" x2="235" y2="88" stroke="#c084fc" stroke-width="1.8" stroke-dasharray="3 3"/>
+            <line x1="115" y1="150" x2="235" y2="88" stroke="#c084fc" stroke-width="1.8" stroke-dasharray="3 3" opacity="0.5"/>
+            <!-- dB 分解矢量 -->
+            <line x1="235" y1="88" x2="235" y2="42" stroke="#f43f5e" stroke-width="2.2"/>
+            <line x1="235" y1="88" x2="235" y2="134" stroke="#f43f5e" stroke-width="2.2" opacity="0.55"/>
+            <path d="M235 88 L302 88 M293 82 L302 88 L293 94" stroke="#38bdf8" stroke-width="3.2" stroke-linecap="round"/>
+            <circle cx="235" cy="88" r="4.5" fill="#ffffff"/>
+          </svg>
+          <span class="card-formula-tag">\(B_x = \frac{\mu_0 I R^2}{2(R^2+x^2)^{3/2}}\)</span>
+        </div>
+        <div class="card-body">
+          <div class="card-title">
+            <span>⭕ 毕奥-萨伐尔定律（载流圆线圈）</span>
+          </div>
+          <p class="card-desc">
+            直观展现圆电流轴线上一点的磁场合成机理：直径两端对称电流元的横向分量 \(\mathrm{d}B_\perp\) 成对抵消，轴向分量 \(\mathrm{d}B_x\) 旋转积分叠加。
+          </p>
+          <div class="card-tags">
+            <span class="tag">对称性抵消</span>
+            <span class="tag">圆锥包络面积分</span>
+            <span class="tag">轴向合成场</span>
+          </div>
+          <div class="card-actions">
+            <a class="btn-launch" href="./biot_savart_loop.html">🚀 进入 3D 实验</a>
+            <button class="btn-preview" onclick="openPreview(2)">页内速览</button>
+          </div>
+        </div>
+      </article>
+
+      <!-- 04 载流长直螺线管磁场 -->
+      <article class="card">
+        <div class="card-visual">
+          <span class="card-num">EXP 04</span>
+          <svg viewBox="0 0 360 175" fill="none">
+            <!-- 平行轴向磁感线 -->
+            <line x1="25" y1="88" x2="335" y2="88" stroke="#34d399" stroke-width="2.5"/>
+            <line x1="25" y1="68" x2="335" y2="68" stroke="#38bdf8" stroke-width="1.8" opacity="0.8"/>
+            <line x1="25" y1="108" x2="335" y2="108" stroke="#38bdf8" stroke-width="1.8" opacity="0.8"/>
+            <!-- 上排 ⊙ 导线截面 -->
+            <g fill="#0284c7" stroke="#ffffff" stroke-width="1.5">
+              <circle cx="95" cy="44" r="9"/><circle cx="135" cy="44" r="9"/><circle cx="175" cy="44" r="9"/>
+              <circle cx="215" cy="44" r="9"/><circle cx="255" cy="44" r="9"/>
+            </g>
+            <!-- 下排 ⊗ 导线截面 -->
+            <g fill="#e11d48" stroke="#ffffff" stroke-width="1.5">
+              <circle cx="95" cy="132" r="9"/><circle cx="135" cy="132" r="9"/><circle cx="175" cy="132" r="9"/>
+              <circle cx="215" cy="132" r="9"/><circle cx="255" cy="132" r="9"/>
+            </g>
+            <!-- 局部叠加环示意 -->
+            <circle cx="175" cy="44" r="18" stroke="#10b981" stroke-width="1.4" stroke-dasharray="3 2"/>
+            <circle cx="215" cy="44" r="18" stroke="#f59e0b" stroke-width="1.4" stroke-dasharray="3 2"/>
+            <circle cx="175" cy="132" r="18" stroke="#10b981" stroke-width="1.4" stroke-dasharray="3 2"/>
+            <circle cx="215" cy="132" r="18" stroke="#f59e0b" stroke-width="1.4" stroke-dasharray="3 2"/>
+          </svg>
+          <span class="card-formula-tag">\(B = \mu_0 n I\)</span>
+        </div>
+        <div class="card-body">
+          <div class="card-title">
+            <span>🌀 载流长直螺线管截面与空间磁场</span>
+          </div>
+          <p class="card-desc">
+            支持线圈匝数 \(N\) 从短螺线管平滑过渡至无限长极限，切换 2D 截面与 3D 空间旋转对称磁感线，并微距图解上下排相邻导线磁场的纵向相消与轴向强化。
+          </p>
+          <div class="card-tags">
+            <span class="tag">相邻电流微观叠加</span>
+            <span class="tag">有限长→无限长过渡</span>
+            <span class="tag">2D截面 / 3D全空间</span>
+          </div>
+          <div class="card-actions">
+            <a class="btn-launch" href="./solenoid_magnetic_field.html">🚀 进入 3D 实验</a>
+            <button class="btn-preview" onclick="openPreview(3)">页内速览</button>
+          </div>
+        </div>
+      </article>
+
+      <!-- 05 磁场高斯定理 -->
+      <article class="card">
+        <div class="card-visual">
+          <span class="card-num">EXP 05</span>
+          <svg viewBox="0 0 360 175" fill="none">
+            <!-- 直导线 -->
+            <line x1="130" y1="18" x2="130" y2="158" stroke="#fbbf24" stroke-width="6" stroke-linecap="round"/>
+            <!-- 同心圆磁感线 -->
+            <ellipse cx="130" cy="88" rx="65" ry="24" stroke="#38bdf8" stroke-width="1.8" opacity="0.75"/>
+            <ellipse cx="130" cy="88" rx="108" ry="38" stroke="#38bdf8" stroke-width="1.8" opacity="0.55"/>
+            <!-- 不规则绿色高斯曲面 -->
+            <path d="M195 45 C235 35, 275 55, 268 92 C262 128, 220 140, 185 122 C160 108, 165 55, 195 45 Z"
+              fill="rgba(16, 185, 129, 0.28)" stroke="#34d399" stroke-width="2"/>
+            <!-- 穿入穿出发光交点 -->
+            <circle cx="192" cy="79" r="5" fill="#ffffff" stroke="#38bdf8" stroke-width="2"/>
+            <circle cx="182" cy="103" r="5" fill="#ffffff" stroke="#38bdf8" stroke-width="2"/>
+            <circle cx="236" cy="79" r="5" fill="#ffffff" stroke="#38bdf8" stroke-width="2"/>
+            <circle cx="222" cy="116" r="5" fill="#ffffff" stroke="#38bdf8" stroke-width="2"/>
+          </svg>
+          <span class="card-formula-tag">\(\oint_S \vec{B}\cdot\mathrm{d}\vec{A} \equiv 0\)</span>
+        </div>
+        <div class="card-body">
+          <div class="card-title">
+            <span>🟢 磁场高斯定理与任意闭合曲面</span>
+          </div>
+          <p class="card-desc">
+            支持一键切换「导线外闭合曲面」与「包围电流闭合曲面」，可随机改变不规则曲面形状与分层显示，实时统计穿入与穿出交点数 \(N_{进}=N_{出}\)，验证磁场无源性。
+          </p>
+          <div class="card-tags">
+            <span class="tag">导线外 / 包围电流双模式</span>
+            <span class="tag">任意形状随机畸变</span>
+            <span class="tag">进出交点实时求交</span>
+          </div>
+          <div class="card-actions">
+            <a class="btn-launch" href="./magnetic_gauss_law.html">🚀 进入 3D 实验</a>
+            <button class="btn-preview" onclick="openPreview(4)">页内速览</button>
+          </div>
+        </div>
+      </article>
+
+      <!-- 06 安培力实验 -->
+      <article class="card">
+        <div class="card-visual">
+          <span class="card-num">EXP 06</span>
+          <svg viewBox="0 0 360 175" fill="none">
+            <!-- U形磁铁上下极 -->
+            <rect x="125" y="24" width="90" height="24" rx="4" fill="#ef4444" opacity="0.85"/>
+            <rect x="125" y="128" width="90" height="24" rx="4" fill="#3b82f6" opacity="0.85"/>
+            <!-- 竖直磁感线 B -->
+            <line x1="150" y1="50" x2="150" y2="124" stroke="#38bdf8" stroke-width="1.6" stroke-dasharray="4 3"/>
+            <line x1="170" y1="50" x2="170" y2="124" stroke="#38bdf8" stroke-width="1.6" stroke-dasharray="4 3"/>
+            <line x1="190" y1="50" x2="190" y2="124" stroke="#38bdf8" stroke-width="1.6" stroke-dasharray="4 3"/>
+            <!-- 悬挂通电导体棒与安培力 F -->
+            <line x1="170" y1="15" x2="205" y2="88" stroke="#94a3b8" stroke-width="2"/>
+            <circle cx="205" cy="88" r="10" fill="#fbbf24" stroke="#ffffff" stroke-width="2"/>
+            <path d="M218 88 L272 88 M263 82 L272 88 L263 94" stroke="#10b981" stroke-width="3.2" stroke-linecap="round"/>
+          </svg>
+          <span class="card-formula-tag">\(\vec{F} = I\vec{L}\times\vec{B}\)</span>
+        </div>
+        <div class="card-body">
+          <div class="card-title">
+            <span>✋ 磁场对通电导体的作用（安培力）</span>
+          </div>
+          <p class="card-desc">
+            蹄形磁铁匀强磁场中的悬挂导体棒通电后受安培力摆动，内置与物理量方向实时联动的三维左手定则手势模型，直观掌握 \(\vec{I}, \vec{B}, \vec{F}\) 空间关系。
+          </p>
+          <div class="card-tags">
+            <span class="tag">3D 左手定则模型</span>
+            <span class="tag">磁极翻转与电流调向</span>
+            <span class="tag">单摆力学阻尼仿真</span>
+          </div>
+          <div class="card-actions">
+            <a class="btn-launch" href="./ampere_force_experiment.html">🚀 进入 3D 实验</a>
+            <button class="btn-preview" onclick="openPreview(5)">页内速览</button>
+          </div>
+        </div>
+      </article>
+
+      <!-- 07 平行载流导线相互作用 -->
+      <article class="card">
+        <div class="card-visual">
+          <span class="card-num">EXP 07</span>
+          <svg viewBox="0 0 360 175" fill="none">
+            <!-- 两根弹性弯曲平行导线 -->
+            <path d="M130 20 Q152 88 130 155" stroke="#fbbf24" stroke-width="6" stroke-linecap="round"/>
+            <path d="M230 20 Q208 88 230 155" stroke="#fbbf24" stroke-width="6" stroke-linecap="round"/>
+            <!-- 相互作用安培力箭头 (同向相吸) -->
+            <path d="M146 88 L174 88 M167 83 L174 88 L167 93" stroke="#10b981" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M214 88 L186 88 M193 83 L186 88 L193 93" stroke="#10b981" stroke-width="2.8" stroke-linecap="round"/>
+            <!-- 环绕磁场圆环 -->
+            <ellipse cx="141" cy="88" rx="85" ry="24" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.6"/>
+          </svg>
+          <span class="card-formula-tag">\(f = \frac{\mu_0 I_1 I_2}{2\pi d}\)</span>
+        </div>
+        <div class="card-body">
+          <div class="card-title">
+            <span>⚡ 平行载流直导线间的相互作用</span>
+          </div>
+          <p class="card-desc">
+            演示「同向电流相吸、反向电流相斥」的微观场媒介机制：导线 1 激发环形磁场 \(\vec{B}_1\)，导线 2 处于 \(\vec{B}_1\) 中受安培力 \(\vec{F}_{12}\) 并产生真实弹性形变。
+          </p>
+          <div class="card-tags">
+            <span class="tag">同向相吸 / 反向相斥</span>
+            <span class="tag">场与受力双向分解</span>
+            <span class="tag">导线柔性形变动画</span>
+          </div>
+          <div class="card-actions">
+            <a class="btn-launch" href="./parallel_currents_interaction.html">🚀 进入 3D 实验</a>
+            <button class="btn-preview" onclick="openPreview(6)">页内速览</button>
+          </div>
+        </div>
+      </article>
+
+    </main>
+
+    <footer>
+      <div>
+        <span>🎓 大学物理 · 电磁学三维交互演示实验室</span>
+      </div>
+      <div>
+        <span>GitHub 仓库：<a href="https://github.com/shijunlj/physics-em-visualizer" target="_blank" rel="noopener">shijunlj/physics-em-visualizer</a></span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- 页内全屏快速切换预览模态窗 -->
+  <div class="viewer-modal" id="viewer-modal">
+    <div class="viewer-topbar">
+      <div class="viewer-tabs" id="viewer-tabs"></div>
+      <div class="viewer-controls">
+        <a class="viewer-btn" id="viewer-open-full" href="#" target="_blank">↗ 新窗口全屏打开</a>
+        <button class="viewer-btn close" onclick="closePreview()">✕ 返回主页</button>
+      </div>
+    </div>
+    <iframe class="viewer-frame" id="viewer-frame" src=""></iframe>
+  </div>
+
+  <script>
+    const DEMOS = [
+      { title: '01 奥斯特实验', url: './oersted_experiment.html' },
+      { title: '02 毕奥-萨伐尔(直导线)', url: './biot_savart_wire.html' },
+      { title: '03 毕奥-萨伐尔(圆线圈)', url: './biot_savart_loop.html' },
+      { title: '04 载流长直螺线管磁场', url: './solenoid_magnetic_field.html' },
+      { title: '05 磁场高斯定理', url: './magnetic_gauss_law.html' },
+      { title: '06 安培力实验', url: './ampere_force_experiment.html' },
+      { title: '07 平行载流导线相互作用', url: './parallel_currents_interaction.html' }
+    ];
+
+    const modal = document.getElementById('viewer-modal');
+    const frame = document.getElementById('viewer-frame');
+    const tabsContainer = document.getElementById('viewer-tabs');
+    const openFullBtn = document.getElementById('viewer-open-full');
+
+    function renderTabs(activeIdx) {
+      tabsContainer.innerHTML = '';
+      DEMOS.forEach((d, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'viewer-tab' + (idx === activeIdx ? ' active' : '');
+        btn.textContent = d.title;
+        btn.onclick = () => selectDemo(idx);
+        tabsContainer.appendChild(btn);
+      });
+    }
+
+    function selectDemo(idx) {
+      const demo = DEMOS[idx];
+      frame.src = demo.url;
+      openFullBtn.href = demo.url;
+      renderTabs(idx);
+    }
+
+    function openPreview(idx) {
+      modal.classList.add('open');
+      selectDemo(idx);
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closePreview() {
+      modal.classList.remove('open');
+      frame.src = '';
+      document.body.style.overflow = '';
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modal.classList.contains('open')) {
+        closePreview();
+      }
+    });
+  </script>
+</body>
+</html>

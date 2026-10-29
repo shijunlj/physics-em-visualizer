@@ -1,6 +1,8 @@
 # 大学物理 · 电磁学三维交互演示合集
 
-本项目包含 7 个基于 **Three.js (WebGL)** 的独立单文件 HTML 交互式物理演示页面，用于直观展示大学物理电磁学（稳恒磁场）的核心概念、实验现象与场分布规律。所有页面均可直接在浏览器中打开运行，支持 360° 自由旋转、缩放与实时参数调节。
+🌐 **在线演示网站（GitHub Pages）**：[**https://shijunlj.github.io/physics-em-visualizer/**](https://shijunlj.github.io/physics-em-visualizer/)
+
+本项目包含 7 个基于 **Three.js (WebGL)** 的独立单文件 HTML 交互式物理演示页面（及 `index.html` 导航主页），用于直观展示大学物理电磁学（稳恒磁场）的核心概念、实验现象与场分布规律。所有页面均可直接在浏览器中打开运行，支持 360° 自由旋转、缩放与实时参数调节。
 
 ---
 
