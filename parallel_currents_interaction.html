@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>电流与电流之间的相互作用演示 (Parallel Currents Interaction)</title>
+  <!-- 引入 Three.js 与 OrbitControls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(15, 23, 42, 0.88);
+      --border: rgba(148, 163, 184, 0.2);
+      --c-wire: #fbbf24;      /* 金黄 导线 */
+      --c-i1: #38bdf8;        /* 亮蓝 电流1 */
+      --c-i2: #f43f5e;        /* 玫红 电流2 */
+      --c-bfield: #10b981;    /* 翠绿 磁场 */
+      --c-force: #a855f7;     /* 紫色 安培相互作用力 */
+      --c-plus: #ef4444;      /* 正极 红色 */
+      --c-minus: #3b82f6;     /* 负极 蓝色 */
+      --text: #f8fafc;
+      --text-dim: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #webgl-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* 顶部标题栏 */
+    .header-bar {
+      position: absolute;
+      top: 16px;
+      left: 20px;
+      z-index: 10;
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      padding: 12px 20px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+      max-width: 480px;
+    }
+
+    .header-bar h1 {
+      font-size: 18px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header-bar .subtitle {
+      font-size: 12.5px;
+      color: var(--text-dim);
+      margin-top: 5px;
+      line-height: 1.5;
+    }
+
+    /* 右侧控制面板 */
+    .panel {
+      position: absolute;
+      top: 16px;
+      right: 20px;
+      width: 350px;
+      z-index: 10;
+      background: var(--card-bg);
+      backdrop-filter: blur(14px);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      font-size: 15px;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .panel-body {
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 13px;
+      max-height: calc(100vh - 80px);
+      overflow-y: auto;
+    }
+
+    /* 开关闸刀大按钮 */
+    .switch-btn {
+      width: 100%;
+      padding: 13px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.25s ease;
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border-color: rgba(239, 68, 68, 0.4);
+    }
+
+    .switch-btn.on {
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      border-color: rgba(16, 185, 129, 0.5);
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.25);
+    }
+
+    .status-badge {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    /* 物理量读数卡片 */
+    .info-card {
+      background: rgba(0, 0, 0, 0.45);
+      border-radius: 8px;
+      padding: 12px 14px;
+      border-left: 3px solid var(--c-force);
+      font-size: 13px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .info-val {
+      font-weight: bold;
+      color: #f1f5f9;
+      font-family: "Cambria Math", serif;
+    }
+
+    /* 经典规律提示卡 */
+    .law-card {
+      background: rgba(30, 41, 59, 0.65);
+      border-radius: 8px;
+      padding: 11px 14px;
+      font-size: 12.5px;
+      line-height: 1.6;
+      border-left: 3px solid #38bdf8;
+    }
+
+    .law-card b {
+      color: #38bdf8;
+    }
+
+    /* 控制选项组与分段按钮 */
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .control-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-dim);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .seg-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      background: rgba(0, 0, 0, 0.25);
+      padding: 3px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .seg-btn {
+      padding: 8px 10px;
+      font-size: 12.5px;
+      font-weight: 500;
+      border: none;
+      background: transparent;
+      color: var(--text-dim);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+
+    .seg-btn:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .seg-btn.active {
+      background: #2563eb;
+      color: #ffffff;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4);
+    }
+
+    .seg-btn.active.repel {
+      background: #e11d48;
+      box-shadow: 0 2px 8px rgba(225, 29, 72, 0.4);
+    }
+
+    /* 滑块样式 */
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%;
+      background: transparent;
+    }
+
+    input[type=range]:focus {
+      outline: none;
+    }
+
+    input[type=range]::-webkit-slider-runnable-track {
+      width: 100%;
+      height: 6px;
+      cursor: pointer;
+      background: #334155;
+      border-radius: 3px;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      height: 16px;
+      width: 16px;
+      border-radius: 50%;
+      background: #38bdf8;
+      cursor: pointer;
+      -webkit-appearance: none;
+      margin-top: -5px;
+      box-shadow: 0 0 6px rgba(56, 189, 248, 0.6);
+      transition: transform 0.1s;
+    }
+
+    input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    /* 底部按钮栏 */
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .btn {
+      padding: 9px 12px;
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background: rgba(51, 65, 85, 0.9);
+      border-color: rgba(148, 163, 184, 0.4);
+    }
+
+    .btn.active {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: rgba(16, 185, 129, 0.5);
+      color: #34d399;
+    }
+
+    /* 左下角图例 */
+    .legend-box {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      z-index: 10;
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 12.5px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .legend-color {
+      width: 16px;
+      height: 4px;
+      border-radius: 2px;
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- WebGL 渲染容器 -->
+  <div id="webgl-container"></div>
+
+  <!-- 顶部标题栏 -->
+  <div class="header-bar">
+    <h1>
+      <span>⚡ 电流与电流之间的相互作用</span>
+    </h1>
+    <div class="subtitle">
+      两根平行通电柔性导线：<b>同向电流相互吸引</b>，<b>反向电流相互排斥</b>。<br>
+      本质：一根电流激发的磁场对另一根电流产生安培力 \(F = \frac{\mu_0 I_1 I_2 L}{2\pi d}\)。
+    </div>
+  </div>
+
+  <!-- 左下角图例 -->
+  <div class="legend-box">
+    <div class="legend-item">
+      <div class="legend-color" style="background: var(--c-wire);"></div>
+      <span>平行柔性导线（初始位置虚线参考）</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background: var(--c-i1);"></div>
+      <span>左侧电流 \(I_1\) 矢量与流动方向</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background: var(--c-i2);"></div>
+      <span>右侧电流 \(I_2\) 矢量与流动方向</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background: var(--c-bfield);"></div>
+      <span>导线环形磁感应线 \(B\)</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background: var(--c-force);"></div>
+      <span>安培相互作用力 \(F_{12}, F_{21}\)</span>
+    </div>
+  </div>
+
+  <!-- 右侧交互控制面板 -->
+  <div class="panel">
+    <div class="panel-header">
+      <span>控制台与物理调节</span>
+      <span style="font-size: 12px; color: var(--c-i1);">大学物理·电磁学</span>
+    </div>
+    <div class="panel-body">
+
+      <!-- 开关控制按钮 -->
+      <button class="switch-btn on" id="btn-circuit" onclick="toggleCircuit()">
+        <span class="status-badge"></span>
+        <span id="txt-circuit-status">电路已通电 (ON)</span>
+      </button>
+
+      <!-- 快捷实验模式选择：同向吸引 vs 反向排斥 -->
+      <div class="control-group">
+        <div class="control-label">
+          <span>经典实验模式</span>
+        </div>
+        <div class="seg-group">
+          <button class="seg-btn active" id="btn-mode-attract" onclick="setMode('ATTRACT')">
+            🧲 同向电流 (相互吸引)
+          </button>
+          <button class="seg-btn repel" id="btn-mode-repel" onclick="setMode('REPEL')">
+            💥 反向电流 (相互排斥)
+          </button>
+        </div>
+      </div>
+
+      <!-- 实时受力与偏转读数 -->
+      <div class="info-card">
+        <div class="info-row">
+          <span>相互作用性质</span>
+          <span class="info-val" id="val-nature" style="color: #38bdf8;">相互吸引 (向内弯曲)</span>
+        </div>
+        <div class="info-row">
+          <span>单位长度安培力 \(F/L\)</span>
+          <span class="info-val" id="val-force" style="color: var(--c-force);">0.160 N/m</span>
+        </div>
+        <div class="info-row">
+          <span>中心最大弯曲偏移 \(\Delta x\)</span>
+          <span class="info-val" id="val-deflection" style="color: #fbbf24;">4.80 cm</span>
+        </div>
+      </div>
+
+      <!-- 规律指导卡 -->
+      <div class="law-card" id="law-explanation">
+        <b>💡 物理机制分析：</b><br>
+        1. 左导线电流 \(I_1\) 在右侧处产生向里的磁场 \(B_1\)；<br>
+        2. 根据<b>左手定则</b>，向上的电流 \(I_2\) 受安培力向左吸引；<br>
+        3. 反之右导线同样吸引左导线，两线向内贴近。
+      </div>
+
+      <!-- 分别设定两根导线的电流方向 -->
+      <div class="control-group">
+        <div class="control-label">
+          <span>左导线电流 \(I_1\) 方向</span>
+        </div>
+        <div class="seg-group">
+          <button class="seg-btn active" id="btn-i1-up" onclick="setI1Dir(1)">
+            向上流动 \(I_1 \uparrow\)
+          </button>
+          <button class="seg-btn" id="btn-i1-down" onclick="setI1Dir(-1)">
+            向下流动 \(I_1 \downarrow\)
+          </button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">
+          <span>右导线电流 \(I_2\) 方向</span>
+        </div>
+        <div class="seg-group">
+          <button class="seg-btn active" id="btn-i2-up" onclick="setI2Dir(1)">
+            向上流动 \(I_2 \uparrow\)
+          </button>
+          <button class="seg-btn" id="btn-i2-down" onclick="setI2Dir(-1)">
+            向下流动 \(I_2 \downarrow\)
+          </button>
+        </div>
+      </div>
+
+      <!-- 电流大小调节 -->
+      <div class="control-group">
+        <div class="control-label">
+          <span>设定电流强度 \(I_1, I_2\)</span>
+          <span id="label-current" style="color: var(--c-i1);">4.0 A</span>
+        </div>
+        <input type="range" id="slider-current" min="1.0" max="8.0" step="0.2" value="4.0">
+      </div>
+
+      <!-- 导线间距调节 -->
+      <div class="control-group">
+        <div class="control-label">
+          <span>两导线初始间距 \(d\)</span>
+          <span id="label-distance" style="color: var(--c-bfield);">1.20 m</span>
+        </div>
+        <input type="range" id="slider-distance" min="0.8" max="1.8" step="0.05" value="1.20">
+      </div>
+
+      <!-- 辅助图层开关与视角复位 -->
+      <div class="btn-row">
+        <button class="btn active" id="btn-toggle-field" onclick="toggleFieldLines()">
+          <span>🌀 环形磁场线</span>
+        </button>
+        <button class="btn active" id="btn-toggle-vectors" onclick="toggleVectors()">
+          <span>📐 受力箭头</span>
+        </button>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn" style="grid-column: span 2;" onclick="resetView()">
+          <span>↺ 重置最佳观察视角</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    /* ==========================================================
+       1. 场景与相机初始化（正面略仰视角，直观展现两导线形变）
+       ========================================================== */
+    const container = document.getElementById('webgl-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0a0f1d);
+    scene.fog = new THREE.FogExp2(0x0a0f1d, 0.02);
+
+    const camera = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const initialCamPos = new THREE.Vector3(0, 1.3, 4.2);
+    const initialCamTarget = new THREE.Vector3(0, 1.3, 0);
+
+    camera.position.copy(initialCamPos);
+    camera.lookAt(initialCamTarget);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.target.copy(initialCamTarget);
+    controls.update();
+
+    // 光照设置
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
+    scene.add(ambientLight);
+
+    const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.9);
+    dirLight1.position.set(4, 8, 6);
+    scene.add(dirLight1);
+
+    const dirLight2 = new THREE.DirectionalLight(0x38bdf8, 0.4);
+    dirLight2.position.set(-4, -1, 3);
+    scene.add(dirLight2);
+
+    // 实验室地面微光网格
+    const grid = new THREE.GridHelper(12, 12, 0x1e293b, 0x0f172a);
+    grid.position.y = -0.01;
+    scene.add(grid);
+
+    /* ==========================================================
+       2. 文字标签生成辅助函数 (Sprite)
+       ========================================================== */
+    function makeTextSprite(text, color = '#ffffff', fontSize = 34, bg = 'rgba(15, 23, 42, 0.85)') {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = 256;
+      canvas.height = 128;
+
+      ctx.fillStyle = bg;
+      ctx.roundRect(14, 18, 228, 92, 16);
+      ctx.fill();
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 3.5;
+      ctx.roundRect(14, 18, 228, 92, 16);
+      ctx.stroke();
+
+      ctx.font = `bold ${fontSize}px sans-serif`;
+      ctx.fillStyle = color;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, 128, 64);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      const spriteMaterial = new THREE.SpriteMaterial({ map: texture, depthTest: false });
+      const sprite = new THREE.Sprite(spriteMaterial);
+      sprite.scale.set(0.7, 0.35, 1);
+      return sprite;
+    }
+
+    /* ==========================================================
+       3. 物理实验装置 3D 建模
+       ========================================================== */
+    const labGroup = new THREE.Group();
+    scene.add(labGroup);
+
+    // 实验框架参数
+    const frameHeight = 2.4; // 两横梁间导线长度
+    const frameYBottom = 0.25;
+    const frameYTop = frameYBottom + frameHeight;
+    let wireHalfDist = 0.6;   // 导线初始半间距 (d = 1.2m)
+
+    // 绝缘支架与接线横梁材质
+    const blockMat = new THREE.MeshStandardMaterial({
+      color: 0x059669,       // 绿色绝缘安装板（与示意图一致）
+      roughness: 0.35,
+      metalness: 0.3
+    });
+    const terminalMat = new THREE.MeshStandardMaterial({
+      color: 0x0284c7,       // 铜绿/金属接线柱
+      roughness: 0.2,
+      metalness: 0.8
+    });
+    const postMat = new THREE.MeshStandardMaterial({
+      color: 0x475569,
+      roughness: 0.4,
+      metalness: 0.6
+    });
+
+    // 绝缘横梁几何 (顶部与底部)
+    const beamGeo = new THREE.BoxGeometry(2.4, 0.14, 0.35);
+    const topBeam = new THREE.Mesh(beamGeo, blockMat);
+    topBeam.position.set(0, frameYTop + 0.07, 0);
+    labGroup.add(topBeam);
+
+    const bottomBeam = new THREE.Mesh(beamGeo, blockMat);
+    bottomBeam.position.set(0, frameYBottom - 0.07, 0);
+    labGroup.add(bottomBeam);
+
+    // 左右支撑绝缘立柱
+    const postGeo = new THREE.CylinderGeometry(0.04, 0.04, frameHeight + 0.3, 20);
+    const postLeft = new THREE.Mesh(postGeo, postMat);
+    postLeft.position.set(-1.1, (frameYTop + frameYBottom) / 2, 0);
+    labGroup.add(postLeft);
+
+    const postRight = new THREE.Mesh(postGeo, postMat);
+    postRight.position.set(1.1, (frameYTop + frameYBottom) / 2, 0);
+    labGroup.add(postRight);
+
+    // 接线柱与外引导线
+    const terminalGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.16, 16);
+    const termT1 = new THREE.Mesh(terminalGeo, terminalMat);
+    const termT2 = new THREE.Mesh(terminalGeo, terminalMat);
+    const termB1 = new THREE.Mesh(terminalGeo, terminalMat);
+    const termB2 = new THREE.Mesh(terminalGeo, terminalMat);
+    labGroup.add(termT1, termT2, termB1, termB2);
+
+    // 弯曲的外部接线黄色导线
+    function createExternalWireCurve(p1, p2, ctrl) {
+      const curve = new THREE.QuadraticBezierCurve3(p1, ctrl, p2);
+      const tubeGeo = new THREE.TubeGeometry(curve, 20, 0.018, 8, false);
+      const tubeMat = new THREE.MeshStandardMaterial({ color: 0xeab308, roughness: 0.4, metalness: 0.4 });
+      return new THREE.Mesh(tubeGeo, tubeMat);
+    }
+
+    let extWiresGroup = new THREE.Group();
+    labGroup.add(extWiresGroup);
+
+    // 正负极极性标牌 (+ / -)
+    const labelT1 = makeTextSprite('-', '#3b82f6', 42);
+    const labelT2 = makeTextSprite('-', '#3b82f6', 42);
+    const labelB1 = makeTextSprite('+', '#ef4444', 42);
+    const labelB2 = makeTextSprite('+', '#ef4444', 42);
+    labGroup.add(labelT1, labelT2, labelB1, labelB2);
+
+    function updateTerminalsLayout() {
+      termT1.position.set(-wireHalfDist, frameYTop + 0.16, 0);
+      termT2.position.set(wireHalfDist, frameYTop + 0.16, 0);
+      termB1.position.set(-wireHalfDist, frameYBottom - 0.16, 0);
+      termB2.position.set(wireHalfDist, frameYBottom - 0.16, 0);
+
+      labelT1.position.set(-wireHalfDist - 0.18, frameYTop + 0.28, 0.1);
+      labelT2.position.set(wireHalfDist + 0.18, frameYTop + 0.28, 0.1);
+      labelB1.position.set(-wireHalfDist - 0.18, frameYBottom - 0.28, 0.1);
+      labelB2.position.set(wireHalfDist + 0.18, frameYBottom - 0.28, 0.1);
+
+      // 重新生成外部接线
+      while (extWiresGroup.children.length > 0) {
+        extWiresGroup.remove(extWiresGroup.children[0]);
+      }
+      extWiresGroup.add(createExternalWireCurve(
+        new THREE.Vector3(-wireHalfDist, frameYTop + 0.18, 0),
+        new THREE.Vector3(-wireHalfDist - 0.22, frameYTop + 0.42, 0),
+        new THREE.Vector3(-wireHalfDist - 0.18, frameYTop + 0.24, 0.15)
+      ));
+      extWiresGroup.add(createExternalWireCurve(
+        new THREE.Vector3(wireHalfDist, frameYTop + 0.18, 0),
+        new THREE.Vector3(wireHalfDist + 0.22, frameYTop + 0.42, 0),
+        new THREE.Vector3(wireHalfDist + 0.18, frameYTop + 0.24, 0.15)
+      ));
+      extWiresGroup.add(createExternalWireCurve(
+        new THREE.Vector3(-wireHalfDist, frameYBottom - 0.18, 0),
+        new THREE.Vector3(-wireHalfDist - 0.22, frameYBottom - 0.42, 0),
+        new THREE.Vector3(-wireHalfDist - 0.18, frameYBottom - 0.24, 0.15)
+      ));
+      extWiresGroup.add(createExternalWireCurve(
+        new THREE.Vector3(wireHalfDist, frameYBottom - 0.18, 0),
+        new THREE.Vector3(wireHalfDist + 0.22, frameYBottom - 0.42, 0),
+        new THREE.Vector3(wireHalfDist + 0.18, frameYBottom - 0.24, 0.15)
+      ));
+    }
+
+    // --- 虚线初始直线参考 (未通电时的初始平衡位置) ---
+    const dashedMat = new THREE.LineDashedMaterial({
+      color: 0x94a3b8,
+      dashSize: 0.07,
+      gapSize: 0.05,
+      transparent: true,
+      opacity: 0.5
+    });
+    let dashedRef1, dashedRef2;
+
+    function buildDashedReferences() {
+      if (dashedRef1) labGroup.remove(dashedRef1);
+      if (dashedRef2) labGroup.remove(dashedRef2);
+
+      const p1 = [new THREE.Vector3(-wireHalfDist, frameYBottom, 0), new THREE.Vector3(-wireHalfDist, frameYTop, 0)];
+      const p2 = [new THREE.Vector3(wireHalfDist, frameYBottom, 0), new THREE.Vector3(wireHalfDist, frameYTop, 0)];
+
+      const geo1 = new THREE.BufferGeometry().setFromPoints(p1);
+      dashedRef1 = new THREE.Line(geo1, dashedMat);
+      dashedRef1.computeLineDistances();
+
+      const geo2 = new THREE.BufferGeometry().setFromPoints(p2);
+      dashedRef2 = new THREE.Line(geo2, dashedMat);
+      dashedRef2.computeLineDistances();
+
+      labGroup.add(dashedRef1, dashedRef2);
+    }
+
+    // --- 可动态弹性弯曲变形的柔性通电导线 (Mesh Tube) ---
+    const wireMat1 = new THREE.MeshStandardMaterial({
+      color: 0xfacc15,
+      roughness: 0.2,
+      metalness: 0.7,
+      emissive: 0x854d0e,
+      emissiveIntensity: 0.2
+    });
+    const wireMat2 = new THREE.MeshStandardMaterial({
+      color: 0xfacc15,
+      roughness: 0.2,
+      metalness: 0.7,
+      emissive: 0x854d0e,
+      emissiveIntensity: 0.2
+    });
+
+    let wireMesh1, wireMesh2;
+    const WIRE_SEGMENTS = 36;
+    const WIRE_RADIUS = 0.024;
+
+    function updateWireMeshes(delta1, delta2) {
+      // 物理变形曲线：两端固定，受均布相互作用力，呈正弦/抛物线式弯曲
+      // x(y) = x_0 + delta * sin( pi * (y - yBottom) / L )
+      const pts1 = [];
+      const pts2 = [];
+      for (let i = 0; i <= WIRE_SEGMENTS; i++) {
+        const u = i / WIRE_SEGMENTS;
+        const y = frameYBottom + u * frameHeight;
+        const bow = Math.sin(u * Math.PI);
+
+        const x1 = -wireHalfDist + delta1 * bow;
+        const x2 = wireHalfDist + delta2 * bow;
+
+        pts1.push(new THREE.Vector3(x1, y, 0));
+        pts2.push(new THREE.Vector3(x2, y, 0));
+      }
+
+      const curve1 = new THREE.CatmullRomCurve3(pts1);
+      const curve2 = new THREE.CatmullRomCurve3(pts2);
+
+      const geo1 = new THREE.TubeGeometry(curve1, WIRE_SEGMENTS, WIRE_RADIUS, 12, false);
+      const geo2 = new THREE.TubeGeometry(curve2, WIRE_SEGMENTS, WIRE_RADIUS, 12, false);
+
+      if (wireMesh1) {
+        wireMesh1.geometry.dispose();
+        wireMesh1.geometry = geo1;
+      } else {
+        wireMesh1 = new THREE.Mesh(geo1, wireMat1);
+        labGroup.add(wireMesh1);
+      }
+
+      if (wireMesh2) {
+        wireMesh2.geometry.dispose();
+        wireMesh2.geometry = geo2;
+      } else {
+        wireMesh2 = new THREE.Mesh(geo2, wireMat2);
+        labGroup.add(wireMesh2);
+      }
+    }
+
+    // --- 动态电流脉冲流光微粒与箭头 ---
+    const pulseGroup = new THREE.Group();
+    labGroup.add(pulseGroup);
+
+    const pulseArrows1 = [];
+    const pulseArrows2 = [];
+    for (let i = 0; i < 4; i++) {
+      const arr1 = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 0), 0.25, 0x38bdf8, 0.12, 0.08);
+      pulseGroup.add(arr1);
+      pulseArrows1.push(arr1);
+
+      const arr2 = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 0), 0.25, 0xf43f5e, 0.12, 0.08);
+      pulseGroup.add(arr2);
+      pulseArrows2.push(arr2);
+    }
+
+    // 导线中央大电流箭头标号 (与示意图中的红/蓝粗箭头一致)
+    const centerArrow1 = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 0), 0.45, 0xef4444, 0.18, 0.12);
+    const centerArrow2 = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 0), 0.45, 0xef4444, 0.18, 0.12);
+    pulseGroup.add(centerArrow1, centerArrow2);
+
+    const labelI1 = makeTextSprite('I₁', '#38bdf8', 40);
+    const labelI2 = makeTextSprite('I₂', '#f43f5e', 40);
+    pulseGroup.add(labelI1, labelI2);
+
+    // --- 相互作用力矢量箭头 F12, F21 ---
+    const vectorGroup = new THREE.Group();
+    labGroup.add(vectorGroup);
+
+    const forceArrow1 = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 0, 0), 0.4, 0xa855f7, 0.15, 0.1);
+    const forceArrow2 = new THREE.ArrowHelper(new THREE.Vector3(-1, 0, 0), new THREE.Vector3(0, 0, 0), 0.4, 0xa855f7, 0.15, 0.1);
+    vectorGroup.add(forceArrow1, forceArrow2);
+
+    const labelF1 = makeTextSprite('F₂₁', '#a855f7', 36);
+    const labelF2 = makeTextSprite('F₁₂', '#a855f7', 36);
+    vectorGroup.add(labelF1, labelF2);
+
+    // --- 环形磁场线可视化 (显示导线产生的环状磁感线) ---
+    const fieldLinesGroup = new THREE.Group();
+    labGroup.add(fieldLinesGroup);
+
+    function createCircleFieldRings(center, radius, normal, color = 0x10b981) {
+      const curve = new THREE.EllipseCurve(0, 0, radius, radius, 0, 2 * Math.PI, false, 0);
+      const points = curve.getPoints(40);
+      const geo = new THREE.BufferGeometry().setFromPoints(points.map(p => new THREE.Vector3(p.x, 0, p.y)));
+      const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.45, linewidth: 1.5 });
+      const ring = new THREE.LineLoop(geo, mat);
+      ring.position.copy(center);
+      return ring;
+    }
+
+    let fieldRings = [];
+    function rebuildFieldRings() {
+      while (fieldLinesGroup.children.length > 0) {
+        fieldLinesGroup.remove(fieldLinesGroup.children[0]);
+      }
+      fieldRings = [];
+
+      const yLevels = [frameYBottom + 0.6, (frameYBottom + frameYTop) / 2, frameYTop - 0.6];
+      const radii = [0.18, 0.35, 0.52];
+
+      yLevels.forEach(y => {
+        radii.forEach(r => {
+          // 左导线环形磁场
+          const ring1 = createCircleFieldRings(new THREE.Vector3(-wireHalfDist, y, 0), r, new THREE.Vector3(0, 1, 0), 0x10b981);
+          fieldLinesGroup.add(ring1);
+          fieldRings.push(ring1);
+
+          // 右导线环形磁场
+          const ring2 = createCircleFieldRings(new THREE.Vector3(wireHalfDist, y, 0), r, new THREE.Vector3(0, 1, 0), 0x10b981);
+          fieldLinesGroup.add(ring2);
+          fieldRings.push(ring2);
+        });
+      });
+    }
+
+    /* ==========================================================
+       4. 物理参数与二阶受迫阻尼摆动动力学
+       ========================================================== */
+    let isCircuitClosed = true;
+    let i1Direction = 1;     // +1: 向上, -1: 向下
+    let i2Direction = 1;     // +1: 向上, -1: 向下 (初始同向吸引)
+    let currentAmps = 4.0;   // 电流大小 (A)
+    let initialDist = 1.2;   // 导线间距 d (m)
+
+    // 导线中心偏转动力学状态
+    let delta1 = 0;          // 左导线中心偏移 (向右为正)
+    let delta2 = 0;          // 右导线中心偏移 (向右为正)
+    let vel1 = 0;
+    let vel2 = 0;
+    let targetDeflection = 0.22; // 稳态平衡位移 (m)
+
+    function updatePhysicsTarget() {
+      wireHalfDist = initialDist / 2;
+      updateTerminalsLayout();
+      buildDashedReferences();
+      rebuildFieldRings();
+
+      const isSameDir = (i1Direction === i2Direction);
+
+      // 计算极性标牌 (+ / -)
+      // 若电流向上：下极为正(+)，上极为负(-)
+      // 若电流向下：上极为正(+)，下极为负(-)
+      if (i1Direction > 0) {
+        labelB1.material.map = makeTextSprite('+', '#ef4444', 44, 'rgba(239, 68, 68, 0.9)').material.map;
+        labelT1.material.map = makeTextSprite('-', '#3b82f6', 44, 'rgba(59, 130, 246, 0.9)').material.map;
+      } else {
+        labelB1.material.map = makeTextSprite('-', '#3b82f6', 44, 'rgba(59, 130, 246, 0.9)').material.map;
+        labelT1.material.map = makeTextSprite('+', '#ef4444', 44, 'rgba(239, 68, 68, 0.9)').material.map;
+      }
+
+      if (i2Direction > 0) {
+        labelB2.material.map = makeTextSprite('+', '#ef4444', 44, 'rgba(239, 68, 68, 0.9)').material.map;
+        labelT2.material.map = makeTextSprite('-', '#3b82f6', 44, 'rgba(59, 130, 246, 0.9)').material.map;
+      } else {
+        labelB2.material.map = makeTextSprite('-', '#3b82f6', 44, 'rgba(59, 130, 246, 0.9)').material.map;
+        labelT2.material.map = makeTextSprite('+', '#ef4444', 44, 'rgba(239, 68, 68, 0.9)').material.map;
+      }
+
+      // 计算安培力理论值 F/L = μ0 * I1 * I2 / (2π * d)
+      // 为了直观演示，按照弹性力学弯曲模型缩放位移
+      const mu0 = 4 * Math.PI * 1e-7;
+      const forcePerLength = isCircuitClosed ? (mu0 * currentAmps * currentAmps / (2 * Math.PI * initialDist) * 1e6) : 0; // 放大系数用于微观力教学演示
+      
+      // 导线最大弯曲偏移与电流平方成正比，与间距反比
+      const maxBendScale = 0.016; 
+      const nominalDeflection = isCircuitClosed ? Math.min(wireHalfDist * 0.65, (currentAmps * currentAmps / initialDist) * maxBendScale) : 0;
+
+      // 同向电流：相互吸引 (左导线向右 +delta，右导线向左 -delta)
+      // 反向电流：相互排斥 (左导线向左 -delta，右导线向右 +delta)
+      targetDeflection = isSameDir ? nominalDeflection : -nominalDeflection;
+
+      // 更新受力箭头方向
+      // forceArrow1 是作用在左导线上的力：吸引时向右(+X)，排斥时向左(-X)
+      // forceArrow2 是作用在右导线上的力：吸引时向左(-X)，排斥时向右(+X)
+      const f1Dir = isSameDir ? 1 : -1;
+      forceArrow1.setDirection(new THREE.Vector3(f1Dir, 0, 0));
+      forceArrow2.setDirection(new THREE.Vector3(-f1Dir, 0, 0));
+
+      const arrowLen = isCircuitClosed ? 0.35 : 0.001;
+      forceArrow1.setLength(arrowLen, 0.12, 0.08);
+      forceArrow2.setLength(arrowLen, 0.12, 0.08);
+
+      labelF1.visible = isCircuitClosed;
+      labelF2.visible = isCircuitClosed;
+
+      // 更新界面文字
+      const modeAttractBtn = document.getElementById('btn-mode-attract');
+      const modeRepelBtn = document.getElementById('btn-mode-repel');
+      modeAttractBtn.classList.toggle('active', isSameDir);
+      modeRepelBtn.classList.toggle('active', !isSameDir);
+
+      const natEle = document.getElementById('val-nature');
+      if (!isCircuitClosed) {
+        natEle.innerText = '电路断开 (无相互作用)';
+        natEle.style.color = '#94a3b8';
+      } else if (isSameDir) {
+        natEle.innerText = '相互吸引 (向内吸拢)';
+        natEle.style.color = '#38bdf8';
+      } else {
+        natEle.innerText = '相互排斥 (向外张开)';
+        natEle.style.color = '#f43f5e';
+      }
+
+      document.getElementById('val-force').innerText = `${forcePerLength.toFixed(3)} N/m`;
+      const defCm = Math.abs(targetDeflection * 100);
+      document.getElementById('val-deflection').innerText = `${defCm.toFixed(2)} cm`;
+
+      const expEle = document.getElementById('law-explanation');
+      if (isSameDir) {
+        expEle.innerHTML = `<b>🧲 同向电流相互吸引机制：</b><br>
+        1. 两导线电流方向相同（同为 ${i1Direction > 0 ? '↑' : '↓'}）；<br>
+        2. 根据<b>右手螺旋定则</b>，两导线之间磁场反向抵消减弱，外侧加强；<br>
+        3. 由<b>左手定则</b>，各导线均受指向对方的安培引力，两导线向中央靠近弯曲。`;
+      } else {
+        expEle.innerHTML = `<b>💥 反向电流相互排斥机制：</b><br>
+        1. 两导线电流方向相反（左 ${i1Direction > 0 ? '↑' : '↓'}，右 ${i2Direction > 0 ? '↑' : '↓'}）；<br>
+        2. 根据<b>右手螺旋定则</b>，两导线中间的磁场同向叠加增强；<br>
+        3. 由<b>左手定则</b>，各导线均受背离对方的安培斥力，两导线向外张开弯曲。`;
+      }
+    }
+
+    /* ==========================================================
+       5. 交互控制逻辑
+       ========================================================== */
+    function toggleCircuit() {
+      isCircuitClosed = !isCircuitClosed;
+      const btn = document.getElementById('btn-circuit');
+      const txt = document.getElementById('txt-circuit-status');
+
+      if (isCircuitClosed) {
+        btn.classList.add('on');
+        txt.innerText = '电路已通电 (ON)';
+      } else {
+        btn.classList.remove('on');
+        txt.innerText = '电路已断开 (OFF)';
+      }
+      updatePhysicsTarget();
+    }
+
+    function setMode(mode) {
+      if (mode === 'ATTRACT') {
+        i1Direction = 1;
+        i2Direction = 1;
+        document.getElementById('btn-i1-up').classList.add('active');
+        document.getElementById('btn-i1-down').classList.remove('active');
+        document.getElementById('btn-i2-up').classList.add('active');
+        document.getElementById('btn-i2-down').classList.remove('active');
+      } else {
+        i1Direction = -1;
+        i2Direction = 1;
+        document.getElementById('btn-i1-up').classList.remove('active');
+        document.getElementById('btn-i1-down').classList.add('active');
+        document.getElementById('btn-i2-up').classList.add('active');
+        document.getElementById('btn-i2-down').classList.remove('active');
+      }
+      updatePhysicsTarget();
+    }
+
+    function setI1Dir(dir) {
+      i1Direction = dir;
+      document.getElementById('btn-i1-up').classList.toggle('active', dir === 1);
+      document.getElementById('btn-i1-down').classList.toggle('active', dir === -1);
+      updatePhysicsTarget();
+    }
+
+    function setI2Dir(dir) {
+      i2Direction = dir;
+      document.getElementById('btn-i2-up').classList.toggle('active', dir === 1);
+      document.getElementById('btn-i2-down').classList.toggle('active', dir === -1);
+      updatePhysicsTarget();
+    }
+
+    function toggleFieldLines() {
+      fieldLinesGroup.visible = !fieldLinesGroup.visible;
+      document.getElementById('btn-toggle-field').classList.toggle('active', fieldLinesGroup.visible);
+    }
+
+    function toggleVectors() {
+      vectorGroup.visible = !vectorGroup.visible;
+      document.getElementById('btn-toggle-vectors').classList.toggle('active', vectorGroup.visible);
+    }
+
+    // 滑块监听
+    const sliderCurrent = document.getElementById('slider-current');
+    sliderCurrent.addEventListener('input', (e) => {
+      currentAmps = parseFloat(e.target.value);
+      document.getElementById('label-current').innerText = `${currentAmps.toFixed(1)} A`;
+      updatePhysicsTarget();
+    });
+
+    const sliderDistance = document.getElementById('slider-distance');
+    sliderDistance.addEventListener('input', (e) => {
+      initialDist = parseFloat(e.target.value);
+      document.getElementById('label-distance').innerText = `${initialDist.toFixed(2)} m`;
+      updatePhysicsTarget();
+    });
+
+    // 视角平滑复位
+    let camAnimId = null;
+    function resetView() {
+      if (camAnimId) cancelAnimationFrame(camAnimId);
+      const startPos = camera.position.clone();
+      const startTarget = controls.target.clone();
+      let progress = 0;
+
+      function step() {
+        progress += 0.05;
+        const t = Math.min(1.0, 0.5 - 0.5 * Math.cos(progress * Math.PI));
+        camera.position.lerpVectors(startPos, initialCamPos, t);
+        controls.target.lerpVectors(startTarget, initialCamTarget, t);
+        controls.update();
+
+        if (progress < 1.0) {
+          camAnimId = requestAnimationFrame(step);
+        } else {
+          camera.position.copy(initialCamPos);
+          controls.target.copy(initialCamTarget);
+          controls.update();
+          camAnimId = null;
+        }
+      }
+      step();
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    /* ==========================================================
+       6. 动画主循环与弹性受阻尼动态形变模拟
+       ========================================================== */
+    updatePhysicsTarget();
+    updateWireMeshes(0, 0);
+
+    let lastTime = performance.now();
+    let currentFlowOffset1 = 0;
+    let currentFlowOffset2 = 0;
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const now = performance.now();
+      const dt = Math.min(0.04, (now - lastTime) / 1000);
+      lastTime = now;
+
+      // 导线弹性阻尼振动方程求解：
+      // 左导线中心期望偏转为 +targetDeflection
+      // 右导线中心期望偏转为 -targetDeflection
+      const omega = 7.5;     // 导线弹性张力回复频率
+      const damping = 2.2;   // 空气阻尼
+
+      const forceSpring1 = -Math.pow(omega, 2) * (delta1 - targetDeflection);
+      const forceDamp1 = -2 * damping * vel1;
+      vel1 += (forceSpring1 + forceDamp1) * dt;
+      delta1 += vel1 * dt;
+
+      const forceSpring2 = -Math.pow(omega, 2) * (delta2 - (-targetDeflection));
+      const forceDamp2 = -2 * damping * vel2;
+      vel2 += (forceSpring2 + forceDamp2) * dt;
+      delta2 += vel2 * dt;
+
+      // 实时更新导线三维弯曲 Tube 网格
+      updateWireMeshes(delta1, delta2);
+
+      // 导线中心受力与大电流箭头位置随导线弯曲动态同步
+      const midY = (frameYBottom + frameYTop) / 2;
+      const curX1 = -wireHalfDist + delta1;
+      const curX2 = wireHalfDist + delta2;
+
+      // 1. 电流主箭头与文字
+      centerArrow1.position.set(curX1, midY - 0.22 * i1Direction, 0);
+      centerArrow1.setDirection(new THREE.Vector3(0, i1Direction, 0));
+      labelI1.position.set(curX1 - 0.22, midY, 0.1);
+
+      centerArrow2.position.set(curX2, midY - 0.22 * i2Direction, 0);
+      centerArrow2.setDirection(new THREE.Vector3(0, i2Direction, 0));
+      labelI2.position.set(curX2 + 0.22, midY, 0.1);
+
+      // 2. 安培力矢量箭头
+      const f1Dir = (i1Direction === i2Direction) ? 1 : -1;
+      forceArrow1.position.set(curX1, midY, 0);
+      labelF1.position.set(curX1 + f1Dir * 0.45, midY + 0.15, 0);
+
+      forceArrow2.position.set(curX2, midY, 0);
+      labelF2.position.set(curX2 - f1Dir * 0.45, midY + 0.15, 0);
+
+      // 3. 通电光斑脉冲流动
+      if (isCircuitClosed) {
+        currentFlowOffset1 += dt * 2.8 * i1Direction;
+        currentFlowOffset2 += dt * 2.8 * i2Direction;
+
+        pulseArrows1.forEach((arr, idx) => {
+          let u = ((idx * 0.25 + (currentFlowOffset1 % 1.0) + 1.0) % 1.0);
+          let y = frameYBottom + u * frameHeight;
+          let x = -wireHalfDist + delta1 * Math.sin(u * Math.PI);
+          arr.position.set(x, y - 0.12 * i1Direction, 0);
+          arr.setDirection(new THREE.Vector3(0, i1Direction, 0));
+          arr.visible = true;
+        });
+
+        pulseArrows2.forEach((arr, idx) => {
+          let u = ((idx * 0.25 + (currentFlowOffset2 % 1.0) + 1.0) % 1.0);
+          let y = frameYBottom + u * frameHeight;
+          let x = wireHalfDist + delta2 * Math.sin(u * Math.PI);
+          arr.position.set(x, y - 0.12 * i2Direction, 0);
+          arr.setDirection(new THREE.Vector3(0, i2Direction, 0));
+          arr.visible = true;
+        });
+      } else {
+        pulseArrows1.forEach(a => a.visible = false);
+        pulseArrows2.forEach(a => a.visible = false);
+      }
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>

@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>磁场高斯定理演示：无限长直电流磁场与任意闭合曲面</title>
+  <!-- 引入 Three.js 与 OrbitControls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <style>
+    :root {
+      --bg: #0a0f1d;
+      --card-bg: rgba(15, 23, 42, 0.85);
+      --border: rgba(148, 163, 184, 0.2);
+      --c-wire: #fbbf24;      /* 铜直导线 金黄 */
+      --c-bline: #38bdf8;     /* 闭合同心圆磁感线 天蓝 */
+      --c-surface: #10b981;   /* 不规则闭合曲面 翡翠绿半透 */
+      --c-marker: #f8fafc;    /* 交点标记 亮白/柔光 */
+      --text: #f8fafc;
+      --text-dim: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #webgl-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* 顶部精炼标题栏 */
+    .header-bar {
+      position: absolute;
+      top: 16px;
+      left: 20px;
+      z-index: 10;
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      padding: 12px 20px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+      max-width: 480px;
+    }
+
+    .header-bar h1 {
+      font-size: 17px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header-bar .subtitle {
+      font-size: 12.5px;
+      color: var(--text-dim);
+      margin-top: 5px;
+      line-height: 1.5;
+    }
+
+    /* 右侧极简看板 */
+    .panel {
+      position: absolute;
+      top: 16px;
+      right: 20px;
+      width: 320px;
+      z-index: 10;
+      background: var(--card-bg);
+      backdrop-filter: blur(14px);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 16px;
+      max-height: calc(100vh - 36px);
+      overflow-y: auto;
+    }
+
+    .panel-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* 统计信息卡 */
+    .stat-box {
+      background: rgba(0, 0, 0, 0.45);
+      border-radius: 8px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .stat-val {
+      font-weight: bold;
+      font-family: "Cambria Math", serif;
+      color: #38bdf8;
+    }
+
+    .flux-res {
+      margin-top: 4px;
+      padding: 8px 12px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+    }
+
+    .flux-val {
+      font-weight: 700;
+      color: #34d399;
+      font-family: "Cambria Math", serif;
+    }
+
+    /* 按钮样式 */
+    .btn {
+      width: 100%;
+      padding: 9px 12px;
+      background: rgba(30, 41, 59, 0.85);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 12.5px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      background: rgba(51, 65, 85, 0.95);
+      border-color: rgba(148, 163, 184, 0.5);
+    }
+
+    .btn.primary {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: rgba(16, 185, 129, 0.5);
+      color: #34d399;
+    }
+
+    .btn.primary:hover {
+      background: rgba(16, 185, 129, 0.35);
+    }
+
+    .btn.active {
+      background: rgba(16, 185, 129, 0.28);
+      border-color: rgba(16, 185, 129, 0.65);
+      color: #34d399;
+      font-weight: 600;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+    }
+
+    /* 磁感线分层显示控制样式 */
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .control-label {
+      font-size: 12.5px;
+      font-weight: 500;
+      color: var(--text-dim);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .layer-quick-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 5px;
+    }
+
+    .layer-btn {
+      padding: 6px 3px;
+      font-size: 11.5px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: rgba(30, 41, 59, 0.65);
+      color: var(--text-dim);
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .layer-btn:hover {
+      background: rgba(51, 65, 85, 0.85);
+      color: var(--text);
+    }
+
+    .layer-btn.active {
+      background: #2563eb;
+      color: #ffffff;
+      border-color: #3b82f6;
+      font-weight: 600;
+      box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4);
+    }
+
+    .layer-check-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 6px;
+      background: rgba(0, 0, 0, 0.32);
+      padding: 7px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .layer-check-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      color: #cbd5e1;
+      cursor: pointer;
+    }
+
+    .layer-check-item input[type="checkbox"] {
+      cursor: pointer;
+      accent-color: #38bdf8;
+      width: 14px;
+      height: 14px;
+    }
+
+    /* 左下角提示与图例 */
+    .legend-box {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      z-index: 10;
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 12px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .legend-color {
+      width: 14px;
+      height: 4px;
+      border-radius: 2px;
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    /* 交互提示气泡 */
+    .hint-pill {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      z-index: 10;
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      padding: 8px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- WebGL 渲染容器 -->
+  <div id="webgl-container"></div>
+
+  <!-- 顶部标题栏 -->
+  <div class="header-bar">
+    <h1>
+      <span>⚡ 无限长直电流磁场与高斯定理</span>
+    </h1>
+    <div class="subtitle" id="header-subtitle">
+      麦克斯韦方程组：<b>\(\oint_S \vec{B} \cdot d\vec{A} = 0\)</b>。<br>
+      直导线电流激发的磁感线是一组<b>同心闭合圆环</b>。无论闭合曲面是否包围电流，任何截断的磁感线必有一进一出，全包围磁感线不产生穿透，<b>净磁通量恒为零</b>！
+    </div>
+  </div>
+
+  <!-- 左下角图例 -->
+  <div class="legend-box">
+    <div class="legend-item">
+      <div class="legend-color" style="background: var(--c-wire); height: 6px;"></div>
+      <span>无限长直载流导线（电流 \(I \uparrow\) 向上）</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background: var(--c-bline);"></div>
+      <span>同心闭合圆环磁感应线（右手螺旋定则）</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background: var(--c-surface); opacity: 0.85;"></div>
+      <span id="legend-surface-desc">任意闭合曲面 \(S\)（导线外，不包围电流）</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background: var(--c-marker); box-shadow: 0 0 8px #ffffff;"></div>
+      <span>曲面截断交点（穿入与穿出条数严格相等）</span>
+    </div>
+  </div>
+
+  <!-- 右下角手动操作提示 -->
+  <div class="hint-pill">
+    <span>🖱️ 鼠标按住左键拖拽可 360° 自由旋转视角</span>
+  </div>
+
+  <!-- 右侧极简看板 -->
+  <div class="panel">
+    <div class="panel-title">
+      <span>磁通量实时监测</span>
+      <span style="font-size: 11px; color: #38bdf8;">高斯定理</span>
+    </div>
+
+    <!-- 闭合曲面类型切换按钮组 -->
+    <div class="control-group">
+      <div class="control-label">
+        <span>闭合曲面类型切换：</span>
+        <span id="surface-type-badge" style="color: #38bdf8; font-size: 11px; font-weight: 600;">导线外闭合曲面</span>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+        <button class="btn active" id="btn-mode-outside" onclick="switchSurfaceMode('outside')">
+          <span>⚪ 导线外曲面</span>
+        </button>
+        <button class="btn" id="btn-mode-enclosing" onclick="switchSurfaceMode('enclosing')">
+          <span>🟢 包围电流曲面</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 计数数据卡 -->
+    <div class="stat-box">
+      <div class="stat-row" id="row-wire-status" style="display: none; padding-bottom: 5px; border-bottom: 1px dashed rgba(16,185,129,0.3);">
+        <span>导线电流状态：</span>
+        <span style="font-weight: 600; color: #34d399;">已包围电流 \(I_{内} \ne 0\)</span>
+      </div>
+      <div class="stat-row" id="row-inside-lines" style="display: none;">
+        <span>全包围磁感线 (穿透=0)：</span>
+        <span class="stat-val" id="stat-inside-lines" style="color: #a7f3d0;">0 根</span>
+      </div>
+      <div class="stat-row">
+        <span>截断闭合磁感线：</span>
+        <span class="stat-val" id="stat-lines">0 根</span>
+      </div>
+      <div class="stat-row">
+        <span>穿入曲面点数 \(N_{进}\)：</span>
+        <span class="stat-val" id="stat-in">0 个</span>
+      </div>
+      <div class="stat-row">
+        <span>穿出曲面点数 \(N_{出}\)：</span>
+        <span class="stat-val" id="stat-out">0 个</span>
+      </div>
+      <div class="stat-row" style="color: #94a3b8; font-size: 12px; border-top: 1px dashed rgba(148,163,184,0.2); padding-top: 6px;">
+        <span>穿入与穿出对比：</span>
+        <span style="color: #f1f5f9; font-weight: 600;" id="stat-match">严格相等</span>
+      </div>
+    </div>
+
+    <!-- 净磁通结果 -->
+    <div class="flux-res">
+      <span>穿过闭合曲面的净磁通：</span>
+      <span class="flux-val">Φ ≡ 0.00 Wb</span>
+    </div>
+
+    <!-- 教学理论解析卡 -->
+    <div class="theory-box" style="background: rgba(0,0,0,0.42); border-radius: 8px; padding: 10px 12px; font-size: 12px; line-height: 1.55; border-left: 3px solid #10b981;">
+      <b style="color: #34d399;">💡 物理本质解析：</b><br>
+      <span id="theory-desc">
+        <b>导线外曲面</b>：闭合磁感线穿入即穿出，进出点数严格相等（\(N_{进} = N_{出}\)），净磁通量恒为零。
+      </span>
+    </div>
+
+    <!-- 磁感线分层显示与选择控制 -->
+    <div class="control-group">
+      <div class="control-label">
+        <span>磁感线分层显示控制：</span>
+      </div>
+      <!-- 快捷单层查看或全显 -->
+      <div class="layer-quick-grid">
+        <button class="layer-btn active" id="btn-layer-all" onclick="setLayerPreset('ALL')">全部三层</button>
+        <button class="layer-btn" id="btn-layer-top" onclick="setLayerPreset('TOP')">仅上层</button>
+        <button class="layer-btn" id="btn-layer-mid" onclick="setLayerPreset('MID')">仅中层</button>
+        <button class="layer-btn" id="btn-layer-bot" onclick="setLayerPreset('BOT')">仅下层</button>
+      </div>
+      <!-- 各层自由可见性复选切换 (visible / invisible) -->
+      <div class="layer-check-row">
+        <label class="layer-check-item">
+          <input type="checkbox" id="chk-top" checked onchange="toggleLayer('top', this.checked)">
+          <span>上层 (+0.5)</span>
+        </label>
+        <label class="layer-check-item">
+          <input type="checkbox" id="chk-mid" checked onchange="toggleLayer('middle', this.checked)">
+          <span>中层 (0.0)</span>
+        </label>
+        <label class="layer-check-item">
+          <input type="checkbox" id="chk-bot" checked onchange="toggleLayer('bottom', this.checked)">
+          <span>下层 (-0.5)</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- 交互操作按钮 -->
+    <button class="btn primary" onclick="randomizeShape()">
+      <span>🎲 随机改变不规则曲面形状</span>
+    </button>
+
+    <button class="btn" onclick="shiftSurfacePosition()">
+      <span>↔️ 平移曲面位置</span>
+    </button>
+
+    <button class="btn" onclick="resetView()">
+      <span>↺ 重置最佳观察视角</span>
+    </button>
+  </div>
+
+  <script>
+    /* ==========================================================
+       1. 场景与相机初始化（支持流畅 360° 手动旋转）
+       ========================================================== */
+    const container = document.getElementById('webgl-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0a0f1d);
+
+    const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const initialCamPos = new THREE.Vector3(2.8, 2.4, 4.2);
+    const initialCamTarget = new THREE.Vector3(0.6, 0, 0);
+
+    camera.position.copy(initialCamPos);
+    camera.lookAt(initialCamTarget);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.target.copy(initialCamTarget);
+    controls.update();
+
+    // 柔和光照
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+    scene.add(ambientLight);
+
+    const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.9);
+    dirLight1.position.set(6, 10, 7);
+    scene.add(dirLight1);
+
+    const dirLight2 = new THREE.DirectionalLight(0x38bdf8, 0.4);
+    dirLight2.position.set(-6, -2, -4);
+    scene.add(dirLight2);
+
+    // 实验室地面参考网格
+    const grid = new THREE.GridHelper(14, 14, 0x1e293b, 0x0f172a);
+    grid.position.y = -2.5;
+    scene.add(grid);
+
+    /* ==========================================================
+       2. 文本 Sprite 标签生成辅助函数
+       ========================================================== */
+    function makeTextSprite(text, color = '#ffffff', fontSize = 28, bg = 'rgba(15, 23, 42, 0.90)') {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+      const textMetrics = ctx.measureText(text);
+      const textWidth = textMetrics.width;
+
+      const padX = 32;
+      canvas.width = Math.max(256, Math.ceil(textWidth + padX * 2));
+      canvas.height = 72;
+
+      ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+      ctx.fillStyle = bg;
+      if (ctx.roundRect) {
+        ctx.beginPath();
+        ctx.roundRect(4, 4, canvas.width - 8, canvas.height - 8, 12);
+        ctx.fill();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+      } else {
+        ctx.fillRect(4, 4, canvas.width - 8, canvas.height - 8);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 3;
+        ctx.strokeRect(4, 4, canvas.width - 8, canvas.height - 8);
+      }
+
+      ctx.fillStyle = color;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      const spriteMaterial = new THREE.SpriteMaterial({ map: texture, depthTest: false });
+      const sprite = new THREE.Sprite(spriteMaterial);
+      const aspect = canvas.width / canvas.height;
+      const heightInScene = 0.24;
+      sprite.scale.set(heightInScene * aspect, heightInScene, 1);
+      return sprite;
+    }
+
+    /* ==========================================================
+       3. 无限长直载流导线三维建模
+       ========================================================== */
+    const wireGroup = new THREE.Group();
+    scene.add(wireGroup);
+
+    // 直导线沿竖直 Y 轴延伸 (模拟无限长直导线)
+    const wireLength = 6.0;
+    const wireRadius = 0.055;
+    const wireGeo = new THREE.CylinderGeometry(wireRadius, wireRadius, wireLength, 24);
+    const wireMat = new THREE.MeshStandardMaterial({
+      color: 0xfbbf24,
+      roughness: 0.25,
+      metalness: 0.85,
+      emissive: 0x92400e,
+      emissiveIntensity: 0.25
+    });
+    const wireMesh = new THREE.Mesh(wireGeo, wireMat);
+    wireGroup.add(wireMesh);
+
+    // 电流方向指示大箭头 (沿 +Y 向上)
+    const arrowI = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 1.3, 0), 0.7, 0xef4444, 0.22, 0.14);
+    wireGroup.add(arrowI);
+
+    const labelI = makeTextSprite('电流 I ⇧', '#ef4444', 30);
+    labelI.position.set(0.48, 1.68, 0);
+    wireGroup.add(labelI);
+
+    /* ==========================================================
+       4. 无限长直电流的同心圆闭合磁感线
+       ========================================================== */
+    // 磁场为同心圆环：B = (μ0 * I) / (2π * r)，沿切向封闭
+    const fieldLinesGroup = new THREE.Group();
+    scene.add(fieldLinesGroup);
+
+    // 三个独立高度图层 Group
+    const layerGroups = {
+      top: new THREE.Group(),
+      middle: new THREE.Group(),
+      bottom: new THREE.Group()
+    };
+    fieldLinesGroup.add(layerGroups.top, layerGroups.middle, layerGroups.bottom);
+
+    // 各图层当前可见性状态
+    const layerVisibility = {
+      top: true,
+      middle: true,
+      bottom: true
+    };
+
+    // 在不同高度与半径上分布一组平滑同心圆环 (包含包围电流内部小环与外部大环)
+    const CIRCLE_CONFIGS = [
+      // y = -0.5 下层
+      { r: 0.55, y: -0.5, layer: 'bottom' },
+      { r: 0.9, y: -0.5, layer: 'bottom' },
+      { r: 1.4, y: -0.5, layer: 'bottom' },
+      { r: 1.9, y: -0.5, layer: 'bottom' },
+      // y = 0.0 中央主层
+      { r: 0.48, y: 0.0, layer: 'middle' },
+      { r: 0.8, y: 0.0, layer: 'middle' },
+      { r: 1.2, y: 0.0, layer: 'middle' },
+      { r: 1.6, y: 0.0, layer: 'middle' },
+      { r: 2.1, y: 0.0, layer: 'middle' },
+      { r: 2.6, y: 0.0, layer: 'middle' },
+      // y = +0.5 上层
+      { r: 0.55, y: 0.5, layer: 'top' },
+      { r: 1.0, y: 0.5, layer: 'top' },
+      { r: 1.5, y: 0.5, layer: 'top' },
+      { r: 2.0, y: 0.5, layer: 'top' }
+    ];
+
+    let fieldCircles = [];
+
+    function buildConcentricFieldLines() {
+      // 清空原有图层子元素
+      while (layerGroups.top.children.length > 0) layerGroups.top.remove(layerGroups.top.children[0]);
+      while (layerGroups.middle.children.length > 0) layerGroups.middle.remove(layerGroups.middle.children[0]);
+      while (layerGroups.bottom.children.length > 0) layerGroups.bottom.remove(layerGroups.bottom.children[0]);
+      fieldCircles = [];
+
+      CIRCLE_CONFIGS.forEach((cfg, idx) => {
+        const pts = [];
+        const numSteps = 120;
+        for (let i = 0; i <= numSteps; i++) {
+          const theta = (i / numSteps) * 2 * Math.PI;
+          // 按右手螺旋定则：电流向上(+Y)，俯视逆时针旋转
+          // x = r * cos(theta), z = -r * sin(theta)
+          pts.push(new THREE.Vector3(cfg.r * Math.cos(theta), cfg.y, -cfg.r * Math.sin(theta)));
+        }
+
+        const curve = new THREE.CatmullRomCurve3(pts, true);
+        const tubeGeo = new THREE.TubeGeometry(curve, 90, 0.012, 8, true);
+        const tubeMat = new THREE.MeshStandardMaterial({
+          color: 0x38bdf8,
+          roughness: 0.3,
+          metalness: 0.4,
+          emissive: 0x0284c7,
+          emissiveIntensity: 0.3,
+          transparent: true,
+          opacity: 0.75
+        });
+        const tubeMesh = new THREE.Mesh(tubeGeo, tubeMat);
+        layerGroups[cfg.layer].add(tubeMesh);
+
+        // 沿圆环添加 2 个切向流动小箭头
+        [0.2, 0.7].forEach(u => {
+          const pt = curve.getPointAt(u);
+          const tangent = curve.getTangentAt(u).normalize();
+          const arr = new THREE.ArrowHelper(tangent, pt, 0.18, 0x38bdf8, 0.09, 0.06);
+          layerGroups[cfg.layer].add(arr);
+        });
+
+        fieldCircles.push({
+          id: idx + 1,
+          layer: cfg.layer,
+          r: cfg.r,
+          y: cfg.y,
+          curve: curve,
+          points: curve.getPoints(140)
+        });
+      });
+    }
+
+    /* ==========================================================
+       4.1 磁感线分层可见性切换与控制逻辑
+       ========================================================== */
+    function updateLayerVisibility() {
+      layerGroups.top.visible = layerVisibility.top;
+      layerGroups.middle.visible = layerVisibility.middle;
+      layerGroups.bottom.visible = layerVisibility.bottom;
+
+      // 同步勾选复选框
+      const chkTop = document.getElementById('chk-top');
+      const chkMid = document.getElementById('chk-mid');
+      const chkBot = document.getElementById('chk-bot');
+      if (chkTop) chkTop.checked = layerVisibility.top;
+      if (chkMid) chkMid.checked = layerVisibility.middle;
+      if (chkBot) chkBot.checked = layerVisibility.bottom;
+
+      // 同步快捷预设按钮激活态
+      const allActive = layerVisibility.top && layerVisibility.middle && layerVisibility.bottom;
+      const topOnly = layerVisibility.top && !layerVisibility.middle && !layerVisibility.bottom;
+      const midOnly = !layerVisibility.top && layerVisibility.middle && !layerVisibility.bottom;
+      const botOnly = !layerVisibility.top && !layerVisibility.middle && layerVisibility.bottom;
+
+      const btnAll = document.getElementById('btn-layer-all');
+      const btnTop = document.getElementById('btn-layer-top');
+      const btnMid = document.getElementById('btn-layer-mid');
+      const btnBot = document.getElementById('btn-layer-bot');
+      if (btnAll) btnAll.classList.toggle('active', allActive);
+      if (btnTop) btnTop.classList.toggle('active', topOnly);
+      if (btnMid) btnMid.classList.toggle('active', midOnly);
+      if (btnBot) btnBot.classList.toggle('active', botOnly);
+
+      computeIntersections();
+    }
+
+    function setLayerPreset(preset) {
+      if (preset === 'ALL') {
+        layerVisibility.top = true;
+        layerVisibility.middle = true;
+        layerVisibility.bottom = true;
+      } else if (preset === 'TOP') {
+        layerVisibility.top = true;
+        layerVisibility.middle = false;
+        layerVisibility.bottom = false;
+      } else if (preset === 'MID') {
+        layerVisibility.top = false;
+        layerVisibility.middle = true;
+        layerVisibility.bottom = false;
+      } else if (preset === 'BOT') {
+        layerVisibility.top = false;
+        layerVisibility.middle = false;
+        layerVisibility.bottom = true;
+      }
+      updateLayerVisibility();
+    }
+
+    function toggleLayer(layerKey, isChecked) {
+      layerVisibility[layerKey] = isChecked;
+      updateLayerVisibility();
+    }
+
+    /* ==========================================================
+       5. 任意不规则闭合曲面 3D 建模 (支持导线外 / 包围电流两种模式)
+       ========================================================== */
+    const surfaceGroup = new THREE.Group();
+    scene.add(surfaceGroup);
+
+    let surfaceMode = 'outside'; // 'outside' (导线外) 或 'enclosing' (包围部分电流)
+    let surfaceRadius = 0.85;
+    let surfaceCenter = new THREE.Vector3(1.4, 0.0, 0.0);
+    let surfaceLabelSprite = null;
+
+    // 两模式对应的平移位置预设
+    const POSITION_PRESETS_OUTSIDE = [
+      new THREE.Vector3(1.4, 0.0, 0.0),  // 截断中央密集圆环
+      new THREE.Vector3(1.8, 0.3, 0.0),  // 外移一层
+      new THREE.Vector3(1.2, -0.3, 0.3), // 偏下并有深度
+      new THREE.Vector3(0.95, 0.0, 0.0)  // 紧贴导线外侧
+    ];
+
+    const POSITION_PRESETS_ENCLOSING = [
+      new THREE.Vector3(0.22, 0.0, 0.0),  // 微偏心包围 (内环全包、中环穿透、外环全外)
+      new THREE.Vector3(0.0, 0.0, 0.0),   // 正心对称包围 (中心对齐)
+      new THREE.Vector3(0.15, 0.25, 0.1), // 斜向三维立体偏心
+      new THREE.Vector3(-0.2, -0.15, 0.0) // 反向偏心包围
+    ];
+
+    let presetIndexOutside = 0;
+    let presetIndexEnclosing = 0;
+
+    // 不规则畸变系数
+    let deformCoeffs = {
+      c1: 0.25,
+      c2: 0.20,
+      c3: -0.18,
+      c4: 0.14
+    };
+
+    function getRadialDistance(dir) {
+      const theta = Math.acos(Math.max(-1, Math.min(1, dir.y)));
+      const phi = Math.atan2(dir.z, dir.x);
+
+      const d = 1.0 
+        + deformCoeffs.c1 * Math.sin(2 * theta) * Math.cos(phi)
+        + deformCoeffs.c2 * Math.cos(3 * phi) * Math.sin(theta)
+        + deformCoeffs.c3 * Math.cos(2 * theta)
+        + deformCoeffs.c4 * Math.sin(theta) * Math.sin(2 * phi);
+
+      return surfaceRadius * Math.max(0.4, d);
+    }
+
+    function isInsideSurface(p) {
+      const v = new THREE.Vector3().subVectors(p, surfaceCenter);
+      const dist = v.length();
+      if (dist < 1e-6) return true;
+      const dir = v.clone().normalize();
+      return dist < getRadialDistance(dir);
+    }
+
+    let surfaceMesh, surfaceWire;
+    const surfaceMat = new THREE.MeshPhysicalMaterial({
+      color: 0x10b981,        // 翡翠绿半透
+      transparent: true,
+      opacity: 0.32,
+      roughness: 0.15,
+      metalness: 0.1,
+      transmission: 0.45,
+      ior: 1.15,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    });
+
+    function buildSurfaceMesh() {
+      if (surfaceMesh) surfaceGroup.remove(surfaceMesh);
+      if (surfaceWire) surfaceGroup.remove(surfaceWire);
+      if (surfaceLabelSprite) surfaceGroup.remove(surfaceLabelSprite);
+
+      const baseSphere = new THREE.SphereGeometry(1.0, 64, 48);
+      const posAttr = baseSphere.attributes.position;
+
+      for (let i = 0; i < posAttr.count; i++) {
+        const vx = posAttr.getX(i);
+        const vy = posAttr.getY(i);
+        const vz = posAttr.getZ(i);
+        const dir = new THREE.Vector3(vx, vy, vz).normalize();
+        const r = getRadialDistance(dir);
+        posAttr.setXYZ(i, dir.x * r, dir.y * r, dir.z * r);
+      }
+
+      baseSphere.computeVertexNormals();
+
+      surfaceMesh = new THREE.Mesh(baseSphere, surfaceMat);
+      surfaceGroup.add(surfaceMesh);
+
+      const wireGeo = new THREE.WireframeGeometry(baseSphere);
+      const wireMat = new THREE.LineBasicMaterial({ color: 0x34d399, transparent: true, opacity: 0.18 });
+      surfaceWire = new THREE.LineSegments(wireGeo, wireMat);
+      surfaceGroup.add(surfaceWire);
+
+      // 曲面顶部 3D 浮动状态标识
+      const isEnclosing = (surfaceMode === 'enclosing');
+      const labelText = isEnclosing ? '闭合曲面 S (已包围部分电流)' : '闭合曲面 S (导线外·未包围电流)';
+      const labelColor = isEnclosing ? '#34d399' : '#38bdf8';
+      surfaceLabelSprite = makeTextSprite(labelText, labelColor, 26, 'rgba(15, 23, 42, 0.90)');
+      surfaceLabelSprite.position.set(0, surfaceRadius + 0.32, 0);
+      surfaceGroup.add(surfaceLabelSprite);
+
+      surfaceGroup.position.copy(surfaceCenter);
+    }
+
+    // 切换曲面模式：导线外 / 包围电流
+    function switchSurfaceMode(mode) {
+      if (surfaceMode === mode) return;
+      surfaceMode = mode;
+
+      const isEnclosing = (mode === 'enclosing');
+      document.getElementById('btn-mode-outside').classList.toggle('active', !isEnclosing);
+      document.getElementById('btn-mode-enclosing').classList.toggle('active', isEnclosing);
+
+      const badge = document.getElementById('surface-type-badge');
+      if (badge) {
+        badge.innerText = isEnclosing ? '包围电流闭合曲面' : '导线外闭合曲面';
+        badge.style.color = isEnclosing ? '#34d399' : '#38bdf8';
+      }
+
+      const rowWire = document.getElementById('row-wire-status');
+      if (rowWire) rowWire.style.display = isEnclosing ? 'flex' : 'none';
+
+      const legendDesc = document.getElementById('legend-surface-desc');
+      if (legendDesc) {
+        legendDesc.innerText = isEnclosing 
+          ? '任意闭合曲面 S（包围一部分电流，导线贯穿内部）' 
+          : '任意闭合曲面 S（导线外，不包围电流）';
+      }
+
+      const theoryDesc = document.getElementById('theory-desc');
+      if (theoryDesc) {
+        theoryDesc.innerHTML = isEnclosing
+          ? '<b>包围电流曲面</b>：尽管包含传导电流（\\(I_{内} \\ne 0\\)），但全包围的磁感线不产生穿透，截断的磁感线必有一进一出，因此<b>净磁通量依然恒为零 \\(\\Phi \\equiv 0\\)</b>！（磁场无单极子，与电场高斯定理有本质区别）'
+          : '<b>导线外曲面</b>：闭合磁感线穿入即穿出，进出点数严格相等（\\(N_{进} = N_{出}\\)），净磁通量恒为零 \\(\\Phi \\equiv 0\\)。';
+      }
+
+      if (isEnclosing) {
+        surfaceRadius = 1.18;
+        presetIndexEnclosing = 0;
+        surfaceCenter.copy(POSITION_PRESETS_ENCLOSING[0]);
+      } else {
+        surfaceRadius = 0.85;
+        presetIndexOutside = 0;
+        surfaceCenter.copy(POSITION_PRESETS_OUTSIDE[0]);
+      }
+
+      buildSurfaceMesh();
+      computeIntersections();
+      resetView();
+    }
+
+    /* ==========================================================
+       6. 截断交点统一标记（不分颜色，纯净白光圆球 + 光晕环）
+       ========================================================== */
+    const markersGroup = new THREE.Group();
+    scene.add(markersGroup);
+
+    function createIntersectionPoint(pos, tangentDir) {
+      const g = new THREE.Group();
+      g.position.copy(pos);
+
+      // 1. 统一纯白/微光立体交点球
+      const sphereGeo = new THREE.SphereGeometry(0.045, 16, 16);
+      const sphereMat = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        emissive: 0x38bdf8,
+        emissiveIntensity: 0.8
+      });
+      const sphereMesh = new THREE.Mesh(sphereGeo, sphereMat);
+      g.add(sphereMesh);
+
+      // 2. 磁感线切向发光小圆环
+      const ringGeo = new THREE.RingGeometry(0.065, 0.095, 24);
+      const ringMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+      const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+      ringMesh.lookAt(pos.clone().add(tangentDir));
+      g.add(ringMesh);
+
+      return g;
+    }
+
+    function computeIntersections() {
+      while (markersGroup.children.length > 0) markersGroup.remove(markersGroup.children[0]);
+
+      let inCount = 0;
+      let outCount = 0;
+      let interceptedLines = 0;
+      let fullyInsideLines = 0;
+
+      fieldCircles.forEach(circle => {
+        // 若该层处于隐藏状态，跳过计算与交点显示
+        if (!layerVisibility[circle.layer]) return;
+
+        const pts = circle.points;
+        const n = pts.length;
+        let lineCrossings = 0;
+
+        let allInside = true;
+        let allOutside = true;
+
+        for (let i = 0; i < n; i++) {
+          const inside = isInsideSurface(pts[i]);
+          if (!inside) allInside = false;
+          if (inside) allOutside = false;
+        }
+
+        if (allInside) {
+          fullyInsideLines++;
+          return;
+        }
+        if (allOutside) {
+          return;
+        }
+
+        // 截断该闭合磁感线，计算进出交点
+        for (let i = 0; i < n; i++) {
+          const pA = pts[i];
+          const pB = pts[(i + 1) % n];
+
+          const inA = isInsideSurface(pA);
+          const inB = isInsideSurface(pB);
+
+          // 穿入 (外面 -> 里面)
+          if (!inA && inB) {
+            inCount++;
+            lineCrossings++;
+            const pInt = binarySearchCrossing(pA, pB, false);
+            const tangent = new THREE.Vector3().subVectors(pB, pA).normalize();
+            markersGroup.add(createIntersectionPoint(pInt, tangent));
+          }
+          // 穿出 (里面 -> 外面)
+          else if (inA && !inB) {
+            outCount++;
+            lineCrossings++;
+            const pInt = binarySearchCrossing(pA, pB, true);
+            const tangent = new THREE.Vector3().subVectors(pB, pA).normalize();
+            markersGroup.add(createIntersectionPoint(pInt, tangent));
+          }
+        }
+
+        if (lineCrossings > 0) {
+          interceptedLines++;
+        }
+      });
+
+      // 更新看板数据
+      document.getElementById('stat-lines').innerText = `${interceptedLines} 根`;
+      document.getElementById('stat-in').innerText = `${inCount} 个`;
+      document.getElementById('stat-out').innerText = `${outCount} 个`;
+      document.getElementById('stat-inside-lines').innerText = `${fullyInsideLines} 根`;
+
+      const rowInside = document.getElementById('row-inside-lines');
+      if (rowInside) {
+        rowInside.style.display = (surfaceMode === 'enclosing' || fullyInsideLines > 0) ? 'flex' : 'none';
+      }
+
+      const matchElem = document.getElementById('stat-match');
+      if (matchElem) {
+        if (interceptedLines === 0 && fullyInsideLines > 0) {
+          matchElem.innerText = '全在内部 (净通量为0)';
+          matchElem.style.color = '#34d399';
+        } else {
+          matchElem.innerText = (inCount === outCount) ? `严格相等 (${inCount} = ${outCount})` : '计算中';
+          matchElem.style.color = (inCount === outCount) ? '#34d399' : '#f59e0b';
+        }
+      }
+    }
+
+    function binarySearchCrossing(pOutside, pInside, startsInside) {
+      let low = 0;
+      let high = 1;
+      let mid = 0.5;
+      for (let iter = 0; iter < 12; iter++) {
+        mid = (low + high) * 0.5;
+        const testP = new THREE.Vector3().lerpVectors(pOutside, pInside, mid);
+        const inside = isInsideSurface(testP);
+        if (startsInside) {
+          if (inside) low = mid; else high = mid;
+        } else {
+          if (!inside) low = mid; else high = mid;
+        }
+      }
+      return new THREE.Vector3().lerpVectors(pOutside, pInside, mid);
+    }
+
+    /* ==========================================================
+       7. 交互功能（随机变形、平移、重置视角）
+       ========================================================== */
+    function randomizeShape() {
+      deformCoeffs.c1 = (Math.random() - 0.5) * 0.55;
+      deformCoeffs.c2 = (Math.random() - 0.5) * 0.45;
+      deformCoeffs.c3 = (Math.random() - 0.5) * 0.40;
+      deformCoeffs.c4 = (Math.random() - 0.5) * 0.35;
+
+      buildSurfaceMesh();
+      computeIntersections();
+    }
+
+    function shiftSurfacePosition() {
+      if (surfaceMode === 'outside') {
+        presetIndexOutside = (presetIndexOutside + 1) % POSITION_PRESETS_OUTSIDE.length;
+        surfaceCenter.copy(POSITION_PRESETS_OUTSIDE[presetIndexOutside]);
+      } else {
+        presetIndexEnclosing = (presetIndexEnclosing + 1) % POSITION_PRESETS_ENCLOSING.length;
+        surfaceCenter.copy(POSITION_PRESETS_ENCLOSING[presetIndexEnclosing]);
+      }
+      surfaceGroup.position.copy(surfaceCenter);
+      computeIntersections();
+    }
+
+    let camAnimId = null;
+    function resetView() {
+      if (camAnimId) cancelAnimationFrame(camAnimId);
+      const startPos = camera.position.clone();
+      const startTarget = controls.target.clone();
+      const targetCamPos = (surfaceMode === 'enclosing') ? new THREE.Vector3(2.5, 2.2, 4.0) : initialCamPos;
+      const targetCamTarget = (surfaceMode === 'enclosing') ? new THREE.Vector3(0.15, 0, 0) : initialCamTarget;
+      let progress = 0;
+
+      function step() {
+        progress += 0.05;
+        const t = Math.min(1.0, 0.5 - 0.5 * Math.cos(progress * Math.PI));
+        camera.position.lerpVectors(startPos, targetCamPos, t);
+        controls.target.lerpVectors(startTarget, targetCamTarget, t);
+        controls.update();
+
+        if (progress < 1.0) {
+          camAnimId = requestAnimationFrame(step);
+        } else {
+          camera.position.copy(targetCamPos);
+          controls.target.copy(targetCamTarget);
+          controls.update();
+          camAnimId = null;
+        }
+      }
+      step();
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    /* ==========================================================
+       8. 初始化与主循环
+       ========================================================== */
+    buildConcentricFieldLines();
+    buildSurfaceMesh();
+    updateLayerVisibility();
+    computeIntersections();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>

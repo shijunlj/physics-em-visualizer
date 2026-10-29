@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>奥斯特实验 (Oersted Experiment) 三维物理仿真</title>
+  <!-- 引入 Three.js 与 OrbitControls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(15, 23, 42, 0.88);
+      --border: rgba(148, 163, 184, 0.2);
+      --c-north: #ef4444;    /* 磁针N极 红色 */
+      --c-south: #3b82f6;    /* 磁针S极 蓝色 */
+      --c-wire: #fbbf24;     /* 铜导线 金黄 */
+      --c-curr: #38bdf8;     /* 电流 亮蓝 */
+      --c-field: #10b981;    /* 磁感线 翠绿 */
+      --text: #f8fafc;
+      --text-dim: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #webgl-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* 顶部标题栏 */
+    .header-bar {
+      position: absolute;
+      top: 16px;
+      left: 20px;
+      z-index: 10;
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      padding: 12px 20px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+      max-width: 440px;
+    }
+
+    .header-bar h1 {
+      font-size: 18px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header-bar .subtitle {
+      font-size: 12.5px;
+      color: var(--text-dim);
+      margin-top: 5px;
+      line-height: 1.5;
+    }
+
+    /* 右侧控制面板 */
+    .panel {
+      position: absolute;
+      top: 16px;
+      right: 20px;
+      width: 330px;
+      z-index: 10;
+      background: var(--card-bg);
+      backdrop-filter: blur(14px);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      font-size: 15px;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .panel-body {
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* 开关闸刀大按钮 */
+    .switch-btn {
+      width: 100%;
+      padding: 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.25s ease;
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border-color: rgba(239, 68, 68, 0.4);
+    }
+
+    .switch-btn.on {
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      border-color: rgba(16, 185, 129, 0.5);
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.25);
+    }
+
+    .status-badge {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    /* 物理量读数卡片 */
+    .info-card {
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 8px;
+      padding: 12px;
+      border-left: 3px solid var(--c-curr);
+      font-size: 13px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .info-val {
+      font-weight: bold;
+      color: #f1f5f9;
+    }
+
+    /* 选项组与滑块 */
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .control-label {
+      font-size: 13px;
+      color: var(--text-dim);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .seg-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 3px;
+      border-radius: 8px;
+    }
+
+    .seg-btn {
+      padding: 7px 10px;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      color: var(--text-dim);
+      font-size: 12.5px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .seg-btn.active {
+      background: #2563eb;
+      color: #ffffff;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4);
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--c-curr);
+      cursor: pointer;
+    }
+
+    /* 功能按钮行 */
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .btn {
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: rgba(51, 65, 85, 0.7);
+      color: #fff;
+      font-size: 12.5px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      background: rgba(71, 85, 105, 0.9);
+    }
+
+    .btn.active {
+      background: rgba(16, 185, 129, 0.3);
+      border-color: #10b981;
+      color: #34d399;
+    }
+
+    /* 左下角图例 */
+    .legend-box {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      z-index: 10;
+      background: var(--card-bg);
+      backdrop-filter: blur(10px);
+      padding: 12px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 12.5px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .legend-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- WebGL 渲染容器 -->
+  <div id="webgl-container"></div>
+
+  <!-- 顶部标题 -->
+  <div class="header-bar">
+    <h1>
+      <span>🧭</span>
+      <span>奥斯特实验三维演示</span>
+    </h1>
+    <div class="subtitle">
+      1820年丹麦物理学家奥斯特发现电流磁效应，直观展示导线通电对小磁针的磁偏转。
+    </div>
+  </div>
+
+  <!-- 左下角图例与方位 -->
+  <div class="legend-box">
+    <div class="legend-item">
+      <div class="legend-color" style="background: var(--c-north);"></div>
+      <span>小磁针 <b>N 极（红色）</b></span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background: var(--c-south);"></div>
+      <span>小磁针 <b>S 极（蓝色）</b></span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background: var(--c-wire);"></div>
+      <span>直导线（南北水平放置）</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background: var(--c-curr);"></div>
+      <span>电流方向 <i>I</i></span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background: var(--c-field);"></div>
+      <span>环形磁感线（安培定则）</span>
+    </div>
+  </div>
+
+  <!-- 右侧交互与物理控制面板 -->
+  <div class="panel">
+    <div class="panel-header">
+      <span>实验控制台</span>
+      <span style="font-size: 12px; color: var(--c-curr);">大学物理</span>
+    </div>
+    <div class="panel-body">
+
+      <!-- 开关控制按钮 -->
+      <button class="switch-btn" id="btn-circuit" onclick="toggleCircuit()">
+        <span class="status-badge"></span>
+        <span id="txt-circuit-status">断开电路 (OFF)</span>
+      </button>
+
+      <!-- 磁针偏转状态实时读数 -->
+      <div class="info-card">
+        <div class="info-row">
+          <span>磁针偏转角 <i>&theta;</i></span>
+          <span class="info-val" id="val-deflection" style="color: #fbbf24;">0.00&deg;</span>
+        </div>
+        <div class="info-row">
+          <span>N极偏转指向</span>
+          <span class="info-val" id="val-direction" style="color: var(--c-north);">正北 (N)</span>
+        </div>
+        <div class="info-row">
+          <span>导线电流 <i>I</i></span>
+          <span class="info-val" id="val-current">0.00 A</span>
+        </div>
+      </div>
+
+      <!-- 电流方向设置 -->
+      <div class="control-group">
+        <div class="control-label">
+          <span>电流流向</span>
+        </div>
+        <div class="seg-group">
+          <button class="seg-btn active" id="btn-dir-sn" onclick="setCurrentDirection('SN')">
+            南 &rarr; 北 (S &rarr; N)
+          </button>
+          <button class="seg-btn" id="btn-dir-ns" onclick="setCurrentDirection('NS')">
+            北 &rarr; 南 (N &rarr; S)
+          </button>
+        </div>
+      </div>
+
+      <!-- 磁针放置位置（导线上方 / 导线下方） -->
+      <div class="control-group">
+        <div class="control-label">
+          <span>磁针相对导线位置</span>
+        </div>
+        <div class="seg-group">
+          <button class="seg-btn active" id="btn-pos-below" onclick="setNeedlePosition('below')">
+            导线下方 (经典)
+          </button>
+          <button class="seg-btn" id="btn-pos-above" onclick="setNeedlePosition('above')">
+            导线上方
+          </button>
+        </div>
+      </div>
+
+      <!-- 电流大小调节 -->
+      <div class="control-group">
+        <div class="control-label">
+          <span>设定电流大小 <i>I</i></span>
+          <span id="label-current-set" style="color: var(--c-curr);">3.00 A</span>
+        </div>
+        <input type="range" id="slider-current" min="0.5" max="6.0" step="0.1" value="3.0">
+      </div>
+
+      <!-- 辅助显示与视角复位 -->
+      <div class="btn-row">
+        <button class="btn" id="btn-toggle-field" onclick="toggleFieldLines()">
+          <span>🌀 磁感线</span>
+        </button>
+        <button class="btn" onclick="resetView()">
+          <span>↺ 重置视角</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    /* ==========================================================
+       1. 场景与三维相机初始化（近距离聚焦观察）
+       ========================================================== */
+    const container = document.getElementById('webgl-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0a0f1d);
+    scene.fog = new THREE.FogExp2(0x0a0f1d, 0.025);
+
+    // 舒适观察距离：从侧上方俯瞰导线和小磁针
+    const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const initialCamPos = new THREE.Vector3(3.2, 2.7, 3.8);
+    const initialCamTarget = new THREE.Vector3(0, 1.25, 0);
+
+    camera.position.copy(initialCamPos);
+    camera.lookAt(initialCamTarget);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.target.copy(initialCamTarget);
+    controls.update();
+
+    // 光照设置
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
+    scene.add(ambientLight);
+
+    const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.95);
+    dirLight1.position.set(6, 12, 8);
+    dirLight1.castShadow = true;
+    scene.add(dirLight1);
+
+    const dirLight2 = new THREE.DirectionalLight(0x38bdf8, 0.45);
+    dirLight2.position.set(-6, -2, -4);
+    scene.add(dirLight2);
+
+    // 地面网格
+    const grid = new THREE.GridHelper(16, 16, 0x1e293b, 0x0f172a);
+    grid.position.y = -0.01;
+    scene.add(grid);
+
+    /* ==========================================================
+       2. 方位与文字标注 Sprite
+       在场景中：
+         +Z 为南 (South)，-Z 为北 (North)
+         +X 为东 (East)，-X 为西 (West)
+         +Y 为上 (Up)，-Y 为下 (Down)
+       ========================================================== */
+    function makeTextSprite(text, color = '#ffffff', fontSize = 32, bg = 'rgba(15, 23, 42, 0.8)') {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = 256;
+      canvas.height = 128;
+
+      ctx.fillStyle = bg;
+      ctx.roundRect(16, 20, 224, 88, 16);
+      ctx.fill();
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 4;
+      ctx.roundRect(16, 20, 224, 88, 16);
+      ctx.stroke();
+
+      ctx.font = `bold ${fontSize}px sans-serif`;
+      ctx.fillStyle = color;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, 128, 64);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      const spriteMaterial = new THREE.SpriteMaterial({ map: texture, depthTest: false });
+      const sprite = new THREE.Sprite(spriteMaterial);
+      sprite.scale.set(1.4, 0.7, 1);
+      return sprite;
+    }
+
+    // 地理与地磁方位标识
+    const labelNorth = makeTextSprite('北 (North -Z)', '#ef4444', 30);
+    labelNorth.position.set(0, 0.3, -3.8);
+    scene.add(labelNorth);
+
+    const labelSouth = makeTextSprite('南 (South +Z)', '#38bdf8', 30);
+    labelSouth.position.set(0, 0.3, 3.8);
+    scene.add(labelSouth);
+
+    const labelEast = makeTextSprite('东 (East +X)', '#94a3b8', 28);
+    labelEast.position.set(3.4, 0.3, 0);
+    scene.add(labelEast);
+
+    const labelWest = makeTextSprite('西 (West -X)', '#94a3b8', 28);
+    labelWest.position.set(-3.4, 0.3, 0);
+    scene.add(labelWest);
+
+    /* ==========================================================
+       3. 物理实验装置建模
+       ========================================================== */
+    const labGroup = new THREE.Group();
+    scene.add(labGroup);
+
+    // --- A. 实验台基座 (暗色沉稳底盘) ---
+    const baseGeo = new THREE.BoxGeometry(4.2, 0.2, 5.6);
+    const baseMat = new THREE.MeshStandardMaterial({
+      color: 0x1e293b,
+      roughness: 0.6,
+      metalness: 0.2
+    });
+    const baseMesh = new THREE.Mesh(baseGeo, baseMat);
+    baseMesh.position.set(0, 0.1, 0);
+    baseMesh.receiveShadow = true;
+    labGroup.add(baseMesh);
+
+    // --- B. 粗铜直导线与绝缘支撑立柱 ---
+    const wireY = 1.6; // 导线空间固定高度
+    const postMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.35, metalness: 0.7 });
+
+    // 南北两侧支柱
+    const postGeo = new THREE.CylinderGeometry(0.08, 0.1, wireY - 0.2, 24);
+    const postNorth = new THREE.Mesh(postGeo, postMat);
+    postNorth.position.set(0, (wireY - 0.2) / 2 + 0.2, -2.3);
+    labGroup.add(postNorth);
+
+    const postSouth = new THREE.Mesh(postGeo, postMat);
+    postSouth.position.set(0, (wireY - 0.2) / 2 + 0.2, 2.3);
+    labGroup.add(postSouth);
+
+    // 加粗高反光铜直导线 (半径 0.07m，极具质感且清晰可见)
+    const wireLength = 4.9;
+    const wireGeo = new THREE.CylinderGeometry(0.065, 0.065, wireLength, 32);
+    wireGeo.rotateX(Math.PI / 2); // 沿南北 Z 轴方向延伸
+    const wireMat = new THREE.MeshStandardMaterial({
+      color: 0xfbbf24,
+      roughness: 0.2,
+      metalness: 0.9,
+      emissive: 0xb45309,
+      emissiveIntensity: 0.25
+    });
+    const wireMesh = new THREE.Mesh(wireGeo, wireMat);
+    wireMesh.position.set(0, wireY, 0);
+    labGroup.add(wireMesh);
+
+    const labelWire = makeTextSprite('通电直导线 (南北走向)', '#fbbf24', 24);
+    labelWire.position.set(-0.8, wireY + 0.45, 0);
+    labGroup.add(labelWire);
+
+    // 电流指示箭头组 (通电时沿导线流动的光脉冲箭头)
+    const currentArrowsGroup = new THREE.Group();
+    labGroup.add(currentArrowsGroup);
+
+    const currentArrows = [];
+    for (let i = 0; i < 4; i++) {
+      const arr = new THREE.ArrowHelper(
+        new THREE.Vector3(0, 0, -1),
+        new THREE.Vector3(0, wireY, (i - 1.5) * 1.2),
+        0.55,
+        0x38bdf8,
+        0.22,
+        0.15
+      );
+      arr.visible = false;
+      currentArrowsGroup.add(arr);
+      currentArrows.push(arr);
+    }
+
+    // --- C. 罗盘与小磁针系统 (Compass & Magnetic Needle) ---
+    const compassGroup = new THREE.Group();
+    labGroup.add(compassGroup);
+
+    // 罗盘支柱（从底座升起支撑罗盘底部）
+    const standPostGeo = new THREE.CylinderGeometry(0.05, 0.07, 1.0, 24);
+    const standPost = new THREE.Mesh(standPostGeo, postMat);
+    labGroup.add(standPost); // 独立于 compassGroup，避免遮挡磁针
+
+    // 罗盘黄铜外盒
+    const caseRadius = 0.88;
+    const caseGeo = new THREE.CylinderGeometry(caseRadius, caseRadius * 1.05, 0.14, 48);
+    const caseMat = new THREE.MeshStandardMaterial({
+      color: 0xd97706,
+      roughness: 0.35,
+      metalness: 0.8
+    });
+    const compassCase = new THREE.Mesh(caseGeo, caseMat);
+    compassCase.position.y = 0.07;
+    compassGroup.add(compassCase);
+
+    // 刻度表盘底面 (白底高清罗盘盘面)
+    const dialCanvas = document.createElement('canvas');
+    dialCanvas.width = 512;
+    dialCanvas.height = 512;
+    const dctx = dialCanvas.getContext('2d');
+    dctx.fillStyle = '#f8fafc';
+    dctx.beginPath();
+    dctx.arc(256, 256, 248, 0, Math.PI * 2);
+    dctx.fill();
+
+    dctx.strokeStyle = '#334155';
+    dctx.lineWidth = 8;
+    dctx.stroke();
+
+    // 绘制罗盘星纹与刻度
+    dctx.font = 'bold 54px sans-serif';
+    dctx.textAlign = 'center';
+    dctx.textBaseline = 'middle';
+
+    dctx.fillStyle = '#ef4444';
+    dctx.fillText('N', 256, 60);
+
+    dctx.fillStyle = '#3b82f6';
+    dctx.fillText('S', 256, 452);
+
+    dctx.fillStyle = '#0f172a';
+    dctx.fillText('E', 452, 256);
+    dctx.fillText('W', 60, 256);
+
+    for (let deg = 0; deg < 360; deg += 30) {
+      const rad = deg * Math.PI / 180;
+      dctx.beginPath();
+      dctx.moveTo(256 + 205 * Math.cos(rad), 256 + 205 * Math.sin(rad));
+      dctx.lineTo(256 + 235 * Math.cos(rad), 256 + 235 * Math.sin(rad));
+      dctx.lineWidth = 4;
+      dctx.stroke();
+    }
+
+    const dialTex = new THREE.CanvasTexture(dialCanvas);
+    const dialGeo = new THREE.CircleGeometry(caseRadius * 0.94, 48);
+    dialGeo.rotateX(-Math.PI / 2);
+    const dialMesh = new THREE.Mesh(dialGeo, new THREE.MeshBasicMaterial({ map: dialTex }));
+    dialMesh.position.y = 0.142;
+    compassGroup.add(dialMesh);
+
+    // 中心金属顶针
+    const pinGeo = new THREE.ConeGeometry(0.03, 0.18, 16);
+    const pinMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.9, roughness: 0.2 });
+    const pinMesh = new THREE.Mesh(pinGeo, pinMat);
+    pinMesh.position.y = 0.2;
+    compassGroup.add(pinMesh);
+
+    // --- D. 3D 立体菱形小磁针 (Needle Pivot Group) ---
+    const needlePivot = new THREE.Group();
+    needlePivot.position.y = 0.28; // 位于表盘上方旋转
+    compassGroup.add(needlePivot);
+
+    // 辅助创建立体八面体菱形半段针体 (尖端指向 Z 轴)
+    function createNeedleHalf(isNorth) {
+      const dirSign = isNorth ? -1 : 1; // North 指向 -Z (北), South 指向 +Z (南)
+      const color = isNorth ? 0xef4444 : 0x3b82f6;
+      const emColor = isNorth ? 0xb91c1c : 0x1d4ed8;
+
+      const halfGeo = new THREE.BufferGeometry();
+      const length = 0.68; // 半长
+      const width = 0.13;  // 半宽
+      const height = 0.04; // 厚度
+
+      // 构建菱形上下对称 4 个三角形面
+      const vertices = new Float32Array([
+        // 上面 2 个三角形
+        0, height, 0,
+        width, 0, 0,
+        0, 0, dirSign * length,
+
+        0, height, 0,
+        0, 0, dirSign * length,
+        -width, 0, 0,
+
+        // 下面 2 个三角形
+        0, -height, 0,
+        0, 0, dirSign * length,
+        width, 0, 0,
+
+        0, -height, 0,
+        -width, 0, 0,
+        0, 0, dirSign * length
+      ]);
+
+      halfGeo.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+      halfGeo.computeVertexNormals();
+
+      const mat = new THREE.MeshStandardMaterial({
+        color: color,
+        emissive: emColor,
+        emissiveIntensity: 0.35,
+        metalness: 0.5,
+        roughness: 0.3,
+        side: THREE.DoubleSide
+      });
+
+      return new THREE.Mesh(halfGeo, mat);
+    }
+
+    const needleN = createNeedleHalf(true);  // N 极 (红色，朝向 -Z 北方)
+    const needleS = createNeedleHalf(false); // S 极 (蓝色，朝向 +Z 南方)
+    needlePivot.add(needleN);
+    needlePivot.add(needleS);
+
+    // 磁针中心黄铜轴承帽
+    const capGeo = new THREE.CylinderGeometry(0.065, 0.065, 0.08, 20);
+    const capMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, metalness: 0.9, roughness: 0.2 });
+    const capMesh = new THREE.Mesh(capGeo, capMat);
+    needlePivot.add(capMesh);
+
+    // 磁针尖端文字标识 (N / S)
+    const labelNeedleN = makeTextSprite('N', '#ef4444', 36, 'rgba(0,0,0,0.6)');
+    labelNeedleN.scale.set(0.6, 0.3, 1);
+    labelNeedleN.position.set(0, 0.15, -0.75);
+    needlePivot.add(labelNeedleN);
+
+    const labelNeedleS = makeTextSprite('S', '#3b82f6', 36, 'rgba(0,0,0,0.6)');
+    labelNeedleS.scale.set(0.6, 0.3, 1);
+    labelNeedleS.position.set(0, 0.15, 0.75);
+    needlePivot.add(labelNeedleS);
+
+    // --- E. 环形同心圆磁感线组 (安培右手螺旋) ---
+    const fieldLinesGroup = new THREE.Group();
+    fieldLinesGroup.visible = false;
+    labGroup.add(fieldLinesGroup);
+
+    const ringRadii = [0.45, 0.75, 1.15];
+    ringRadii.forEach(r => {
+      const ringPts = [];
+      const segs = 64;
+      for (let i = 0; i <= segs; i++) {
+        const th = (i / segs) * Math.PI * 2;
+        ringPts.push(new THREE.Vector3(r * Math.cos(th), wireY + r * Math.sin(th), 0));
+      }
+      const rGeo = new THREE.BufferGeometry().setFromPoints(ringPts);
+      const rMat = new THREE.LineDashedMaterial({
+        color: 0x10b981,
+        dashSize: 0.15,
+        gapSize: 0.1,
+        transparent: true,
+        opacity: 0.85
+      });
+      const rLine = new THREE.Line(rGeo, rMat);
+      rLine.computeLineDistances();
+      fieldLinesGroup.add(rLine);
+    });
+
+    /* ==========================================================
+       4. 物理参数与偏转动力学方程求解
+       ========================================================== */
+    let isCircuitClosed = false;     // 电路是否通电
+    let currentDirection = 'SN';      // 'SN' (南到北) 或 'NS' (北到南)
+    let needlePosition = 'below';    // 'below' (导线下方) 或 'above' (导线上方)
+    let currentAmps = 3.0;           // 电流大小 (A)
+    const earthFieldBe = 1.0;        // 地磁场等效基准大小
+
+    // 磁针动力学状态量（二阶受迫阻尼谐振动）
+    let needleAngle = 0;             // 当前实际偏转角 (rad)
+    let needleVelocity = 0;          // 角速度 (rad/s)
+    let targetEquilibriumAngle = 0;  // 理论平衡偏转角 (rad)
+
+    function updateNeedlePhysicsTarget() {
+      // 1. 设置罗盘在空间的高度与支柱高度：
+      // 导线高度 wireY = 1.6
+      if (needlePosition === 'below') {
+        // 导线下方：磁针针心高度约 1.15m (距离导线 0.45m，间距清晰)
+        compassGroup.position.set(0, 0.85, 0);
+        standPost.geometry.dispose();
+        standPost.geometry = new THREE.CylinderGeometry(0.05, 0.07, 0.65, 24);
+        standPost.position.set(0, 0.2 + 0.65 / 2, 0);
+      } else {
+        // 导线上方：磁针针心高度约 2.15m (距离导线 0.55m)
+        compassGroup.position.set(0, 1.85, 0);
+        standPost.geometry.dispose();
+        standPost.geometry = new THREE.CylinderGeometry(0.05, 0.07, 1.65, 24);
+        standPost.position.set(0, 0.2 + 1.65 / 2, 0);
+      }
+
+      // 2. 计算通电直导线在磁针位置产生的磁场 B_I 方向与大小：
+      // 若断路，B_I = 0，磁针只受地磁场控制，目标偏转角为 0 (指向正北)
+      if (!isCircuitClosed) {
+        targetEquilibriumAngle = 0;
+        return;
+      }
+
+      // 地磁场指向正北 (在场景中沿 -Z 方向)
+      // 直导线电流产生的磁场依据安培定则 (右手定则)：
+      // 当电流由 南向北 (S -> N, 沿 -Z 方向) 时：
+      //   - 导线下方 (-Y): 磁场指向 西 (West, -X 方向)
+      //   - 导线上方 (+Y): 磁场指向 东 (East, +X 方向)
+      // 当电流由 北向南 (N -> S, 沿 +Z 方向) 时：
+      //   - 导线下方 (-Y): 磁场指向 东 (East, +X 方向)
+      //   - 导线上方 (+Y): 磁场指向 西 (West, -X 方向)
+
+      let biDirectionSign = 1; // 1 表示向西偏转 (针角正向), -1 表示向东偏转 (针角负向)
+
+      if (currentDirection === 'SN') {
+        biDirectionSign = (needlePosition === 'below') ? 1 : -1;
+      } else {
+        biDirectionSign = (needlePosition === 'below') ? -1 : 1;
+      }
+
+      // 磁感应强度比值 tanθ = B_I / B_e
+      const biMagnitude = currentAmps * 0.55;
+      const angleRad = Math.atan(biMagnitude / earthFieldBe);
+
+      targetEquilibriumAngle = biDirectionSign * angleRad;
+    }
+
+    /* ==========================================================
+       5. 交互控制函数
+       ========================================================== */
+    function toggleCircuit() {
+      isCircuitClosed = !isCircuitClosed;
+      const btn = document.getElementById('btn-circuit');
+      const txt = document.getElementById('txt-circuit-status');
+
+      if (isCircuitClosed) {
+        btn.classList.add('on');
+        txt.innerText = '闭合通电中 (ON)';
+      } else {
+        btn.classList.remove('on');
+        txt.innerText = '断开电路 (OFF)';
+      }
+
+      currentArrows.forEach(arr => arr.visible = isCircuitClosed);
+      updateNeedlePhysicsTarget();
+    }
+
+    function setCurrentDirection(dir) {
+      currentDirection = dir;
+      document.getElementById('btn-dir-sn').classList.toggle('active', dir === 'SN');
+      document.getElementById('btn-dir-ns').classList.toggle('active', dir === 'NS');
+
+      // 更新电流流向指示箭头
+      const arrDir = (dir === 'SN') ? new THREE.Vector3(0, 0, -1) : new THREE.Vector3(0, 0, 1);
+      currentArrows.forEach(arr => arr.setDirection(arrDir));
+
+      updateNeedlePhysicsTarget();
+    }
+
+    function setNeedlePosition(pos) {
+      needlePosition = pos;
+      document.getElementById('btn-pos-below').classList.toggle('active', pos === 'below');
+      document.getElementById('btn-pos-above').classList.toggle('active', pos === 'above');
+      updateNeedlePhysicsTarget();
+    }
+
+    function toggleFieldLines() {
+      fieldLinesGroup.visible = !fieldLinesGroup.visible;
+      document.getElementById('btn-toggle-field').classList.toggle('active', fieldLinesGroup.visible);
+    }
+
+    // 电流滑块绑定
+    const sliderCurrent = document.getElementById('slider-current');
+    sliderCurrent.addEventListener('input', (e) => {
+      currentAmps = parseFloat(e.target.value);
+      document.getElementById('label-current-set').innerText = `${currentAmps.toFixed(2)} A`;
+      updateNeedlePhysicsTarget();
+    });
+
+    // 视角平滑复位
+    let camAnimId = null;
+    function resetView() {
+      if (camAnimId) cancelAnimationFrame(camAnimId);
+      const startPos = camera.position.clone();
+      const startTarget = controls.target.clone();
+      let progress = 0;
+
+      function step() {
+        progress += 0.05;
+        const t = Math.min(1.0, 0.5 - 0.5 * Math.cos(progress * Math.PI));
+        camera.position.lerpVectors(startPos, initialCamPos, t);
+        controls.target.lerpVectors(startTarget, initialCamTarget, t);
+        controls.update();
+
+        if (progress < 1.0) {
+          camAnimId = requestAnimationFrame(step);
+        } else {
+          camera.position.copy(initialCamPos);
+          controls.target.copy(initialCamTarget);
+          controls.update();
+          camAnimId = null;
+        }
+      }
+      step();
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    /* ==========================================================
+       6. 动画主循环与动力学方程
+       ========================================================== */
+    updateNeedlePhysicsTarget();
+
+    let lastTime = performance.now();
+    let currentFlowOffset = 0;
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const now = performance.now();
+      const dt = Math.min(0.05, (now - lastTime) / 1000);
+      lastTime = now;
+
+      // 磁针阻尼弹簧摆动方程：
+      // d²θ/dt² + 2ζω (dθ/dt) + ω² (θ - θ_target) = 0
+      const omega = 7.5;      // 振动角频率
+      const damping = 3.6;    // 空气阻尼
+      const springTorque = -Math.pow(omega, 2) * (needleAngle - targetEquilibriumAngle);
+      const dampingTorque = -2 * damping * needleVelocity;
+      const angularAcc = springTorque + dampingTorque;
+
+      needleVelocity += angularAcc * dt;
+      needleAngle += needleVelocity * dt;
+
+      // 磁针绕 Y 轴物理偏转
+      needlePivot.rotation.y = needleAngle;
+
+      // 导线通电时电流光斑流动
+      if (isCircuitClosed) {
+        currentFlowOffset += dt * 2.4 * (currentDirection === 'SN' ? 1 : -1);
+        currentArrows.forEach((arr, idx) => {
+          let zPos = ((idx * 1.2 + currentFlowOffset) % 4.8) - 2.4;
+          arr.position.set(0, wireY, zPos);
+        });
+      }
+
+      // 更新面板偏转角读数
+      const degValue = (needleAngle * 180 / Math.PI);
+      document.getElementById('val-deflection').innerText = `${Math.abs(degValue).toFixed(2)}°`;
+      document.getElementById('val-current').innerText = isCircuitClosed ? `${currentAmps.toFixed(2)} A` : `0.00 A`;
+
+      // 偏转方向文字提示
+      let dirText = '正北 (N)';
+      if (Math.abs(degValue) > 0.4) {
+        if (degValue > 0) {
+          dirText = `向西偏转 ${Math.abs(degValue).toFixed(1)}° (偏西 W)`;
+        } else {
+          dirText = `向东偏转 ${Math.abs(degValue).toFixed(1)}° (偏东 E)`;
+        }
+      }
+      document.getElementById('val-direction').innerText = dirText;
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>

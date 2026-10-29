@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>载流长直螺线管截面磁场与叠加机理 (Solenoid Magnetic Field)</title>
+  <!-- 引入 Three.js 与 OrbitControls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(15, 23, 42, 0.9);
+      --border: rgba(148, 163, 184, 0.2);
+      --c-out: #00d2ff;        /* 出纸面电流 亮青蓝 ⊙ */
+      --c-in: #f43f5e;         /* 进纸面电流 玫红 ⊗ */
+      --c-bfield: #38bdf8;     /* 合成磁场 亮蓝 */
+      --c-b1: #10b981;         /* 导线1单源场 翠绿 */
+      --c-b2: #f59e0b;         /* 导线2单源场 琥珀橙 */
+      --c-cancel: #c084fc;     /* 垂直抵消分量 紫光 */
+      --text: #f8fafc;
+      --text-dim: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #webgl-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* 顶部标题栏 */
+    .header-bar {
+      position: absolute;
+      top: 16px;
+      left: 20px;
+      z-index: 10;
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      padding: 12px 20px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+      max-width: 480px;
+    }
+
+    .header-bar h1 {
+      font-size: 17.5px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header-bar .subtitle {
+      font-size: 12.5px;
+      color: var(--text-dim);
+      margin-top: 5px;
+      line-height: 1.55;
+    }
+
+    /* 右侧控制面板 (支持一键折叠/展开，保持画面绝对居中) */
+    .panel {
+      position: absolute;
+      top: 16px;
+      right: 20px;
+      width: 320px;
+      z-index: 10;
+      background: var(--card-bg);
+      backdrop-filter: blur(14px);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+      padding: 16px;
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .panel.collapsed {
+      transform: translateX(calc(100% + 25px));
+    }
+
+    .panel-header {
+      font-size: 14.5px;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* 悬浮面板收起/展开切换悬浮药丸按钮 */
+    .toggle-panel-btn {
+      position: absolute;
+      top: 16px;
+      right: 20px;
+      z-index: 9;
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      padding: 8px 14px;
+      border-radius: 20px;
+      color: var(--text);
+      font-size: 12.5px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+      transition: background 0.2s;
+    }
+
+    .toggle-panel-btn:hover {
+      background: rgba(30, 41, 59, 0.95);
+    }
+
+    /* 教学原理解析卡 */
+    .theory-card {
+      background: rgba(0, 0, 0, 0.45);
+      border-radius: 8px;
+      padding: 11px 13px;
+      font-size: 12px;
+      line-height: 1.6;
+      border-left: 3px solid #38bdf8;
+    }
+
+    .theory-card b {
+      color: #38bdf8;
+    }
+
+    /* 控制选项组 */
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .control-label {
+      font-size: 12.5px;
+      font-weight: 500;
+      color: var(--text-dim);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* 滑块样式 */
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%;
+      background: transparent;
+    }
+
+    input[type=range]:focus {
+      outline: none;
+    }
+
+    input[type=range]::-webkit-slider-runnable-track {
+      width: 100%;
+      height: 6px;
+      cursor: pointer;
+      background: #334155;
+      border-radius: 3px;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      height: 16px;
+      width: 16px;
+      border-radius: 50%;
+      background: #38bdf8;
+      cursor: pointer;
+      -webkit-appearance: none;
+      margin-top: -5px;
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
+      transition: transform 0.1s;
+    }
+
+    input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    /* 按钮组 */
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .btn {
+      padding: 8px 10px;
+      background: rgba(30, 41, 59, 0.85);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background: rgba(51, 65, 85, 0.95);
+      border-color: rgba(148, 163, 184, 0.5);
+    }
+
+    .btn.active {
+      background: rgba(16, 185, 129, 0.25);
+      border-color: rgba(16, 185, 129, 0.55);
+      color: #34d399;
+      font-weight: 600;
+    }
+
+    /* 左下角图例 */
+    .legend-box {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      z-index: 10;
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      padding: 12px 18px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 12px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .legend-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      font-weight: bold;
+      font-size: 11px;
+    }
+
+    .legend-line {
+      width: 18px;
+      height: 3px;
+      border-radius: 2px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- WebGL 渲染容器 -->
+  <div id="webgl-container"></div>
+
+  <!-- 顶部标题栏 -->
+  <div class="header-bar">
+    <h1>
+      <span>🧲 载流长直螺线管截面磁场与微观叠加</span>
+    </h1>
+    <div class="subtitle">
+      截面剖析：上排导线电流出纸面 <b>⊙</b>，下排导线电流进纸面 <b>⊗</b>。<br>
+      <b>纵向分量反向抵消，横向分量同向叠加</b>：磁感线沿轴向平行均匀延伸！
+    </div>
+  </div>
+
+  <!-- 左下角图例 -->
+  <div class="legend-box">
+    <div class="legend-item">
+      <span class="legend-badge" style="background: rgba(0,210,255,0.2); color: var(--c-out); border: 1px solid var(--c-out);">⊙</span>
+      <span>上排导线：电流出纸面（指向读者）</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-badge" style="background: rgba(244,63,94,0.2); color: var(--c-in); border: 1px solid var(--c-in);">⊗</span>
+      <span>下排导线：电流进纸面（背离读者）</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-line" style="background: var(--c-bfield);"></div>
+      <span>轴向磁感应线（中轴线与管内平行线延伸至远端）</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-line" style="background: var(--c-cancel); height: 2px;"></div>
+      <span>导线间垂直分量 \(B_y\)（一上一向下严格抵消）</span>
+    </div>
+  </div>
+
+  <!-- 面板折叠展开悬浮按钮 -->
+  <button class="toggle-panel-btn" onclick="togglePanelVisibility()">
+    <span id="btn-toggle-txt">⚙️ 控制面板</span>
+  </button>
+
+  <!-- 右侧交互控制面板 -->
+  <div class="panel" id="side-panel">
+    <div class="panel-header">
+      <span>控制台与参数调节</span>
+      <span style="font-size: 12px; color: #38bdf8; cursor: pointer;" onclick="togglePanelVisibility()">收起 ✕</span>
+    </div>
+
+    <!-- 螺线管长度控制滑块 (有限长 -> 接近无限长) -->
+    <div class="control-group">
+      <div class="control-label">
+        <span>螺线管长度 (线圈匝数 \(N\))</span>
+        <span id="label-turns" style="color: var(--c-out); font-weight: bold;">24 匝 (长直无限长近似)</span>
+      </div>
+      <input type="range" id="slider-turns" min="6" max="36" step="2" value="24">
+      <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-dim); margin-top: 2px;">
+        <span>有限长 (端部发散明显)</span>
+        <span>无限长 (内部平行均匀)</span>
+      </div>
+    </div>
+
+    <!-- 线圈半径调节 -->
+    <div class="control-group">
+      <div class="control-label">
+        <span>螺线管半径 \(R\)</span>
+        <span id="label-radius" style="color: #cbd5e1;">0.85 m</span>
+      </div>
+      <input type="range" id="slider-radius" min="0.5" max="1.3" step="0.05" value="0.85">
+    </div>
+
+    <!-- 叠加原理清晰解析卡片 -->
+    <div class="theory-card">
+      <b>💡 电流磁场为何严格沿中轴线？</b><br>
+      微观放大解析上排 (⊙) 与下排 (⊗) 导线：<br>
+      1. <b>上排 ⊙ (逆时针环绕)</b>：导线间隙处 \(B_{1y}\uparrow + B_{2y}\downarrow = 0\) 严格对消；管内侧 \(B_{1x}\rightarrow + B_{2x}\rightarrow\) 全部向右叠加；<br>
+      2. <b>下排 ⊗ (顺时针环绕)</b>：导线间隙处 \(B_{1y}\downarrow + B_{2y}\uparrow = 0\) 严格对消；管内侧 \(B_{1x}\rightarrow + B_{2x}\rightarrow\) 全部向右叠加；<br>
+      3. <b>上下汇聚同向强化</b>：所有垂直分量消除，上下两排在管内共同强化，汇聚成<b>沿轴向平行的匀强磁场 \(B = \mu_0 n I\)</b>！
+    </div>
+
+    <!-- 功能开关按钮组 -->
+    <div class="btn-row">
+      <button class="btn active" id="btn-toggle-demo" onclick="toggleSuperpositionDemo()">
+        <span>📐 邻近电流叠加解析</span>
+      </button>
+      <button class="btn" id="btn-toggle-3d" onclick="toggle3DView()">
+        <span>🔄 2D截面 / 3D空间磁场</span>
+      </button>
+    </div>
+
+    <button class="btn" style="width: 100%;" onclick="resetView()">
+      <span>↺ 画面居中复位</span>
+    </button>
+
+  </div>
+
+  <script>
+    /* ==========================================================
+       1. 场景与相机初始化 (居中正视 2D 截面，支持平滑缩放与旋转)
+       ========================================================== */
+    const container = document.getElementById('webgl-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x090d16);
+
+    const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
+    // 居中黄金视角：Z=7.8 留出足够宽阔的水平视野，展示磁力线向两侧无限远延伸
+    const default2DPos = new THREE.Vector3(0, 0, 7.8);
+    const default3DPos = new THREE.Vector3(2.5, 2.2, 6.0);
+    const sceneTarget = new THREE.Vector3(0, 0, 0);
+
+    let is3DMode = false;
+    camera.position.copy(default2DPos);
+    camera.lookAt(sceneTarget);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.target.copy(sceneTarget);
+    controls.update();
+
+    // 柔和自然光照
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+    scene.add(ambientLight);
+
+    const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.9);
+    dirLight1.position.set(6, 8, 8);
+    scene.add(dirLight1);
+
+    const dirLight2 = new THREE.DirectionalLight(0x38bdf8, 0.35);
+    dirLight2.position.set(-6, -3, 4);
+    scene.add(dirLight2);
+
+    /* ==========================================================
+       2. 文字 Sprite 标签辅助生成
+       ========================================================== */
+    function makeTextSprite(text, color = '#ffffff', fontSize = 26, bg = 'rgba(15, 23, 42, 0.92)') {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+      const textMetrics = ctx.measureText(text);
+      const textWidth = textMetrics.width;
+
+      const padX = 36;
+      canvas.width = Math.max(256, Math.ceil(textWidth + padX * 2));
+      canvas.height = 72;
+
+      ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+      ctx.fillStyle = bg;
+      if (ctx.roundRect) {
+        ctx.beginPath();
+        ctx.roundRect(4, 4, canvas.width - 8, canvas.height - 8, 12);
+        ctx.fill();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+      } else {
+        ctx.fillRect(4, 4, canvas.width - 8, canvas.height - 8);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 3;
+        ctx.strokeRect(4, 4, canvas.width - 8, canvas.height - 8);
+      }
+
+      ctx.fillStyle = color;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      const spriteMaterial = new THREE.SpriteMaterial({ map: texture, depthTest: false });
+      const sprite = new THREE.Sprite(spriteMaterial);
+      const aspect = canvas.width / canvas.height;
+      const heightInScene = 0.22;
+      sprite.scale.set(heightInScene * aspect, heightInScene, 1);
+      return sprite;
+    }
+
+    /* ==========================================================
+       3. 螺线管物理参数与导线截面模型
+       ========================================================== */
+    let numTurns = 24;            // 匝数 N
+    let solenoidRadius = 0.85;     // 截面半高 R (m)
+    let wireSpacing = 0.20;       // 紧凑匝间距，使整体比例端正居中
+    const wireCoreRadius = 0.045; // 铜导线圆截面半径
+
+    const solenoidGroup = new THREE.Group();
+    scene.add(solenoidGroup);
+
+    let wireCrossSections = [];
+    let coil3DMesh = null;
+
+    // 导线材质
+    const matTop = new THREE.MeshStandardMaterial({
+      color: 0x0284c7,
+      roughness: 0.3,
+      metalness: 0.8,
+      emissive: 0x0369a1,
+      emissiveIntensity: 0.3
+    });
+    const matBottom = new THREE.MeshStandardMaterial({
+      color: 0xe11d48,
+      roughness: 0.3,
+      metalness: 0.8,
+      emissive: 0xbe123c,
+      emissiveIntensity: 0.3
+    });
+
+    // 绘制 ⊙ (出纸面) 与 ⊗ (进纸面) 的端面纹理
+    function makeWireCapTexture(type) {
+      const c = document.createElement('canvas');
+      c.width = 128;
+      c.height = 128;
+      const cctx = c.getContext('2d');
+
+      cctx.fillStyle = (type === 'OUT') ? '#0284c7' : '#e11d48';
+      cctx.beginPath();
+      cctx.arc(64, 64, 58, 0, 2 * Math.PI);
+      cctx.fill();
+
+      cctx.lineWidth = 6;
+      cctx.strokeStyle = '#ffffff';
+      cctx.stroke();
+
+      if (type === 'OUT') {
+        cctx.fillStyle = '#ffffff';
+        cctx.beginPath();
+        cctx.arc(64, 64, 20, 0, 2 * Math.PI);
+        cctx.fill();
+      } else {
+        cctx.strokeStyle = '#ffffff';
+        cctx.lineWidth = 14;
+        cctx.lineCap = 'round';
+        cctx.beginPath();
+        cctx.moveTo(36, 36);
+        cctx.lineTo(92, 92);
+        cctx.moveTo(92, 36);
+        cctx.lineTo(36, 92);
+        cctx.stroke();
+      }
+
+      return new THREE.CanvasTexture(c);
+    }
+
+    const texOut = makeWireCapTexture('OUT');
+    const texIn = makeWireCapTexture('IN');
+    const capMatOut = new THREE.MeshBasicMaterial({ map: texOut });
+    const capMatIn = new THREE.MeshBasicMaterial({ map: texIn });
+
+    function rebuildSolenoidModel() {
+      while (solenoidGroup.children.length > 0) solenoidGroup.remove(solenoidGroup.children[0]);
+      wireCrossSections = [];
+
+      const totalLen = (numTurns - 1) * wireSpacing;
+      const xStart = -totalLen / 2;
+
+      // 截面小圆柱
+      const cylGeo = new THREE.CylinderGeometry(wireCoreRadius, wireCoreRadius, 0.22, 20);
+      cylGeo.rotateX(Math.PI / 2);
+
+      const capGeo = new THREE.CircleGeometry(wireCoreRadius * 1.15, 24);
+
+      for (let i = 0; i < numTurns; i++) {
+        const x = xStart + i * wireSpacing;
+
+        // 上排导线 (y = +solenoidRadius, 出纸面 ⊙)
+        const topMesh = new THREE.Mesh(cylGeo, matTop);
+        topMesh.position.set(x, solenoidRadius, 0);
+        solenoidGroup.add(topMesh);
+
+        const capTop = new THREE.Mesh(capGeo, capMatOut);
+        capTop.position.set(x, solenoidRadius, 0.115);
+        solenoidGroup.add(capTop);
+
+        wireCrossSections.push({ x: x, y: solenoidRadius, current: +1, id: `T${i + 1}`, index: i });
+
+        // 下排导线 (y = -solenoidRadius, 进纸面 ⊗)
+        const botMesh = new THREE.Mesh(cylGeo, matBottom);
+        botMesh.position.set(x, -solenoidRadius, 0);
+        solenoidGroup.add(botMesh);
+
+        const capBot = new THREE.Mesh(capGeo, capMatIn);
+        capBot.position.set(x, -solenoidRadius, 0.115);
+        solenoidGroup.add(capBot);
+
+        wireCrossSections.push({ x: x, y: -solenoidRadius, current: -1, id: `B${i + 1}`, index: i });
+      }
+
+      // 3D 螺旋线圈连续线框
+      const coilCurvePts = [];
+      const coilSteps = numTurns * 36;
+      for (let i = 0; i <= coilSteps; i++) {
+        const u = i / coilSteps;
+        const theta = u * numTurns * 2 * Math.PI;
+        const cx = xStart + u * totalLen;
+        const cy = solenoidRadius * Math.cos(theta);
+        const cz = solenoidRadius * Math.sin(theta);
+        coilCurvePts.push(new THREE.Vector3(cx, cy, cz));
+      }
+      const coilCurve = new THREE.CatmullRomCurve3(coilCurvePts);
+      const coilGeo = new THREE.TubeGeometry(coilCurve, numTurns * 24, 0.02, 8, false);
+      const coilMat = new THREE.MeshStandardMaterial({
+        color: 0xfbbf24,
+        roughness: 0.3,
+        metalness: 0.7,
+        transparent: true,
+        opacity: 0.25
+      });
+      coil3DMesh = new THREE.Mesh(coilGeo, coilMat);
+      coil3DMesh.visible = is3DMode;
+      solenoidGroup.add(coil3DMesh);
+    }
+
+    /* ==========================================================
+       4. 毕奥-萨伐尔精确磁场计算
+       ========================================================== */
+    function getMagneticFieldAt(x, y) {
+      let bx = 0;
+      let by = 0;
+      const k = 1.0;
+
+      for (let i = 0; i < wireCrossSections.length; i++) {
+        const w = wireCrossSections[i];
+        const dx = x - w.x;
+        const dy = y - w.y;
+        const r2 = dx * dx + dy * dy + 0.0004;
+
+        const cur = w.current;
+        bx += -cur * k * (dy / r2);
+        by += cur * k * (dx / r2);
+      }
+
+      return { bx, by, mag: Math.hypot(bx, by) };
+    }
+
+    /* ==========================================================
+       5. 磁感线生成：大幅延长向左右两侧延伸 (默认伸向无限远)
+       ========================================================== */
+    const streamlinesGroup = new THREE.Group(); // 2D 垂直截面上的主磁感线 (Z = 0)
+    scene.add(streamlinesGroup);
+
+    const streamlines3DGroup = new THREE.Group(); // 3D 模式下的非垂直截面空间全方位磁感线
+    scene.add(streamlines3DGroup);
+    streamlines3DGroup.visible = false;
+
+    function buildStreamlines() {
+      while (streamlinesGroup.children.length > 0) streamlinesGroup.remove(streamlinesGroup.children[0]);
+      while (streamlines3DGroup.children.length > 0) streamlines3DGroup.remove(streamlines3DGroup.children[0]);
+
+      const totalLen = (numTurns - 1) * wireSpacing;
+      // 磁感线水平延展跨度：延伸至远端 (|X| <= 9.8m)，默认伸向无穷远
+      const maxExtX = 9.8;
+
+      // 3D 空间非截面旋转角度分布 (沿轴对称分布在不同空间辐射角上)
+      const phiAngles = [
+        Math.PI * 0.25,
+        Math.PI * 0.50,
+        Math.PI * 0.75,
+        Math.PI * 1.25,
+        Math.PI * 1.50,
+        Math.PI * 1.75
+      ];
+
+      // --- A. 中轴线磁感线 (y = 0)：笔直横贯左右，向两侧无限远延伸 ---
+      const axisLinePts = [
+        new THREE.Vector3(-maxExtX, 0, 0),
+        new THREE.Vector3(maxExtX, 0, 0)
+      ];
+      const axisGeo = new THREE.BufferGeometry().setFromPoints(axisLinePts);
+      const axisMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 2.5 });
+      const axisLine = new THREE.Line(axisGeo, axisMat);
+      streamlinesGroup.add(axisLine);
+
+      // 轴线上分布 4 个沿 +X 向右的清晰箭头
+      [-5.0, -1.8, 1.8, 5.0].forEach(x => {
+        const arr = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(x, 0, 0), 0.28, 0x38bdf8, 0.12, 0.07);
+        streamlinesGroup.add(arr);
+      });
+
+      // --- B. 管内与管口延伸磁感线 ---
+      const yFractions = [-0.68, -0.45, -0.22, 0.22, 0.45, 0.68];
+      const stepSize = 0.04;
+      const maxSteps = 450;
+
+      yFractions.forEach(frac => {
+        const yStart = frac * solenoidRadius;
+        const forwardPts = [new THREE.Vector3(0, yStart, 0)];
+        let curr = new THREE.Vector3(0, yStart, 0);
+
+        // 正向追踪 (向右延伸)
+        for (let s = 0; s < maxSteps; s++) {
+          const f = getMagneticFieldAt(curr.x, curr.y);
+          if (f.mag < 0.001) break;
+
+          const isDeepInside = (Math.abs(curr.x) < totalLen * 0.45 && Math.abs(curr.y) < solenoidRadius * 0.9);
+          let dirX = f.bx;
+          let dirY = isDeepInside ? (f.by * 0.1) : f.by;
+          const mag = Math.hypot(dirX, dirY);
+
+          curr.x += (dirX / mag) * stepSize;
+          curr.y += (dirY / mag) * stepSize;
+
+          if (Math.abs(curr.x) > maxExtX || Math.abs(curr.y) > solenoidRadius * 3.0) break;
+          forwardPts.push(curr.clone());
+        }
+
+        // 反向追踪 (向左延伸)
+        const backwardPts = [];
+        curr = new THREE.Vector3(0, yStart, 0);
+        for (let s = 0; s < maxSteps; s++) {
+          const f = getMagneticFieldAt(curr.x, curr.y);
+          if (f.mag < 0.001) break;
+
+          const isDeepInside = (Math.abs(curr.x) < totalLen * 0.45 && Math.abs(curr.y) < solenoidRadius * 0.9);
+          let dirX = f.bx;
+          let dirY = isDeepInside ? (f.by * 0.1) : f.by;
+          const mag = Math.hypot(dirX, dirY);
+
+          curr.x -= (dirX / mag) * stepSize;
+          curr.y -= (dirY / mag) * stepSize;
+
+          if (Math.abs(curr.x) > maxExtX || Math.abs(curr.y) > solenoidRadius * 3.0) break;
+          backwardPts.unshift(curr.clone());
+        }
+
+        const fullPts = [...backwardPts, ...forwardPts];
+        if (fullPts.length < 10) return;
+
+        // 1. 生成 2D 截面主磁感线 (Z = 0)
+        const curve2D = new THREE.CatmullRomCurve3(fullPts);
+        const geo2D = new THREE.BufferGeometry().setFromPoints(curve2D.getPoints(120));
+        const mat2D = new THREE.LineBasicMaterial({
+          color: 0x0284c7,
+          transparent: true,
+          opacity: 0.75,
+          linewidth: 1.5
+        });
+        const line2D = new THREE.Line(geo2D, mat2D);
+        streamlinesGroup.add(line2D);
+
+        // 沿线添加右向流动箭头
+        const totalCount = fullPts.length;
+        [0.2, 0.45, 0.65, 0.82].forEach(ratio => {
+          const idx = Math.floor(totalCount * ratio);
+          if (idx >= 1 && idx < totalCount) {
+            const p1 = fullPts[idx - 1];
+            const p2 = fullPts[idx];
+            const dir = new THREE.Vector3().subVectors(p2, p1).normalize();
+            if (dir.length() > 0.5 && dir.x > 0.2) {
+              const arr = new THREE.ArrowHelper(dir, p2, 0.22, 0x38bdf8, 0.1, 0.06);
+              streamlinesGroup.add(arr);
+            }
+          }
+        });
+
+        // 2. 生成 3D 模式下的非垂直截面空间立体磁力线束 (绕 X 轴旋转不同角度 φ)
+        phiAngles.forEach(phi => {
+          const pts3D = fullPts.map(p => new THREE.Vector3(p.x, p.y * Math.cos(phi), p.y * Math.sin(phi)));
+          const curve3D = new THREE.CatmullRomCurve3(pts3D);
+          const geo3D = new THREE.BufferGeometry().setFromPoints(curve3D.getPoints(90));
+          const mat3D = new THREE.LineBasicMaterial({
+            color: 0x0284c7,
+            transparent: true,
+            opacity: 0.38,
+            linewidth: 1.0
+          });
+          const line3D = new THREE.Line(geo3D, mat3D);
+          streamlines3DGroup.add(line3D);
+
+          // 3D 空间磁感线箭头
+          [0.3, 0.7].forEach(r => {
+            const i3 = Math.floor(pts3D.length * r);
+            if (i3 >= 1 && i3 < pts3D.length) {
+              const pa = pts3D[i3 - 1];
+              const pb = pts3D[i3];
+              const d3 = new THREE.Vector3().subVectors(pb, pa).normalize();
+              if (d3.length() > 0.5 && d3.x > 0.2) {
+                const arr3D = new THREE.ArrowHelper(d3, pb, 0.20, 0x38bdf8, 0.08, 0.05);
+                streamlines3DGroup.add(arr3D);
+              }
+            }
+          });
+        });
+      });
+
+      // --- C. 有限长时的管外回流磁线 ---
+      if (numTurns <= 20) {
+        [-1, 1].forEach(side => {
+          const outerPts = [];
+          const numOuterSteps = 80;
+          for (let i = 0; i <= numOuterSteps; i++) {
+            const u = i / numOuterSteps;
+            const x = maxExtX * 0.65 * (1 - 2 * u);
+            const y = side * (solenoidRadius * 1.5 + 0.8 * Math.sin(u * Math.PI));
+            outerPts.push(new THREE.Vector3(x, y, 0));
+          }
+          const outCurve = new THREE.CatmullRomCurve3(outerPts);
+          const outGeo = new THREE.BufferGeometry().setFromPoints(outCurve.getPoints(60));
+          const outMat = new THREE.LineBasicMaterial({ color: 0x0369a1, transparent: true, opacity: 0.35 });
+          streamlinesGroup.add(new THREE.Line(outGeo, outMat));
+
+          // 3D 外空间回流线
+          phiAngles.forEach(phi => {
+            const outPts3D = outerPts.map(p => new THREE.Vector3(p.x, p.y * Math.cos(phi), p.y * Math.sin(phi)));
+            const c3 = new THREE.CatmullRomCurve3(outPts3D);
+            const g3 = new THREE.BufferGeometry().setFromPoints(c3.getPoints(50));
+            const m3 = new THREE.LineBasicMaterial({ color: 0x0369a1, transparent: true, opacity: 0.25 });
+            streamlines3DGroup.add(new THREE.Line(g3, m3));
+          });
+        });
+      }
+
+      streamlines3DGroup.visible = is3DMode;
+    }
+
+    /* ==========================================================
+       6. 形象直观展示：相邻两段电流磁场叠加机理 (无需鼠标探针)
+       ========================================================== */
+    const superpositionDemoGroup = new THREE.Group();
+    scene.add(superpositionDemoGroup);
+
+    let showSuperpositionDemo = true;
+
+    function buildSuperpositionDemo() {
+      while (superpositionDemoGroup.children.length > 0) superpositionDemoGroup.remove(superpositionDemoGroup.children[0]);
+      if (!showSuperpositionDemo) return;
+
+      const midIdx = Math.floor(numTurns / 2);
+      // 上排相邻两导线 (⊙ 与 ⊙, 电流出纸面)
+      const wT1 = wireCrossSections.find(w => w.id === `T${midIdx}`);
+      const wT2 = wireCrossSections.find(w => w.id === `T${midIdx + 1}`);
+      // 下排相邻两导线 (⊗ 与 ⊗, 电流进纸面)
+      const wB1 = wireCrossSections.find(w => w.id === `B${midIdx}`);
+      const wB2 = wireCrossSections.find(w => w.id === `B${midIdx + 1}`);
+
+      if (!wT1 || !wT2 || !wB1 || !wB2) return;
+
+      const xMid = (wT1.x + wT2.x) / 2;
+      const ringR = wireSpacing * 0.62;
+      const arrowLen = ringR * 0.72;
+
+      // 辅助函数：绘制导线外围局部闭合磁感线圆环 (带切向箭头指示旋转方向)
+      function makeCirculatingRing(centerX, centerY, radius, isCounterClockwise, colorHex) {
+        const ringObj = new THREE.Group();
+        const pts = [];
+        const segs = 64;
+        for (let i = 0; i <= segs; i++) {
+          const frac = i / segs;
+          const th = (isCounterClockwise ? 1 : -1) * frac * 2 * Math.PI;
+          pts.push(new THREE.Vector3(centerX + radius * Math.cos(th), centerY + radius * Math.sin(th), 0.06));
+        }
+        const curve = new THREE.CatmullRomCurve3(pts);
+        const geo = new THREE.BufferGeometry().setFromPoints(curve.getPoints(segs));
+        const mat = new THREE.LineBasicMaterial({ color: colorHex, linewidth: 2.2 });
+        ringObj.add(new THREE.Line(geo, mat));
+
+        // 在圆环的外/内侧添加微型切向箭头标明旋转方向
+        const arrowAngles = isCounterClockwise ? [Math.PI * 0.25, Math.PI * 1.25] : [-Math.PI * 0.25, -Math.PI * 1.25];
+        arrowAngles.forEach(ang => {
+          const px = centerX + radius * Math.cos(ang);
+          const py = centerY + radius * Math.sin(ang);
+          const tx = isCounterClockwise ? -Math.sin(ang) : Math.sin(ang);
+          const ty = isCounterClockwise ? Math.cos(ang) : -Math.cos(ang);
+          const arr = new THREE.ArrowHelper(
+            new THREE.Vector3(tx, ty, 0).normalize(),
+            new THREE.Vector3(px - tx * 0.02, py - ty * 0.02, 0.07),
+            0.05,
+            colorHex,
+            0.04,
+            0.03
+          );
+          ringObj.add(arr);
+        });
+
+        return ringObj;
+      }
+
+      // 辅助函数：高亮导线外圈轮廓光晕
+      function highlightWires(wires) {
+        wires.forEach(w => {
+          const ringGeo = new THREE.RingGeometry(wireCoreRadius * 1.22, wireCoreRadius * 1.55, 32);
+          const ringMat = new THREE.MeshBasicMaterial({ color: 0xfbbf24, side: THREE.DoubleSide });
+          const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+          ringMesh.position.set(w.x, w.y, 0.05);
+          superpositionDemoGroup.add(ringMesh);
+        });
+      }
+
+      // ==============================================================
+      // 1. 上排导线微观叠加 (⊙ 出纸面，右手定则：逆时针环绕)
+      // ==============================================================
+      highlightWires([wT1, wT2]);
+      const yTop = solenoidRadius;
+
+      // 局部闭合磁感线 (逆时针)
+      superpositionDemoGroup.add(makeCirculatingRing(wT1.x, yTop, ringR, true, 0x10b981)); // 导线1 (翠绿)
+      superpositionDemoGroup.add(makeCirculatingRing(wT2.x, yTop, ringR, true, 0xf59e0b)); // 导线2 (琥珀橙)
+
+      // 间隙处垂直分量：左导线向上 B1y↑，右导线向下 B2y↓
+      const arrT1Up = new THREE.ArrowHelper(
+        new THREE.Vector3(0, 1, 0),
+        new THREE.Vector3(xMid - 0.018, yTop - arrowLen * 0.5, 0.08),
+        arrowLen,
+        0x10b981,
+        0.08,
+        0.05
+      );
+      superpositionDemoGroup.add(arrT1Up);
+
+      const arrT2Down = new THREE.ArrowHelper(
+        new THREE.Vector3(0, -1, 0),
+        new THREE.Vector3(xMid + 0.018, yTop + arrowLen * 0.5, 0.08),
+        arrowLen,
+        0xf59e0b,
+        0.08,
+        0.05
+      );
+      superpositionDemoGroup.add(arrT2Down);
+
+      // 上排外侧抵消标牌
+      const labelTCancel = makeTextSprite('上排 ⊙ 间隙垂直抵消：B₁ᵧ↑ + B₂ᵧ↓ = 0', '#c084fc', 26, 'rgba(15, 23, 42, 0.92)');
+      labelTCancel.position.set(xMid, yTop + ringR + 0.22, 0.15);
+      superpositionDemoGroup.add(labelTCancel);
+
+      // 管内侧 (yTop - ringR)：两导线逆时针圆环底端均指向右侧 (+x)
+      const yTopIn = yTop - ringR;
+      const arrT1Right = new THREE.ArrowHelper(
+        new THREE.Vector3(1, 0, 0),
+        new THREE.Vector3(wT1.x - 0.05, yTopIn, 0.08),
+        0.24,
+        0x10b981,
+        0.08,
+        0.05
+      );
+      superpositionDemoGroup.add(arrT1Right);
+
+      const arrT2Right = new THREE.ArrowHelper(
+        new THREE.Vector3(1, 0, 0),
+        new THREE.Vector3(wT2.x - 0.05, yTopIn, 0.08),
+        0.24,
+        0xf59e0b,
+        0.08,
+        0.05
+      );
+      superpositionDemoGroup.add(arrT2Right);
+
+      // 上排管内合成水平箭头
+      const arrTTotal = new THREE.ArrowHelper(
+        new THREE.Vector3(1, 0, 0),
+        new THREE.Vector3(xMid - 0.14, yTopIn - 0.09, 0.08),
+        0.44,
+        0x38bdf8,
+        0.11,
+        0.07
+      );
+      superpositionDemoGroup.add(arrTTotal);
+
+      const labelTReinforce = makeTextSprite('上排管内水平同向：B₁ₓ→ + B₂ₓ→ (向右增强)', '#38bdf8', 26, 'rgba(15, 23, 42, 0.92)');
+      const insideOffset = Math.min(0.22, solenoidRadius * 0.28);
+      labelTReinforce.position.set(xMid, yTopIn - insideOffset, 0.15);
+      superpositionDemoGroup.add(labelTReinforce);
+
+      // ==============================================================
+      // 2. 下排导线微观叠加 (⊗ 进纸面，右手定则：顺时针环绕)
+      // ==============================================================
+      highlightWires([wB1, wB2]);
+      const yBot = -solenoidRadius;
+
+      // 局部闭合磁感线 (顺时针)
+      superpositionDemoGroup.add(makeCirculatingRing(wB1.x, yBot, ringR, false, 0x10b981)); // 导线1 (翠绿)
+      superpositionDemoGroup.add(makeCirculatingRing(wB2.x, yBot, ringR, false, 0xf59e0b)); // 导线2 (琥珀橙)
+
+      // 间隙处垂直分量：左导线向下 B1y↓，右导线向上 B2y↑
+      const arrB1Down = new THREE.ArrowHelper(
+        new THREE.Vector3(0, -1, 0),
+        new THREE.Vector3(xMid - 0.018, yBot + arrowLen * 0.5, 0.08),
+        arrowLen,
+        0x10b981,
+        0.08,
+        0.05
+      );
+      superpositionDemoGroup.add(arrB1Down);
+
+      const arrB2Up = new THREE.ArrowHelper(
+        new THREE.Vector3(0, 1, 0),
+        new THREE.Vector3(xMid + 0.018, yBot - arrowLen * 0.5, 0.08),
+        arrowLen,
+        0xf59e0b,
+        0.08,
+        0.05
+      );
+      superpositionDemoGroup.add(arrB2Up);
+
+      // 下排外侧抵消标牌
+      const labelBCancel = makeTextSprite('下排 ⊗ 间隙垂直抵消：B₁ᵧ↓ + B₂ᵧ↑ = 0', '#c084fc', 26, 'rgba(15, 23, 42, 0.92)');
+      labelBCancel.position.set(xMid, yBot - ringR - 0.22, 0.15);
+      superpositionDemoGroup.add(labelBCancel);
+
+      // 管内侧 (yBot + ringR)：两导线顺时针圆环顶端均指向右侧 (+x)
+      const yBotIn = yBot + ringR;
+      const arrB1Right = new THREE.ArrowHelper(
+        new THREE.Vector3(1, 0, 0),
+        new THREE.Vector3(wB1.x - 0.05, yBotIn, 0.08),
+        0.24,
+        0x10b981,
+        0.08,
+        0.05
+      );
+      superpositionDemoGroup.add(arrB1Right);
+
+      const arrB2Right = new THREE.ArrowHelper(
+        new THREE.Vector3(1, 0, 0),
+        new THREE.Vector3(wB2.x - 0.05, yBotIn, 0.08),
+        0.24,
+        0xf59e0b,
+        0.08,
+        0.05
+      );
+      superpositionDemoGroup.add(arrB2Right);
+
+      // 下排管内合成水平箭头
+      const arrBTotal = new THREE.ArrowHelper(
+        new THREE.Vector3(1, 0, 0),
+        new THREE.Vector3(xMid - 0.14, yBotIn + 0.09, 0.08),
+        0.44,
+        0x38bdf8,
+        0.11,
+        0.07
+      );
+      superpositionDemoGroup.add(arrBTotal);
+
+      const labelBReinforce = makeTextSprite('下排管内水平同向：B₁ₓ→ + B₂ₓ→ (向右增强)', '#38bdf8', 26, 'rgba(15, 23, 42, 0.92)');
+      labelBReinforce.position.set(xMid, yBotIn + insideOffset, 0.15);
+      superpositionDemoGroup.add(labelBReinforce);
+
+      // ==============================================================
+      // 3. 轴线管内总体汇聚结论标牌 (中心 y = 0)
+      // ==============================================================
+      const labelCenter = makeTextSprite('上下两排在管内磁场同向叠加 ⟹ 严格沿轴线形成匀强场 B = μ₀nI', '#34d399', 26, 'rgba(15, 23, 42, 0.94)');
+      labelCenter.position.set(xMid, 0, 0.15);
+      superpositionDemoGroup.add(labelCenter);
+    }
+
+    /* ==========================================================
+       7. 交互控制与视图复位
+       ========================================================== */
+    // 滑块：匝数 N (有限长 -> 接近无限长)
+    const sliderTurns = document.getElementById('slider-turns');
+    sliderTurns.addEventListener('input', (e) => {
+      numTurns = parseInt(e.target.value);
+      const label = document.getElementById('label-turns');
+      if (numTurns <= 8) {
+        label.innerText = `${numTurns} 匝 (短螺线管·端部发散明显)`;
+        label.style.color = '#f43f5e';
+      } else if (numTurns <= 16) {
+        label.innerText = `${numTurns} 匝 (中等长度)`;
+        label.style.color = '#fbbf24';
+      } else {
+        label.innerText = `${numTurns} 匝 (长直无限长近似)`;
+        label.style.color = '#34d399';
+      }
+
+      rebuildSolenoidModel();
+      buildStreamlines();
+      buildSuperpositionDemo();
+    });
+
+    // 滑块：半径 R
+    const sliderRadius = document.getElementById('slider-radius');
+    sliderRadius.addEventListener('input', (e) => {
+      solenoidRadius = parseFloat(e.target.value);
+      document.getElementById('label-radius').innerText = `${solenoidRadius.toFixed(2)} m`;
+      rebuildSolenoidModel();
+      buildStreamlines();
+      buildSuperpositionDemo();
+    });
+
+    // 功能开关
+    function toggleSuperpositionDemo() {
+      showSuperpositionDemo = !showSuperpositionDemo;
+      superpositionDemoGroup.visible = showSuperpositionDemo;
+      document.getElementById('btn-toggle-demo').classList.toggle('active', showSuperpositionDemo);
+      if (showSuperpositionDemo) buildSuperpositionDemo();
+    }
+
+    function toggle3DView() {
+      is3DMode = !is3DMode;
+      document.getElementById('btn-toggle-3d').classList.toggle('active', is3DMode);
+      if (coil3DMesh) coil3DMesh.visible = is3DMode;
+      streamlines3DGroup.visible = is3DMode;
+
+      const targetPos = is3DMode ? default3DPos : default2DPos;
+      smoothTransitionCamera(targetPos, sceneTarget);
+    }
+
+    function resetView() {
+      is3DMode = false;
+      document.getElementById('btn-toggle-3d').classList.remove('active');
+      if (coil3DMesh) coil3DMesh.visible = false;
+      streamlines3DGroup.visible = false;
+      smoothTransitionCamera(default2DPos, sceneTarget);
+    }
+
+    // 面板收起/展开
+    let isPanelOpen = true;
+    function togglePanelVisibility() {
+      isPanelOpen = !isPanelOpen;
+      const panel = document.getElementById('side-panel');
+      panel.classList.toggle('collapsed', !isPanelOpen);
+      document.getElementById('btn-toggle-txt').innerText = isPanelOpen ? '⚙️ 控制面板' : '⚙️ 展开控制面板';
+    }
+
+    let camAnimId = null;
+    function smoothTransitionCamera(endPos, endTarget) {
+      if (camAnimId) cancelAnimationFrame(camAnimId);
+      const startPos = camera.position.clone();
+      const startTarget = controls.target.clone();
+      let progress = 0;
+
+      function step() {
+        progress += 0.05;
+        const t = Math.min(1.0, 0.5 - 0.5 * Math.cos(progress * Math.PI));
+        camera.position.lerpVectors(startPos, endPos, t);
+        controls.target.lerpVectors(startTarget, endTarget, t);
+        controls.update();
+
+        if (progress < 1.0) {
+          camAnimId = requestAnimationFrame(step);
+        } else {
+          camera.position.copy(endPos);
+          controls.target.copy(endTarget);
+          controls.update();
+          camAnimId = null;
+        }
+      }
+      step();
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    /* ==========================================================
+       8. 初始化与动画主循环
+       ========================================================== */
+    rebuildSolenoidModel();
+    buildStreamlines();
+    buildSuperpositionDemo();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>

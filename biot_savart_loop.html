@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Biot-Savart Law: Circular Current Loop</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <style>
+    :root {
+      --bg: #0b1120;
+      --card-bg: rgba(15, 23, 42, 0.85);
+      --border: rgba(148, 163, 184, 0.2);
+      --c-dl: #38bdf8;
+      --c-r: #4ade80;
+      --c-b: #f43f5e;
+      --c-b-par: #fb923c;
+      --c-b-perp: #a855f7;
+      --c-ring: #e2e8f0;
+      --text: #f8fafc;
+      --text-dim: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #webgl-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* Top Title Header */
+    .header-bar {
+      position: absolute;
+      top: 16px;
+      left: 20px;
+      z-index: 10;
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      padding: 12px 20px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+    }
+
+    .header-bar h1 {
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Right Control Panel */
+    .panel {
+      position: absolute;
+      top: 16px;
+      right: 20px;
+      width: 320px;
+      z-index: 10;
+      background: var(--card-bg);
+      backdrop-filter: blur(14px);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      font-size: 15px;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .panel-body {
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .formula-card {
+      background: rgba(0, 0, 0, 0.45);
+      border-radius: 8px;
+      padding: 12px;
+      border-left: 3px solid var(--c-b);
+      font-family: "Cambria Math", "Times New Roman", serif;
+      font-size: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .formula-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .control-label {
+      font-size: 13px;
+      color: var(--text-dim);
+      display: flex;
+      justify-content: space-between;
+      font-family: "Cambria Math", "Times New Roman", serif;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--c-dl);
+      cursor: pointer;
+    }
+
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .btn {
+      padding: 9px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: rgba(51, 65, 85, 0.7);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      background: rgba(71, 85, 105, 0.9);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .btn.active {
+      background: #2563eb;
+      border-color: #3b82f6;
+    }
+
+    /* Legend */
+    .legend-box {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      z-index: 10;
+      background: var(--card-bg);
+      backdrop-filter: blur(10px);
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 13px;
+      font-family: "Cambria Math", "Times New Roman", serif;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .legend-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="webgl-container"></div>
+
+  <!-- Header -->
+  <div class="header-bar">
+    <h1>Biot-Savart Law &bull; Circular Loop</h1>
+  </div>
+
+  <!-- Legend -->
+  <div class="legend-box">
+    <div class="legend-item">
+      <div class="legend-color" style="background: var(--c-dl);"></div>
+      <span><i>I</i> d<b><i>l</i></b></span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background: var(--c-r);"></div>
+      <span><b><i>r</i></b></span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background: var(--c-b);"></div>
+      <span>d<b><i>B</i></b> &nbsp;[ d<b><i>B</i></b> &perp; <b><i>r</i></b> ]</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background: var(--c-b-par);"></div>
+      <span>d<b><i>B</i></b><sub>&parallel;</sub></span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background: var(--c-b-perp);"></div>
+      <span>d<b><i>B</i></b><sub>&perp;</sub></span>
+    </div>
+    <div class="legend-item" id="legend-sym" style="opacity: 0.7; display: none;">
+      <div class="legend-color" style="background: rgba(244, 63, 94, 0.5); border: 1px dashed #f43f5e;"></div>
+      <span>d<b><i>B</i></b>' &nbsp;(50% Opacity)</span>
+    </div>
+  </div>
+
+  <!-- Control Panel -->
+  <div class="panel">
+    <div class="panel-header">
+      <span>Vector Relations</span>
+    </div>
+    <div class="panel-body">
+
+      <!-- Math Formulations -->
+      <div class="formula-card">
+        <div class="formula-line">
+          <span>d<b><i>B</i></b> = (<i>&mu;</i><sub>0</sub> / 4<i>&pi;</i>) &middot; (<i>I</i> d<b><i>l</i></b> &times; <b><i>r</i></b>) / <i>r</i><sup>3</sup></span>
+        </div>
+        <div class="formula-line" style="color: var(--text-dim); font-size: 13.5px;">
+          <span>|<i>I</i> d<b><i>l</i></b> &times; <b><i>r</i></b>| = <i>I</i> d<i>l</i> &middot; <i>r</i> &nbsp;(d<b><i>l</i></b> &perp; <b><i>r</i></b>)</span>
+        </div>
+        <div class="formula-line" style="font-size: 14px; margin-top: 4px;">
+          <span style="color: var(--c-b-par);">d<i>B</i><sub>&parallel;</sub> = d<i>B</i> &middot; (<i>R</i> / <i>r</i>)</span>
+          <span style="color: var(--c-b-perp);">d<i>B</i><sub>&perp;</sub> = d<i>B</i> &middot; (<i>x</i> / <i>r</i>)</span>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="control-group">
+        <div class="control-label">
+          <span><i>x</i> (Axis Distance)</span>
+          <span id="val-x" style="color: var(--c-dl);">4.00</span>
+        </div>
+        <input type="range" id="slider-x" min="-5.0" max="5.0" step="0.05" value="4.00">
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">
+          <span><i>R</i> (Loop Radius)</span>
+          <span id="val-r" style="color: var(--c-dl);">2.50</span>
+        </div>
+        <input type="range" id="slider-r" min="1.5" max="3.5" step="0.05" value="2.50">
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">
+          <span><i>&phi;</i> (Element Angle)</span>
+          <span id="val-phi" style="color: var(--c-dl);">90.00&deg;</span>
+        </div>
+        <input type="range" id="slider-phi" min="0" max="360" step="0.1" value="90.00">
+      </div>
+
+      <div class="control-group" style="margin-top: -4px;">
+        <div class="control-label">
+          <span><i>&theta;</i> (Angle with Axis)</span>
+          <span id="val-theta" style="color: #cbd5e1;">32.01&deg;</span>
+        </div>
+      </div>
+
+      <div class="btn-row" style="grid-template-columns: 1fr 1fr;">
+        <button class="btn" id="btn-rotate" onclick="toggleLoopRotation()">
+          <span>&circlearrowright; Loop Orbit</span>
+        </button>
+        <button class="btn" id="btn-reset-pos" onclick="resetPosition()">
+          <span>&circlearrowleft; Reset Position</span>
+        </button>
+      </div>
+      <div class="btn-row" style="grid-template-columns: 1fr 1fr; margin-top: 8px;">
+        <button class="btn" id="btn-sym" onclick="toggleSymmetricElement()">
+          <span>&boxbox; Symmetric Idl'</span>
+        </button>
+        <button class="btn" id="btn-reset" onclick="resetView()">
+          <span>&circlearrowleft; Reset View</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    /* ==========================================================
+       1. Setup Scene, Camera, Renderer, Controls
+       ========================================================== */
+    const container = document.getElementById('webgl-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0a0f1d);
+
+    const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+
+    // Default: textbook perspective
+    const initialCamPos = new THREE.Vector3(2.5, 2.2, 11.5);
+    const initialCamTarget = new THREE.Vector3(2.0, 0.4, 0);
+
+    function setTextbookCamera() {
+      camera.position.copy(initialCamPos);
+      controls.target.copy(initialCamTarget);
+      camera.lookAt(initialCamTarget);
+    }
+    setTextbookCamera();
+
+    let resetAnimId = null;
+    function resetView() {
+      if (resetAnimId) cancelAnimationFrame(resetAnimId);
+      const startPos = camera.position.clone();
+      const startTarget = controls.target.clone();
+      const startUp = camera.up.clone();
+      const targetUp = new THREE.Vector3(0, 1, 0);
+      let progress = 0;
+
+      function step() {
+        progress += 0.05;
+        const t = Math.min(1.0, 0.5 - 0.5 * Math.cos(progress * Math.PI));
+        camera.position.lerpVectors(startPos, initialCamPos, t);
+        controls.target.lerpVectors(startTarget, initialCamTarget, t);
+        camera.up.lerpVectors(startUp, targetUp, t).normalize();
+        controls.update();
+
+        if (progress < 1.0) {
+          resetAnimId = requestAnimationFrame(step);
+        } else {
+          camera.position.copy(initialCamPos);
+          controls.target.copy(initialCamTarget);
+          camera.up.copy(targetUp);
+          controls.update();
+          resetAnimId = null;
+        }
+      }
+      step();
+    }
+
+    // Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+    scene.add(ambientLight);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    dirLight.position.set(8, 12, 10);
+    scene.add(dirLight);
+
+    /* ==========================================================
+       2. Crisp 2D Canvas Text Sprite Generator (Pure Math)
+       ========================================================== */
+    function makeMathSprite(text, color = '#ffffff', fontSize = 38, italic = true) {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = 256;
+      canvas.height = 128;
+
+      ctx.font = `${italic ? 'italic ' : ''}bold ${fontSize}px "Cambria Math", "Times New Roman", serif`;
+      ctx.fillStyle = color;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, 128, 64);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      const spriteMaterial = new THREE.SpriteMaterial({ map: texture, depthTest: false });
+      const sprite = new THREE.Sprite(spriteMaterial);
+      sprite.scale.set(1.4, 0.7, 1);
+      return sprite;
+    }
+
+    /* ==========================================================
+       3. Scene Parameters and Objects
+       ========================================================== */
+    let R = 2.5;         // Radius of circular loop
+    let x_val = 4.0;     // Distance of point P on x-axis
+    let phi_deg = 90;    // 90 deg = top of the loop (0, R, 0)
+    let isOrbiting = false;
+
+    // Group for the entire coil & coordinate system
+    const systemGroup = new THREE.Group();
+    scene.add(systemGroup);
+
+    // --- Coordinate Axes (x and y) ---
+    const axisMat = new THREE.LineBasicMaterial({ color: 0x64748b, transparent: true, opacity: 0.6 });
+    
+    // x-axis (supporting negative and positive x from -5 to +5)
+    const xAxisGeo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(-7.5, 0, 0),
+      new THREE.Vector3(8.5, 0, 0)
+    ]);
+    const xAxisLine = new THREE.Line(xAxisGeo, axisMat);
+    systemGroup.add(xAxisLine);
+    const xAxisArrow = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(8.5, 0, 0), 0.4, 0x94a3b8, 0.25, 0.15);
+    systemGroup.add(xAxisArrow);
+    const xAxisArrowNeg = new THREE.ArrowHelper(new THREE.Vector3(-1, 0, 0), new THREE.Vector3(-7.5, 0, 0), 0.4, 0x94a3b8, 0.25, 0.15);
+    systemGroup.add(xAxisArrowNeg);
+
+    // y-axis
+    const yAxisGeo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, -3.8, 0),
+      new THREE.Vector3(0, 4.5, 0)
+    ]);
+    const yAxisLine = new THREE.Line(yAxisGeo, axisMat);
+    systemGroup.add(yAxisLine);
+    const yAxisArrow = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 4.5, 0), 0.4, 0x94a3b8, 0.25, 0.15);
+    systemGroup.add(yAxisArrow);
+
+    // Axis Labels
+    const labelX = makeMathSprite('x', '#94a3b8', 34);
+    labelX.position.set(9.5, -0.05, 0);
+    systemGroup.add(labelX);
+
+    const labelY = makeMathSprite('y', '#94a3b8', 34);
+    labelY.position.set(-0.25, 4.9, 0);
+    systemGroup.add(labelY);
+
+    const labelO = makeMathSprite('O', '#cbd5e1', 34);
+    labelO.position.set(-0.35, -0.35, 0);
+    systemGroup.add(labelO);
+
+    // --- Circular Loop (in y-z plane, center at origin) ---
+    let loopMesh = null;
+    let loopLine = null;
+    function createLoopGeometry() {
+      if (loopMesh) systemGroup.remove(loopMesh);
+      if (loopLine) systemGroup.remove(loopLine);
+
+      // Torus
+      const tubeGeo = new THREE.TorusGeometry(R, 0.035, 16, 120);
+      tubeGeo.rotateY(Math.PI / 2); // Place into y-z plane
+      const tubeMat = new THREE.MeshStandardMaterial({
+        color: 0xe2e8f0,
+        metalness: 0.8,
+        roughness: 0.3
+      });
+      loopMesh = new THREE.Mesh(tubeGeo, tubeMat);
+      systemGroup.add(loopMesh);
+
+      // Inner subtle glow line
+      const circlePts = [];
+      for (let i = 0; i <= 128; i++) {
+        const th = (i / 128) * Math.PI * 2;
+        circlePts.push(new THREE.Vector3(0, R * Math.cos(th), R * Math.sin(th)));
+      }
+      const cGeo = new THREE.BufferGeometry().setFromPoints(circlePts);
+      loopLine = new THREE.Line(cGeo, new THREE.LineBasicMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.4 }));
+      systemGroup.add(loopLine);
+    }
+    createLoopGeometry();
+
+    // Current Indicator I with curved arrow along the loop
+    const labelI = makeMathSprite('I', '#cbd5e1', 36);
+    systemGroup.add(labelI);
+
+    const curArrowGroup = new THREE.Group();
+    systemGroup.add(curArrowGroup);
+
+    let curArrowArc = null;
+    let curArrowCone = null;
+
+    function updateCurvedCurrentArrow() {
+      if (curArrowArc) curArrowGroup.remove(curArrowArc);
+      if (curArrowCone) curArrowGroup.remove(curArrowCone);
+
+      const rArrow = R + 0.55;
+      const alphaStart = (68 * Math.PI) / 180;
+      const alphaEnd = (110 * Math.PI) / 180;
+
+      // Sample points along arc
+      const pts = [];
+      const numPts = 32;
+      for (let i = 0; i <= numPts; i++) {
+        const a = alphaStart + (alphaEnd - alphaStart) * (i / numPts);
+        pts.push(new THREE.Vector3(0, rArrow * Math.cos(a), rArrow * Math.sin(a)));
+      }
+
+      // Smooth tube for the arc curve
+      const curve = new THREE.CatmullRomCurve3(pts);
+      const tubeGeo = new THREE.TubeGeometry(curve, 32, 0.024, 8, false);
+      const tubeMat = new THREE.MeshStandardMaterial({
+        color: 0xe2e8f0,
+        emissive: 0x94a3b8,
+        emissiveIntensity: 0.25,
+        metalness: 0.6,
+        roughness: 0.3
+      });
+      curArrowArc = new THREE.Mesh(tubeGeo, tubeMat);
+      curArrowGroup.add(curArrowArc);
+
+      // Arrow cone at the end (alphaEnd) pointing along current flow
+      const tipPos = pts[pts.length - 1];
+      const tangent = new THREE.Vector3(0, -Math.sin(alphaEnd), Math.cos(alphaEnd)).normalize();
+
+      const coneGeo = new THREE.ConeGeometry(0.09, 0.26, 16);
+      const coneMat = new THREE.MeshStandardMaterial({
+        color: 0xe2e8f0,
+        emissive: 0x94a3b8,
+        emissiveIntensity: 0.25,
+        metalness: 0.6,
+        roughness: 0.3
+      });
+      curArrowCone = new THREE.Mesh(coneGeo, coneMat);
+
+      // Orient cone so tip points in tangent direction
+      curArrowCone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), tangent);
+      curArrowCone.position.copy(tipPos).add(tangent.clone().multiplyScalar(0.12));
+      curArrowGroup.add(curArrowCone);
+
+      // Place label I outside the curved arrow arc
+      const midA = (alphaStart + alphaEnd) * 0.5;
+      const labelPos = new THREE.Vector3(
+        0,
+        (rArrow + 0.42) * Math.cos(midA),
+        (rArrow + 0.42) * Math.sin(midA)
+      );
+      labelI.position.copy(labelPos);
+    }
+
+    // Radius R Label
+    const labelR = makeMathSprite('R', '#cbd5e1', 34);
+    systemGroup.add(labelR);
+
+    // Distance x Label
+    const labelDistX = makeMathSprite('x', '#cbd5e1', 34);
+    systemGroup.add(labelDistX);
+
+    // --- Point P (on x-axis) ---
+    const pointPGeo = new THREE.SphereGeometry(0.09, 24, 24);
+    const pointPMat = new THREE.MeshBasicMaterial({ color: 0xf8fafc });
+    const pointPMesh = new THREE.Mesh(pointPGeo, pointPMat);
+    systemGroup.add(pointPMesh);
+
+    const labelP = makeMathSprite('P', '#ffffff', 36);
+    systemGroup.add(labelP);
+
+    // --- Current Element Idl ---
+    const dlCylinder = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.065, 0.065, 0.6, 16),
+      new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 0.8 })
+    );
+    systemGroup.add(dlCylinder);
+
+    let dlArrow = null;
+    const labelDl = makeMathSprite('Idl', '#38bdf8', 36);
+    systemGroup.add(labelDl);
+
+    // --- Vector r ---
+    let arrowR = null;
+    const labelVecR = makeMathSprite('r', '#4ade80', 36);
+    systemGroup.add(labelVecR);
+
+    // --- Magnetic Field dB and Components ---
+    let arrowB = null;
+    let arrowBPar = null;
+    let arrowBPerp = null;
+
+    const labelB = makeMathSprite('dB', '#f43f5e', 36);
+    systemGroup.add(labelB);
+
+    const labelBPar = makeMathSprite('dB∥', '#fb923c', 32);
+    systemGroup.add(labelBPar);
+
+    const labelBPerp = makeMathSprite('dB⊥', '#a855f7', 32);
+    systemGroup.add(labelBPerp);
+
+    // Dashed Projection Lines for dB decomposition
+    const projLineMat = new THREE.LineDashedMaterial({ color: 0x64748b, dashSize: 0.1, gapSize: 0.08 });
+    const projLineGeo = new THREE.BufferGeometry();
+    const projLine = new THREE.LineSegments(projLineGeo, projLineMat);
+    systemGroup.add(projLine);
+
+    // Right-angle marker between r and dB
+    const perpMarker = new THREE.LineSegments(
+      new THREE.BufferGeometry(),
+      new THREE.LineBasicMaterial({ color: 0xf43f5e, transparent: true, opacity: 0.6 })
+    );
+    systemGroup.add(perpMarker);
+
+    // Helper to set opacity on ArrowHelper
+    function setArrowOpacity(arrow, opacity) {
+      if (!arrow) return;
+      if (arrow.line && arrow.line.material) {
+        arrow.line.material.transparent = true;
+        arrow.line.material.opacity = opacity;
+      }
+      if (arrow.cone && arrow.cone.material) {
+        arrow.cone.material.transparent = true;
+        arrow.cone.material.opacity = opacity;
+      }
+    }
+
+    // --- Symmetric Current Element Idl' and its Fields (~50% Opacity) ---
+    let showSymmetricElement = false;
+    const symGroup = new THREE.Group();
+    symGroup.visible = false;
+    systemGroup.add(symGroup);
+
+    // Symmetric element cylinder on the loop
+    const dlSymCylinder = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.065, 0.065, 0.6, 16),
+      new THREE.MeshStandardMaterial({
+        color: 0x38bdf8,
+        emissive: 0x0284c7,
+        emissiveIntensity: 0.5,
+        transparent: true,
+        opacity: 0.5
+      })
+    );
+    symGroup.add(dlSymCylinder);
+
+    let dlSymArrow = null;
+    const labelDlSym = makeMathSprite("Idl'", '#38bdf8', 34);
+    labelDlSym.material.opacity = 0.65;
+    symGroup.add(labelDlSym);
+
+    let arrowRSym = null;
+    const labelVecRSym = makeMathSprite("r'", '#4ade80', 34);
+    labelVecRSym.material.opacity = 0.65;
+    symGroup.add(labelVecRSym);
+
+    let arrowBSym = null;
+    let arrowBParSym = null;
+    let arrowBPerpSym = null;
+
+    const labelBSym = makeMathSprite("dB'", '#f43f5e', 34);
+    labelBSym.material.opacity = 0.65;
+    symGroup.add(labelBSym);
+
+    const labelBParSym = makeMathSprite("dB'∥", '#fb923c', 30);
+    labelBParSym.material.opacity = 0.65;
+    symGroup.add(labelBParSym);
+
+    const labelBPerpSym = makeMathSprite("dB'⊥", '#a855f7', 30);
+    labelBPerpSym.material.opacity = 0.65;
+    symGroup.add(labelBPerpSym);
+
+    // Dashed Projection Lines for dB' decomposition
+    const projLineSymMat = new THREE.LineDashedMaterial({
+      color: 0xa855f7,
+      dashSize: 0.1,
+      gapSize: 0.08,
+      transparent: true,
+      opacity: 0.4
+    });
+    const projLineSymGeo = new THREE.BufferGeometry();
+    const projLineSym = new THREE.LineSegments(projLineSymGeo, projLineSymMat);
+    symGroup.add(projLineSym);
+
+    /* ==========================================================
+       4. Vector Calculations and Dynamic Updating
+       ========================================================== */
+    function updateScene() {
+      const phi = (phi_deg * Math.PI) / 180;
+
+      // 1. Position of element on circular loop
+      // y = R * sin(phi), z = R * cos(phi), x = 0
+      const elemPos = new THREE.Vector3(0, R * Math.sin(phi), R * Math.cos(phi));
+
+      // Tangent vector along current direction:
+      // Current circulates such that at top (phi=90, y=R, z=0), d(pos)/dphi = (0, R*cos(phi), -R*sin(phi))
+      // To match textbook: at top (0, R, 0), dl points along +z:
+      // dl_dir = (0, -sin(phi), cos(phi)) with proper sign -> at phi = 90 deg, (0, 0, 1)
+      const dlDir = new THREE.Vector3(0, -Math.cos(phi), Math.sin(phi)).normalize();
+
+      // Update dl cylinder orientation
+      dlCylinder.position.copy(elemPos);
+      dlCylinder.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dlDir);
+
+      if (dlArrow) systemGroup.remove(dlArrow);
+      // Tangent arrow along the loop indicating current direction Idl
+      dlArrow = new THREE.ArrowHelper(
+        dlDir,
+        elemPos,
+        1.3,
+        0x38bdf8,
+        0.35,
+        0.22
+      );
+      systemGroup.add(dlArrow);
+
+      // Label Idl placed neatly near the tip of the tangent arrow
+      labelDl.position.copy(elemPos).add(dlDir.clone().multiplyScalar(1.45)).add(elemPos.clone().normalize().multiplyScalar(0.25));
+
+      // 2. Field point P position
+      const pPos = new THREE.Vector3(x_val, 0, 0);
+      pointPMesh.position.copy(pPos);
+      labelP.position.set(x_val, -0.4, 0);
+
+      // Label R and Distance x
+      labelR.position.set(-0.25, R * 0.5, 0);
+      labelDistX.position.set(x_val * 0.5, -0.3, 0);
+      updateCurvedCurrentArrow();
+
+      // 3. Vector r: from element to P
+      const rVec = new THREE.Vector3().subVectors(pPos, elemPos);
+      const rLen = rVec.length();
+      const rDir = rVec.clone().normalize();
+
+      if (arrowR) systemGroup.remove(arrowR);
+      arrowR = new THREE.ArrowHelper(rDir, elemPos, rLen, 0x4ade80, 0.35, 0.22);
+      systemGroup.add(arrowR);
+
+      const rMid = new THREE.Vector3().addVectors(elemPos, pPos).multiplyScalar(0.5);
+      labelVecR.position.copy(rMid).add(new THREE.Vector3(0, 0.35, 0));
+
+      // 4. Magnetic Field dB calculation:
+      // dB proportional to dl x r
+      // By Biot-Savart, dB is strictly perpendicular to rVec and dlDir
+      const crossVec = new THREE.Vector3().crossVectors(dlDir, rVec);
+      const bDir = crossVec.clone().normalize();
+
+      // Visual length of dB
+      const bScale = 2.4;
+      const bVec = bDir.clone().multiplyScalar(bScale);
+
+      if (arrowB) systemGroup.remove(arrowB);
+      arrowB = new THREE.ArrowHelper(bDir, pPos, bScale, 0xf43f5e, 0.35, 0.22);
+      systemGroup.add(arrowB);
+
+      const bTip = pPos.clone().add(bVec);
+      labelB.position.copy(bTip).add(new THREE.Vector3(0.15, 0.2, 0));
+
+      // 6. Decompose dB into dB_parallel (along x) and dB_perp (perpendicular to x)
+      const bParLen = bVec.x; // along +x
+      const bPerpVec = new THREE.Vector3(0, bVec.y, bVec.z);
+      const bPerpLen = bPerpVec.length();
+
+      const bParTip = pPos.clone().add(new THREE.Vector3(bParLen, 0, 0));
+      const bPerpTip = pPos.clone().add(bPerpVec);
+
+      if (arrowBPar) systemGroup.remove(arrowBPar);
+      if (bParLen > 0.05) {
+        arrowBPar = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), pPos, bParLen, 0xfb923c, 0.28, 0.16);
+        systemGroup.add(arrowBPar);
+      }
+      labelBPar.position.copy(bParTip).add(new THREE.Vector3(0.4, -0.3, 0));
+
+      if (arrowBPerp) systemGroup.remove(arrowBPerp);
+      if (bPerpLen > 0.05) {
+        arrowBPerp = new THREE.ArrowHelper(bPerpVec.clone().normalize(), pPos, bPerpLen, 0xa855f7, 0.28, 0.16);
+        systemGroup.add(arrowBPerp);
+      }
+      labelBPerp.position.copy(bPerpTip).add(new THREE.Vector3(-0.35, 0.1, 0));
+
+      // Dashed projection rectangle connecting bParTip -> bTip and bPerpTip -> bTip
+      const projPts = [
+        bParTip, bTip,
+        bPerpTip, bTip
+      ];
+      projLineGeo.setFromPoints(projPts);
+      projLine.computeLineDistances();
+
+      // Perpendicular right angle marker between r and dB at point P
+      const mSize = 0.3;
+      const mR = rDir.clone().multiplyScalar(-mSize);
+      const mB = bDir.clone().multiplyScalar(mSize);
+      const markerPts = [
+        pPos.clone().add(mR),
+        pPos.clone().add(mR).add(mB),
+        pPos.clone().add(mR).add(mB),
+        pPos.clone().add(mB)
+      ];
+      perpMarker.geometry.setFromPoints(markerPts);
+
+      // --- Symmetric Element Calculations (~50% Opacity) ---
+      if (showSymmetricElement) {
+        symGroup.visible = true;
+        const phiSym = phi + Math.PI;
+
+        // Position & tangent on opposite side of circle
+        const elemPosSym = new THREE.Vector3(0, R * Math.sin(phiSym), R * Math.cos(phiSym));
+        const dlDirSym = new THREE.Vector3(0, -Math.cos(phiSym), Math.sin(phiSym)).normalize();
+
+        dlSymCylinder.position.copy(elemPosSym);
+        dlSymCylinder.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dlDirSym);
+
+        if (dlSymArrow) symGroup.remove(dlSymArrow);
+        dlSymArrow = new THREE.ArrowHelper(dlDirSym, elemPosSym, 1.3, 0x38bdf8, 0.35, 0.22);
+        setArrowOpacity(dlSymArrow, 0.5);
+        symGroup.add(dlSymArrow);
+
+        labelDlSym.position.copy(elemPosSym).add(dlDirSym.clone().multiplyScalar(1.45)).add(elemPosSym.clone().normalize().multiplyScalar(0.25));
+
+        // Vector r' from symmetric element to P
+        const rVecSym = new THREE.Vector3().subVectors(pPos, elemPosSym);
+        const rLenSym = rVecSym.length();
+        const rDirSym = rVecSym.clone().normalize();
+
+        if (arrowRSym) symGroup.remove(arrowRSym);
+        arrowRSym = new THREE.ArrowHelper(rDirSym, elemPosSym, rLenSym, 0x4ade80, 0.35, 0.22);
+        setArrowOpacity(arrowRSym, 0.5);
+        symGroup.add(arrowRSym);
+
+        const rMidSym = new THREE.Vector3().addVectors(elemPosSym, pPos).multiplyScalar(0.5);
+        labelVecRSym.position.copy(rMidSym).add(new THREE.Vector3(0, -0.35, 0));
+
+        // Magnetic field dB' from symmetric element
+        const crossVecSym = new THREE.Vector3().crossVectors(dlDirSym, rVecSym);
+        const bDirSym = crossVecSym.clone().normalize();
+        const bVecSym = bDirSym.clone().multiplyScalar(bScale);
+
+        if (arrowBSym) symGroup.remove(arrowBSym);
+        arrowBSym = new THREE.ArrowHelper(bDirSym, pPos, bScale, 0xf43f5e, 0.35, 0.22);
+        setArrowOpacity(arrowBSym, 0.52);
+        symGroup.add(arrowBSym);
+
+        const bTipSym = pPos.clone().add(bVecSym);
+        labelBSym.position.copy(bTipSym).add(new THREE.Vector3(0.15, -0.25, 0));
+
+        // Projections of dB'
+        const bParLenSym = bVecSym.x;
+        const bPerpVecSym = new THREE.Vector3(0, bVecSym.y, bVecSym.z);
+        const bPerpLenSym = bPerpVecSym.length();
+
+        const bParTipSym = pPos.clone().add(new THREE.Vector3(bParLenSym, 0, 0));
+        const bPerpTipSym = pPos.clone().add(bPerpVecSym);
+
+        if (arrowBParSym) symGroup.remove(arrowBParSym);
+        if (bParLenSym > 0.05) {
+          arrowBParSym = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), pPos, bParLenSym, 0xfb923c, 0.28, 0.16);
+          setArrowOpacity(arrowBParSym, 0.5);
+          symGroup.add(arrowBParSym);
+        }
+        labelBParSym.position.copy(bParTipSym).add(new THREE.Vector3(0.4, 0.35, 0));
+
+        if (arrowBPerpSym) symGroup.remove(arrowBPerpSym);
+        if (bPerpLenSym > 0.05) {
+          arrowBPerpSym = new THREE.ArrowHelper(bPerpVecSym.clone().normalize(), pPos, bPerpLenSym, 0xa855f7, 0.28, 0.16);
+          setArrowOpacity(arrowBPerpSym, 0.5);
+          symGroup.add(arrowBPerpSym);
+        }
+        labelBPerpSym.position.copy(bPerpTipSym).add(new THREE.Vector3(-0.35, -0.15, 0));
+
+        // Dashed projection rectangle for dB'
+        const projPtsSym = [
+          bParTipSym, bTipSym,
+          bPerpTipSym, bTipSym
+        ];
+        projLineSymGeo.setFromPoints(projPtsSym);
+        projLineSym.computeLineDistances();
+      } else {
+        symGroup.visible = false;
+      }
+
+      // Update UI readout with 2 decimal places
+      document.getElementById('val-x').innerText = x_val.toFixed(2);
+      document.getElementById('val-r').innerText = R.toFixed(2);
+      document.getElementById('val-phi').innerText = `${phi_deg.toFixed(2)}°`;
+      const thetaDeg = Math.abs(x_val) < 1e-4 ? 90.00 : (Math.atan(R / Math.abs(x_val)) * 180 / Math.PI);
+      const thetaEl = document.getElementById('val-theta');
+      if (thetaEl) thetaEl.innerText = `${thetaDeg.toFixed(2)}°`;
+    }
+
+    /* ==========================================================
+       5. Animation and Position Controls
+       ========================================================== */
+    function toggleLoopRotation() {
+      isOrbiting = !isOrbiting;
+      document.getElementById('btn-rotate').classList.toggle('active', isOrbiting);
+    }
+
+    function resetPosition() {
+      phi_deg = 90.00;
+      sliderPhi.value = "90.00";
+      updateScene();
+    }
+
+    function toggleSymmetricElement() {
+      showSymmetricElement = !showSymmetricElement;
+      document.getElementById('btn-sym').classList.toggle('active', showSymmetricElement);
+      const legSym = document.getElementById('legend-sym');
+      if (legSym) legSym.style.display = showSymmetricElement ? 'flex' : 'none';
+      updateScene();
+    }
+
+    /* ==========================================================
+       6. Sliders and Event Listeners
+       ========================================================== */
+    const sliderX = document.getElementById('slider-x');
+    const sliderR = document.getElementById('slider-r');
+    const sliderPhi = document.getElementById('slider-phi');
+
+    sliderX.addEventListener('input', (e) => {
+      x_val = parseFloat(e.target.value);
+      updateScene();
+    });
+
+    sliderR.addEventListener('input', (e) => {
+      R = parseFloat(e.target.value);
+      createLoopGeometry();
+      updateScene();
+    });
+
+    sliderPhi.addEventListener('input', (e) => {
+      phi_deg = parseFloat(e.target.value);
+      updateScene();
+    });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    /* ==========================================================
+       8. Animation Loop
+       ========================================================== */
+    updateScene();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      if (isOrbiting) {
+        // Orbit in the direction of current flow (along the tangent arrow)
+        phi_deg = (phi_deg - 0.5 + 360) % 360;
+        sliderPhi.value = phi_deg.toFixed(2);
+        updateScene();
+      }
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
+</body>
+</html>

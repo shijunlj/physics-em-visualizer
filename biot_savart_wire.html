@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>毕奥-萨伐尔定律：长直导线电流元磁场方向三维动态演示</title>
+  <!-- 引入 Three.js 与 OrbitControls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --card-bg: rgba(30, 41, 59, 0.88);
+      --border-color: rgba(148, 163, 184, 0.2);
+      --accent-dl: #38bdf8;    /* 电流元 亮蓝 */
+      --accent-r: #4ade80;     /* 位置矢量 翠绿 */
+      --accent-b: #f43f5e;     /* 磁场 玫瑰红 */
+      --accent-gold: #fbbf24;  /* 导线/强调 金黄 */
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #webgl-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* 顶部标题栏 */
+    .header-bar {
+      position: absolute;
+      top: 16px;
+      left: 20px;
+      z-index: 10;
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      padding: 14px 22px;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+      max-width: 480px;
+    }
+
+    .header-bar h1 {
+      font-size: 19px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header-bar .subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 6px;
+      line-height: 1.5;
+    }
+
+    /* 右侧控制与分步面板 */
+    .panel {
+      position: absolute;
+      top: 16px;
+      right: 20px;
+      bottom: 20px;
+      width: 360px;
+      z-index: 10;
+      background: var(--card-bg);
+      backdrop-filter: blur(14px);
+      border-radius: 14px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 16px;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .panel-body {
+      padding: 18px 20px;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* 步骤卡片 */
+    .step-card {
+      background: rgba(15, 23, 42, 0.6);
+      border-radius: 10px;
+      padding: 14px;
+      border: 1px solid var(--border-color);
+      transition: all 0.25s ease;
+    }
+
+    .step-card.active {
+      border-color: var(--accent-dl);
+      box-shadow: 0 0 15px rgba(56, 189, 248, 0.25);
+      background: rgba(56, 189, 248, 0.08);
+    }
+
+    .step-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #e2e8f0;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .step-badge {
+      display: inline-flex;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+
+    .step-card.active .step-badge {
+      background: var(--accent-dl);
+      color: #000;
+      font-weight: bold;
+    }
+
+    .step-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .formula-box {
+      background: rgba(0, 0, 0, 0.4);
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-family: "Cambria Math", "Times New Roman", serif;
+      font-size: 14.5px;
+      color: #f1f5f9;
+      text-align: center;
+      margin: 8px 0;
+      border-left: 3px solid var(--accent-b);
+    }
+
+    /* 颜色高亮文字 */
+    .c-dl { color: var(--accent-dl); font-weight: bold; }
+    .c-r { color: var(--accent-r); font-weight: bold; }
+    .c-b { color: var(--accent-b); font-weight: bold; }
+    .c-wire { color: var(--accent-gold); font-weight: bold; }
+
+    /* 控制条控件 */
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .control-label {
+      font-size: 13px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent-dl);
+      cursor: pointer;
+    }
+
+    /* 按钮组 */
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .btn {
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background: rgba(51, 65, 85, 0.8);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      background: rgba(71, 85, 105, 1);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .btn.primary {
+      background: #2563eb;
+      border-color: #3b82f6;
+    }
+    .btn.primary:hover {
+      background: #1d4ed8;
+    }
+
+    /* 底部操作与视角切换栏 */
+    .bottom-toolbar {
+      position: absolute;
+      bottom: 24px;
+      left: 20px;
+      z-index: 10;
+      display: flex;
+      gap: 12px;
+    }
+
+    .view-pill {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      padding: 8px 16px;
+      border-radius: 30px;
+      border: 1px solid var(--border-color);
+      color: #fff;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      transition: all 0.2s;
+    }
+
+    .view-pill:hover, .view-pill.active {
+      background: rgba(56, 189, 248, 0.2);
+      border-color: var(--accent-dl);
+      color: var(--accent-dl);
+    }
+
+    /* 3D 浮动图例 */
+    .legend-box {
+      position: absolute;
+      bottom: 80px;
+      left: 20px;
+      z-index: 10;
+      background: var(--card-bg);
+      backdrop-filter: blur(10px);
+      padding: 12px 18px;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      font-size: 12.5px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .legend-indicator {
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+    }
+
+    /* 右手定则 3D 悬浮指示 */
+    .rh-alert {
+      background: rgba(244, 63, 94, 0.12);
+      border: 1px solid rgba(244, 63, 94, 0.35);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 12.5px;
+      line-height: 1.5;
+      color: #fecdd3;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- WebGL 场景渲染容器 -->
+  <div id="webgl-container"></div>
+
+  <!-- 顶部标题 -->
+  <div class="header-bar">
+    <h1>
+      <span>⚡</span>
+      <span>毕奥-萨伐尔定律矢量分析</span>
+    </h1>
+    <div class="subtitle">
+      长直导线电流竖直向上，确定导线右侧距离 <i>a</i> 处场点 <i>P</i> 的磁场方向。
+    </div>
+  </div>
+
+  <!-- 3D 场景图例 -->
+  <div class="legend-box">
+    <div class="legend-item">
+      <div class="legend-indicator" style="background: var(--accent-gold);"></div>
+      <span>长直导线（通有向上恒定电流 <i>I</i>）</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-indicator" style="background: var(--accent-dl);"></div>
+      <span>电流元矢量 <b><i>I d</i>l</b>（方向向上）</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-indicator" style="background: var(--accent-r);"></div>
+      <span>位置矢量 <b>r</b>（电流元 $\to$ 场点 <i>P</i>）</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-indicator" style="background: var(--accent-b);"></div>
+      <span>磁感应强度微元 <b><i>d</i>B</b>（垂直纸面向里 ⊗）</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-indicator" style="background: rgba(56, 189, 248, 0.25); border: 1px dashed #38bdf8;"></div>
+      <span>源-场平面（<i>I d</i>l 与 r 构成的平面）</span>
+    </div>
+  </div>
+
+  <!-- 底部快捷视角切换 -->
+  <div class="bottom-toolbar">
+    <div class="view-pill active" id="btn-view-3d" onclick="switchView('3d')">
+      🌐 3D 自由透视
+    </div>
+    <div class="view-pill" id="btn-view-front" onclick="switchView('front')">
+      📄 正视纸面（X-Y 剖面）
+    </div>
+    <div class="view-pill" id="btn-view-top" onclick="switchView('top')">
+      🔝 俯视（X-Z 截面）
+    </div>
+  </div>
+
+  <!-- 右侧交互与步骤讲解面板 -->
+  <div class="panel">
+    <div class="panel-header">
+      <span>分析步骤与右手定则</span>
+      <span style="font-size: 12px; color: var(--accent-dl);">大学物理教学演示</span>
+    </div>
+    <div class="panel-body">
+
+      <!-- 步骤 1 -->
+      <div class="step-card active" id="step-card-1">
+        <div class="step-title">
+          <span class="step-badge">1</span>
+          <span>确定电流元 <span class="c-dl">I dl</span></span>
+        </div>
+        <div class="step-desc">
+          在长直导线上任取一电流微元 <span class="c-dl">I dl</span>。因为电流沿导线竖直向上流动，所以电流元矢量的方向即为<b>竖直向上（+Y 方向）</b>。
+        </div>
+      </div>
+
+      <!-- 步骤 2 -->
+      <div class="step-card active" id="step-card-2">
+        <div class="step-title">
+          <span class="step-badge">2</span>
+          <span>作位置矢量 <span class="c-r">r</span>（关键点）</span>
+        </div>
+        <div class="step-desc">
+          从<b>电流元所在位置</b>引一条有向线段指向<b>待求场点 P</b>（右侧距离 <i>a</i> 处）。
+          <br>⚠️ <b style="color:#f87171;">易错提示：</b>起点必须在源（电流元），终点必须在场点 P，切不可反向！
+        </div>
+      </div>
+
+      <!-- 步骤 3 -->
+      <div class="step-card active" id="step-card-3">
+        <div class="step-title">
+          <span class="step-badge">3</span>
+          <span>源-场平面与右手螺旋定则</span>
+        </div>
+        <div class="formula-box">
+          d<b>B</b> = (μ₀ / 4π) · (I d<b>l</b> × <b>r</b>) / r³
+        </div>
+        <div class="step-desc">
+          由矢量叉乘定义，d<b>B</b> 必定<b>垂直于 <span class="c-dl">I dl</span> 与 <span class="c-r">r</span> 张成的半透明平面</b>。
+        </div>
+        <div class="rh-alert" style="margin-top: 8px;">
+          ✋ <b>右手定则操作：</b><br>
+          伸开右手，四指由电流元 <span class="c-dl">I dl</span> 沿着小于 180° 的夹角 θ 弯向位置矢量 <span class="c-r">r</span>，此时<b>大拇指垂直纸面向里</b>，即为 <span class="c-b">dB</span> 的方向！
+        </div>
+      </div>
+
+      <!-- 动态交互控制 -->
+      <div class="step-card">
+        <div class="step-title">
+          <span>⚙️ 实时交互调节</span>
+        </div>
+        
+        <div class="control-group" style="margin-top: 10px;">
+          <div class="control-label">
+            <span>电流元沿导线位置 <i>y</i></span>
+            <span id="label-dl-y" class="c-dl">0.0 m</span>
+          </div>
+          <input type="range" id="slider-dl-y" min="-4.5" max="4.5" step="0.1" value="0.0">
+        </div>
+
+        <div class="control-group" style="margin-top: 12px;">
+          <div class="control-label">
+            <span>场点距离 <i>a</i></span>
+            <span id="label-dist-a" class="c-r">3.5 m</span>
+          </div>
+          <input type="range" id="slider-dist-a" min="2.0" max="6.0" step="0.1" value="3.5">
+        </div>
+
+        <div class="btn-row" style="margin-top: 14px;">
+          <button class="btn primary" id="btn-toggle-anim" onclick="toggleRightHandSweep()">
+            <span>🌀 演示定则扫掠</span>
+          </button>
+          <button class="btn" onclick="toggleAutoScan()">
+            <span>🔄 自动沿导线积分</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 导线全长积分总结 -->
+      <div class="step-card" style="border-left: 3px solid var(--accent-gold);">
+        <div class="step-title">
+          <span style="color:var(--accent-gold);">💡 积分重要结论</span>
+        </div>
+        <div class="step-desc" style="font-size: 12.5px;">
+          你可以上下拖动电流元试一试：<b>整条长直导线上任意位置的电流元</b>，在右侧 <i>P</i> 点产生的磁场微元 <span class="c-b">dB</span> <b>全部垂直纸面向里（-Z 方向）</b>！
+          因此对整条无限长导线积分后，总磁场方向依然严格<b>垂直纸面向里（⊗）</b>。
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    /* ==========================================================
+       1. 场景、相机、渲染器、控制器初始化
+       ========================================================== */
+    const container = document.getElementById('webgl-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0a0f1d);
+    scene.fog = new THREE.FogExp2(0x0a0f1d, 0.025);
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(5.5, 3.2, 11);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.target.set(1.5, 0, 0);
+
+    // 光照设置
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+    scene.add(ambientLight);
+
+    const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.85);
+    dirLight1.position.set(10, 15, 12);
+    scene.add(dirLight1);
+
+    const dirLight2 = new THREE.DirectionalLight(0x38bdf8, 0.4);
+    dirLight2.position.set(-10, -5, -8);
+    scene.add(dirLight2);
+
+    // 辅助网格与坐标参考
+    const grid = new THREE.GridHelper(24, 24, 0x1e293b, 0x0f172a);
+    grid.position.y = -5.0;
+    scene.add(grid);
+
+    /* ==========================================================
+       2. 文字标签创建辅助函数（Canvas Sprite）
+       ========================================================== */
+    function createTextSprite(text, color = '#ffffff', fontSize = 28, bgColor = 'rgba(15, 23, 42, 0.8)') {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = 256;
+      canvas.height = 128;
+
+      ctx.fillStyle = bgColor;
+      ctx.roundRect(10, 15, 236, 98, 16);
+      ctx.fill();
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 4;
+      ctx.roundRect(10, 15, 236, 98, 16);
+      ctx.stroke();
+
+      ctx.font = `bold ${fontSize}px sans-serif`;
+      ctx.fillStyle = color;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, 128, 64);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      const spriteMaterial = new THREE.SpriteMaterial({ map: texture, depthTest: false });
+      const sprite = new THREE.Sprite(spriteMaterial);
+      sprite.scale.set(1.5, 0.75, 1);
+      return sprite;
+    }
+
+    /* ==========================================================
+       3. 物理场景建模
+       ========================================================== */
+    // 物理参数
+    let dl_y = 0.0;     // 电流元在 Y 轴的高度
+    let dist_a = 3.5;   // 场点 P 在 X 轴的距离
+    const wireLength = 10.0;
+    const dl_length = 0.8;
+
+    // --- A. 长直导线 (竖直沿 Y 轴) ---
+    const wireGeo = new THREE.CylinderGeometry(0.045, 0.045, wireLength, 32);
+    const wireMat = new THREE.MeshStandardMaterial({
+      color: 0xfbbf24,
+      roughness: 0.3,
+      metalness: 0.8,
+      emissive: 0x78350f,
+      emissiveIntensity: 0.2
+    });
+    const wireMesh = new THREE.Mesh(wireGeo, wireMat);
+    scene.add(wireMesh);
+
+    // 导线端点渐变/无穷延伸虚线
+    const dashLineMat = new THREE.LineDashedMaterial({ color: 0xfbbf24, dashSize: 0.3, gapSize: 0.2 });
+    const topDashGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 5, 0), new THREE.Vector3(0, 7.5, 0)]);
+    const btmDashGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, -5, 0), new THREE.Vector3(0, -7.5, 0)]);
+    const topDash = new THREE.Line(topDashGeo, dashLineMat);
+    const btmDash = new THREE.Line(btmDashGeo, dashLineMat);
+    topDash.computeLineDistances();
+    btmDash.computeLineDistances();
+    scene.add(topDash);
+    scene.add(btmDash);
+
+    // 导线总电流流动动态粒子/光柱
+    const currentArrowGroup = new THREE.Group();
+    for (let i = -4; i <= 4; i += 2) {
+      if (Math.abs(i) > 0.5) {
+        const arrow = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, i, 0), 0.7, 0xfbbf24, 0.22, 0.14);
+        currentArrowGroup.add(arrow);
+      }
+    }
+    scene.add(currentArrowGroup);
+
+    const wireLabel = createTextSprite("长直导线 (电流 I ↑)", "#fbbf24", 24);
+    wireLabel.position.set(-0.8, 4.2, 0);
+    scene.add(wireLabel);
+
+    // --- B. 待求场点 P (位于导线右侧距离 a 处) ---
+    const pointPGeo = new THREE.SphereGeometry(0.12, 32, 32);
+    const pointPMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      emissive: 0xf43f5e,
+      emissiveIntensity: 0.7
+    });
+    const pointPMesh = new THREE.Mesh(pointPGeo, pointPMat);
+    scene.add(pointPMesh);
+
+    // 场点距离 a 的水平参考虚线
+    const distRefLineMat = new THREE.LineDashedMaterial({ color: 0x64748b, dashSize: 0.15, gapSize: 0.15 });
+    const distRefLineGeo = new THREE.BufferGeometry();
+    const distRefLine = new THREE.Line(distRefLineGeo, distRefLineMat);
+    scene.add(distRefLine);
+
+    const labelP = createTextSprite("场点 P (距离 a)", "#ffffff", 26);
+    scene.add(labelP);
+
+    // --- C. 电流元 I dl ---
+    const dlGroup = new THREE.Group();
+    scene.add(dlGroup);
+
+    // 电流元加粗发光圆柱体
+    const dlCylinderGeo = new THREE.CylinderGeometry(0.08, 0.08, dl_length, 32);
+    const dlCylinderMat = new THREE.MeshStandardMaterial({
+      color: 0x38bdf8,
+      emissive: 0x0284c7,
+      emissiveIntensity: 0.8
+    });
+    const dlCylinder = new THREE.Mesh(dlCylinderGeo, dlCylinderMat);
+    dlGroup.add(dlCylinder);
+
+    // 电流元箭头
+    const dlArrow = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, -dl_length/2, 0), dl_length + 0.35, 0x38bdf8, 0.3, 0.2);
+    dlGroup.add(dlArrow);
+
+    const labelDl = createTextSprite("电流元 I dl ↑", "#38bdf8", 26);
+    scene.add(labelDl);
+
+    // --- D. 位置矢量 r (从电流元指向 P 点) ---
+    let arrowR = null;
+    const labelR = createTextSprite("位置矢量 r", "#4ade80", 26);
+    scene.add(labelR);
+
+    // --- E. 磁场矢量 dB (在 P 点) ---
+    let arrowB = null;
+    const labelB = createTextSprite("dB (垂直向里 ⊗)", "#f43f5e", 26);
+    scene.add(labelB);
+
+    // 垂直符号辅助小正方形 (展示 dB 垂直于源场平面)
+    const rightAngleMarker = new THREE.LineSegments(
+      new THREE.BufferGeometry(),
+      new THREE.LineBasicMaterial({ color: 0xf43f5e, linewidth: 2 })
+    );
+    scene.add(rightAngleMarker);
+
+    // --- F. 源-场平面 (I dl 与 r 张成的平面) ---
+    const planeGeo = new THREE.BufferGeometry();
+    const planeMat = new THREE.MeshBasicMaterial({
+      color: 0x0284c7,
+      transparent: true,
+      opacity: 0.22,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+    const planeMesh = new THREE.Mesh(planeGeo, planeMat);
+    scene.add(planeMesh);
+
+    // --- G. 右手螺旋定则扫掠圆弧动画 ---
+    const sweepCurveMat = new THREE.LineBasicMaterial({ color: 0xfacc15, linewidth: 3 });
+    const sweepLine = new THREE.Line(new THREE.BufferGeometry(), sweepCurveMat);
+    scene.add(sweepLine);
+
+    // 扫掠时的动态手指旋转示意光球
+    const sweepFingerTip = new THREE.Mesh(
+      new THREE.SphereGeometry(0.1, 16, 16),
+      new THREE.MeshBasicMaterial({ color: 0xfacc15 })
+    );
+    scene.add(sweepFingerTip);
+
+    /* ==========================================================
+       4. 物理几何与矢量动态更新函数
+       ========================================================== */
+    function updatePhysicsElements() {
+      // 1. 更新场点 P 位置：位于 (dist_a, 0, 0)
+      const pPos = new THREE.Vector3(dist_a, 0, 0);
+      pointPMesh.position.copy(pPos);
+      labelP.position.set(pPos.x + 0.8, pPos.y + 0.5, pPos.z);
+
+      // 距离 a 的辅助虚线 (从 (0,0,0) 到 P)
+      distRefLineGeo.setFromPoints([new THREE.Vector3(0, 0, 0), pPos]);
+      distRefLine.computeLineDistances();
+
+      // 2. 更新电流元位置
+      dlGroup.position.set(0, dl_y, 0);
+      labelDl.position.set(-1.1, dl_y + 0.3, 0);
+
+      // 3. 计算位置矢量 r：从电流元 (0, dl_y, 0) 指向 P (dist_a, 0, 0)
+      const dlPos = new THREE.Vector3(0, dl_y, 0);
+      const rVec = new THREE.Vector3().subVectors(pPos, dlPos);
+      const rLen = rVec.length();
+      const rDir = rVec.clone().normalize();
+
+      if (arrowR) scene.remove(arrowR);
+      arrowR = new THREE.ArrowHelper(rDir, dlPos, rLen, 0x4ade80, 0.4, 0.24);
+      scene.add(arrowR);
+
+      // 标签 r 放在矢量中点稍偏右上方
+      const rMid = new THREE.Vector3().addVectors(dlPos, pPos).multiplyScalar(0.5);
+      labelR.position.set(rMid.x + 0.4, rMid.y + 0.4, rMid.z);
+
+      // 4. 计算磁场矢量 dB 的方向：
+      // dl 沿 (0, 1, 0)
+      // dl x r: (0, 1, 0) x (dist_a, -dl_y, 0)
+      // x 分量: 1*0 - 0*(-dl_y) = 0
+      // y 分量: 0*dist_a - 0*0 = 0
+      // z 分量: 0*(-dl_y) - 1*dist_a = -dist_a
+      // 所以 dl x r 方向恒为 (0, 0, -1)，即垂直向里（-Z 轴）！
+      const dlDir = new THREE.Vector3(0, 1, 0);
+      const crossVec = new THREE.Vector3().crossVectors(dlDir, rVec);
+      const bDir = crossVec.clone().normalize(); // 恒等于 (0, 0, -1)
+
+      // 磁感应强度微元大小公式 dB ∝ sinθ / r^2
+      // sinθ = dist_a / rLen
+      const sinTheta = dist_a / rLen;
+      const bMag = Math.min(2.5, Math.max(1.0, (sinTheta / (rLen * rLen)) * 12.0)); // 缩放便于观察
+
+      if (arrowB) scene.remove(arrowB);
+      arrowB = new THREE.ArrowHelper(bDir, pPos, bMag, 0xf43f5e, 0.4, 0.28);
+      scene.add(arrowB);
+
+      // dB 标签位置：放在箭头末端稍外
+      labelB.position.set(pPos.x + 0.2, pPos.y - 0.4, pPos.z - bMag - 0.3);
+
+      // 5. 更新源-场平面多边形 (由导线元与 r 张成的平面)
+      // 平面在 Z=0 剖面，构造一个包含 dlPos、dlPos+dlDir、pPos 的三角面/梯形面
+      const p1 = new THREE.Vector3(0, dl_y - 0.8, 0);
+      const p2 = new THREE.Vector3(0, dl_y + 1.2, 0);
+      const p3 = new THREE.Vector3(dist_a + 0.4, 0, 0);
+      const vertices = new Float32Array([
+        p1.x, p1.y, p1.z,
+        p2.x, p2.y, p2.z,
+        p3.x, p3.y, p3.z
+      ]);
+      planeGeo.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+      planeGeo.computeVertexNormals();
+
+      // 6. 垂直符号标记 (在 P 点处，标注 dB 与 X 轴、Y 轴的垂直关系)
+      const markerSize = 0.35;
+      const markerPts = [
+        new THREE.Vector3(pPos.x - markerSize, pPos.y, pPos.z),
+        new THREE.Vector3(pPos.x - markerSize, pPos.y, pPos.z - markerSize),
+        new THREE.Vector3(pPos.x - markerSize, pPos.y, pPos.z - markerSize),
+        new THREE.Vector3(pPos.x, pPos.y, pPos.z - markerSize)
+      ];
+      rightAngleMarker.geometry.setFromPoints(markerPts);
+
+      // 更新界面数值
+      document.getElementById('label-dl-y').innerText = `${dl_y.toFixed(1)} m`;
+      document.getElementById('label-dist-a').innerText = `${dist_a.toFixed(1)} m`;
+    }
+
+    /* ==========================================================
+       5. 右手定则动态扫掠圆弧动画
+       ========================================================== */
+    let isSweeping = false;
+    let sweepProgress = 0; // 0 -> 1
+
+    function updateSweepAnimation() {
+      if (!isSweeping) {
+        sweepLine.visible = false;
+        sweepFingerTip.visible = false;
+        return;
+      }
+
+      sweepLine.visible = true;
+      sweepFingerTip.visible = true;
+
+      // 电流元位置
+      const dlPos = new THREE.Vector3(0, dl_y, 0);
+      const pPos = new THREE.Vector3(dist_a, 0, 0);
+      const rVec = new THREE.Vector3().subVectors(pPos, dlPos);
+
+      // 电流元起始向量 (0, 1, 0)
+      const vStart = new THREE.Vector3(0, 1, 0).normalize();
+      const vEnd = rVec.clone().normalize();
+
+      // 计算从 vStart 旋转到 vEnd 的夹角
+      let totalAngle = vStart.angleTo(vEnd);
+      // 旋转轴恒为 (0, 0, -1)
+      const rotAxis = new THREE.Vector3(0, 0, -1);
+
+      const arcRadius = 1.35;
+      const segments = 32;
+      const points = [];
+      const currentAngle = totalAngle * sweepProgress;
+
+      for (let i = 0; i <= segments; i++) {
+        const frac = i / segments;
+        const theta = currentAngle * frac;
+        const ptDir = vStart.clone().applyAxisAngle(rotAxis, theta);
+        points.push(dlPos.clone().add(ptDir.multiplyScalar(arcRadius)));
+      }
+
+      sweepLine.geometry.setFromPoints(points);
+
+      // 尖端光球位置
+      const tipDir = vStart.clone().applyAxisAngle(rotAxis, currentAngle);
+      sweepFingerTip.position.copy(dlPos.clone().add(tipDir.multiplyScalar(arcRadius)));
+
+      sweepProgress += 0.015;
+      if (sweepProgress > 1.0) {
+        sweepProgress = 0; // 循环扫掠
+      }
+    }
+
+    function toggleRightHandSweep() {
+      isSweeping = !isSweeping;
+      const btn = document.getElementById('btn-toggle-anim');
+      if (isSweeping) {
+        btn.innerHTML = '<span>⏸ 暂停定则动画</span>';
+        btn.classList.add('primary');
+      } else {
+        btn.innerHTML = '<span>🌀 演示定则扫掠</span>';
+        btn.classList.remove('primary');
+      }
+    }
+
+    // 沿导线全长自动扫描积分
+    let isAutoScanning = false;
+    let scanDirection = 1;
+
+    function toggleAutoScan() {
+      isAutoScanning = !isAutoScanning;
+    }
+
+    /* ==========================================================
+       6. 视角切换控制
+       ========================================================== */
+    function switchView(mode) {
+      document.querySelectorAll('.view-pill').forEach(el => el.classList.remove('active'));
+
+      if (mode === '3d') {
+        document.getElementById('btn-view-3d').classList.add('active');
+        animateCameraTo(new THREE.Vector3(5.5, 3.2, 11), new THREE.Vector3(1.5, 0, 0));
+      } else if (mode === 'front') {
+        document.getElementById('btn-view-front').classList.add('active');
+        // 正视 X-Y 剖面（观察者正对纸面，导线垂直向上，P 在右边）
+        animateCameraTo(new THREE.Vector3(1.8, 0, 12), new THREE.Vector3(1.8, 0, 0));
+      } else if (mode === 'top') {
+        document.getElementById('btn-view-top').classList.add('active');
+        // 俯视 X-Z 截面（导线垂直穿出屏幕，P 点在右侧）
+        animateCameraTo(new THREE.Vector3(1.8, 12, 0.01), new THREE.Vector3(1.8, 0, 0));
+      }
+    }
+
+    function animateCameraTo(targetPos, targetLookAt) {
+      const startPos = camera.position.clone();
+      const startTarget = controls.target.clone();
+      let t = 0;
+
+      function step() {
+        t += 0.05;
+        camera.position.lerpVectors(startPos, targetPos, t);
+        controls.target.lerpVectors(startTarget, targetLookAt, t);
+        controls.update();
+        if (t < 1.0) {
+          requestAnimationFrame(step);
+        }
+      }
+      step();
+    }
+
+    /* ==========================================================
+       7. UI 事件监听与滑块绑定
+       ========================================================== */
+    const sliderDlY = document.getElementById('slider-dl-y');
+    const sliderDistA = document.getElementById('slider-dist-a');
+
+    sliderDlY.addEventListener('input', (e) => {
+      dl_y = parseFloat(e.target.value);
+      updatePhysicsElements();
+    });
+
+    sliderDistA.addEventListener('input', (e) => {
+      dist_a = parseFloat(e.target.value);
+      updatePhysicsElements();
+    });
+
+    // 窗口尺寸自适应
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    /* ==========================================================
+       8. 主动画循环
+       ========================================================== */
+    updatePhysicsElements();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // 自动沿导线扫描动画
+      if (isAutoScanning) {
+        dl_y += 0.03 * scanDirection;
+        if (dl_y > 4.2) {
+          dl_y = 4.2;
+          scanDirection = -1;
+        } else if (dl_y < -4.2) {
+          dl_y = -4.2;
+          scanDirection = 1;
+        }
+        sliderDlY.value = dl_y.toFixed(2);
+        updatePhysicsElements();
+      }
+
+      // 右手定则扫掠动画
+      updateSweepAnimation();
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
