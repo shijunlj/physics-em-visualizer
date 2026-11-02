@@ -148,7 +148,7 @@
       border-radius: 50%;
     }
 
-    /* 7 大实验卡片网格 */
+    /* 实验卡片网格 */
     .cards-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
@@ -470,48 +470,47 @@
           <span>安培环路定理：\(\oint_L \vec{B}\cdot\mathrm{d}\vec{l} = \mu_0 \sum I\)</span>
         </div>
         <div class="formula-pill">
-          <span class="dot" style="background: var(--rose);"></span>
-          <span>安培力定律：\(\vec{F} = \int I\mathrm{d}\vec{l}\times\vec{B}\)</span>
+          <span class="dot" style="background: var(--purple);"></span>
+          <span>磁矢势：\(\vec{A} = \frac{\mu_0}{4\pi}\int \frac{I\mathrm{d}\vec{l}}{r'}\)</span>
         </div>
       </div>
     </header>
 
-    <!-- 7 个交互实验卡片 -->
+    <!-- 交互实验卡片列表 -->
     <main class="cards-grid">
 
-      <!-- 01 奥斯特实验 -->
+      <!-- 01 环形电流矢势与对称抵消 (推荐版 v2) -->
       <article class="card">
         <div class="card-visual">
           <span class="card-num">EXP 01</span>
           <svg viewBox="0 0 360 175" fill="none">
-            <!-- 环形磁感线椭圆 -->
-            <ellipse cx="180" cy="95" rx="95" ry="32" stroke="#38bdf8" stroke-width="1.8" stroke-dasharray="5 4" opacity="0.65"/>
-            <ellipse cx="180" cy="95" rx="60" ry="20" stroke="#38bdf8" stroke-width="1.5" opacity="0.45"/>
-            <!-- 顶部直导线 -->
-            <line x1="60" y1="52" x2="300" y2="52" stroke="#fbbf24" stroke-width="7" stroke-linecap="round"/>
-            <path d="M165 36 L198 36 M190 30 L198 36 L190 42" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <!-- 小磁针支架与磁针 -->
-            <line x1="180" y1="95" x2="180" y2="145" stroke="#94a3b8" stroke-width="3"/>
-            <polygon points="180,95 228,76 184,87" fill="#ef4444"/>
-            <polygon points="180,95 132,114 176,103" fill="#3b82f6"/>
-            <circle cx="180" cy="95" r="4.5" fill="#f8fafc"/>
+            <!-- 环形圆导线 -->
+            <ellipse cx="180" cy="95" rx="55" ry="55" stroke="#e2e8f0" stroke-width="3"/>
+            <!-- 半径 a 虚线 -->
+            <line x1="180" y1="95" x2="222" y2="60" stroke="#10b981" stroke-width="2.2" stroke-dasharray="4 3"/>
+            <!-- 场点 P 及切向矢势 A -->
+            <circle cx="180" cy="35" r="4.5" fill="#ffffff"/>
+            <path d="M180 35 L225 35 M217 31 L225 35 L217 39" stroke="#facc15" stroke-width="3" stroke-linecap="round"/>
+            <!-- 径向抵消箭头对 -->
+            <path d="M180 35 L180 18 M177 23 L180 18 L183 23" stroke="#fb7185" stroke-width="2.2"/>
+            <path d="M180 35 L180 52 M177 47 L180 52 L183 47" stroke="#fb7185" stroke-width="2.2"/>
           </svg>
-          <span class="card-formula-tag">\(\vec{\tau} = \vec{m} \times \vec{B}\)</span>
+          <span class="card-formula-tag">\(\vec{A} = \frac{\mu_0 I a}{2\pi}\int_0^\pi \frac{\cos\varphi\,\mathrm{d}\varphi}{r'}\hat{e}_\varphi\)</span>
         </div>
         <div class="card-body">
           <div class="card-title">
-            <span>🧲 奥斯特电流磁效应实验</span>
+            <span>⭕ 环形导线电流的矢势 A（对称抵消演示）</span>
           </div>
           <p class="card-desc">
-            重现 1820 年奥斯特经典实验：直导线通电瞬间激发同心圆环形磁场，下方小磁针受磁力矩作用发生偏转并伴随真实欠阻尼摆动。
+            左图 3D 空间立体视角与右图等大线圈平面投影并列：直观演示空间任一点 \(P\) 处对称电流元 \(\pm\varphi\) 产生的径向分量等大反向抵消、切向分量叠加合成矢势 \(\vec{A}\)。
           </p>
           <div class="card-tags">
-            <span class="tag">右手螺旋定则</span>
-            <span class="tag">小磁针阻尼振荡</span>
-            <span class="tag">电流正反向切换</span>
+            <span class="tag">对称电流元径向抵消</span>
+            <span class="tag">等大投影并列</span>
+            <span class="tag">循环积分动画</span>
           </div>
           <div class="card-actions">
-            <a class="btn-launch" href="./oersted_experiment.html">🚀 进入 3D 实验</a>
+            <a class="btn-launch" href="./vector_potential_loop_symmetry_v2.html">🚀 进入 3D 实验</a>
             <button class="btn-preview" onclick="openPreview(0)">页内速览</button>
           </div>
         </div>
@@ -679,48 +678,10 @@
         </div>
       </article>
 
-      <!-- 06 安培力实验 -->
+      <!-- 06 平行载流导线相互作用 -->
       <article class="card">
         <div class="card-visual">
           <span class="card-num">EXP 06</span>
-          <svg viewBox="0 0 360 175" fill="none">
-            <!-- U形磁铁上下极 -->
-            <rect x="125" y="24" width="90" height="24" rx="4" fill="#ef4444" opacity="0.85"/>
-            <rect x="125" y="128" width="90" height="24" rx="4" fill="#3b82f6" opacity="0.85"/>
-            <!-- 竖直磁感线 B -->
-            <line x1="150" y1="50" x2="150" y2="124" stroke="#38bdf8" stroke-width="1.6" stroke-dasharray="4 3"/>
-            <line x1="170" y1="50" x2="170" y2="124" stroke="#38bdf8" stroke-width="1.6" stroke-dasharray="4 3"/>
-            <line x1="190" y1="50" x2="190" y2="124" stroke="#38bdf8" stroke-width="1.6" stroke-dasharray="4 3"/>
-            <!-- 悬挂通电导体棒与安培力 F -->
-            <line x1="170" y1="15" x2="205" y2="88" stroke="#94a3b8" stroke-width="2"/>
-            <circle cx="205" cy="88" r="10" fill="#fbbf24" stroke="#ffffff" stroke-width="2"/>
-            <path d="M218 88 L272 88 M263 82 L272 88 L263 94" stroke="#10b981" stroke-width="3.2" stroke-linecap="round"/>
-          </svg>
-          <span class="card-formula-tag">\(\vec{F} = I\vec{L}\times\vec{B}\)</span>
-        </div>
-        <div class="card-body">
-          <div class="card-title">
-            <span>✋ 磁场对通电导体的作用（安培力）</span>
-          </div>
-          <p class="card-desc">
-            蹄形磁铁匀强磁场中的悬挂导体棒通电后受安培力摆动，内置与物理量方向实时联动的三维左手定则手势模型，直观掌握 \(\vec{I}, \vec{B}, \vec{F}\) 空间关系。
-          </p>
-          <div class="card-tags">
-            <span class="tag">3D 左手定则模型</span>
-            <span class="tag">磁极翻转与电流调向</span>
-            <span class="tag">单摆力学阻尼仿真</span>
-          </div>
-          <div class="card-actions">
-            <a class="btn-launch" href="./ampere_force_experiment.html">🚀 进入 3D 实验</a>
-            <button class="btn-preview" onclick="openPreview(5)">页内速览</button>
-          </div>
-        </div>
-      </article>
-
-      <!-- 07 平行载流导线相互作用 -->
-      <article class="card">
-        <div class="card-visual">
-          <span class="card-num">EXP 07</span>
           <svg viewBox="0 0 360 175" fill="none">
             <!-- 两根弹性弯曲平行导线 -->
             <path d="M130 20 Q152 88 130 155" stroke="#fbbf24" stroke-width="6" stroke-linecap="round"/>
@@ -747,7 +708,7 @@
           </div>
           <div class="card-actions">
             <a class="btn-launch" href="./parallel_currents_interaction.html">🚀 进入 3D 实验</a>
-            <button class="btn-preview" onclick="openPreview(6)">页内速览</button>
+            <button class="btn-preview" onclick="openPreview(5)">页内速览</button>
           </div>
         </div>
       </article>
@@ -778,13 +739,12 @@
 
   <script>
     const DEMOS = [
-      { title: '01 奥斯特实验', url: './oersted_experiment.html' },
+      { title: '01 环形电流矢势 A', url: './vector_potential_loop_symmetry_v2.html' },
       { title: '02 毕奥-萨伐尔(直导线)', url: './biot_savart_wire.html' },
       { title: '03 毕奥-萨伐尔(圆线圈)', url: './biot_savart_loop.html' },
       { title: '04 载流长直螺线管磁场', url: './solenoid_magnetic_field.html' },
       { title: '05 磁场高斯定理', url: './magnetic_gauss_law.html' },
-      { title: '06 安培力实验', url: './ampere_force_experiment.html' },
-      { title: '07 平行载流导线相互作用', url: './parallel_currents_interaction.html' }
+      { title: '06 平行载流导线相互作用', url: './parallel_currents_interaction.html' }
     ];
 
     const modal = document.getElementById('viewer-modal');

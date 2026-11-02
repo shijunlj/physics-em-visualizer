@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>半径为 a 的环形导线电流 I 的矢势 A 与磁感应强度 B</title>
+  <!-- 引入 Three.js 与 OrbitControls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <!-- 引入 KaTeX 渲染数学公式 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '\\(', right: '\\)', display: false}]});"></script>
+  <style>
+    :root {
+      --bg: #080c16;
+      --panel-bg: rgba(15, 23, 42, 0.88);
+      --border: rgba(148, 163, 184, 0.22);
+      --c-wire: #e2e8f0;     /* 银色环形导线 */
+      --c-a: #10b981;        /* 半径 a：醒目翠绿 */
+      --c-R: #38bdf8;        /* 距离 R：醒目天蓝 */
+      --c-rprime: #f43f5e;   /* 距离 r'：醒目玫红 */
+      --c-phi: #c084fc;      /* 夹角 φ 与辅助色：亮紫 */
+      --c-vecA: #22d3ee;     /* 磁矢势 A：亮青色 */
+      --text: #f8fafc;
+      --text-dim: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background: radial-gradient(circle at 42% 50%, #0f172a 0%, #060911 100%);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    #webgl-container {
+      width: 100vw;
+      height: 100vh;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+    }
+
+    /* 左上角：题目与颜色图例卡片 */
+    #header-card {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      z-index: 10;
+      background: var(--panel-bg);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 18px;
+      max-width: 560px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+    }
+
+    #header-card h1 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #header-card h1 .badge {
+      background: rgba(56, 189, 248, 0.18);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+
+    #header-card p {
+      font-size: 12.5px;
+      color: #cbd5e1;
+      line-height: 1.55;
+      margin-bottom: 8px;
+    }
+
+    .legend-strip {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 14px;
+      font-size: 12px;
+      padding-top: 6px;
+      border-top: 1px solid rgba(148, 163, 184, 0.15);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-swatch {
+      width: 16px;
+      height: 3.5px;
+      border-radius: 2px;
+    }
+
+    /* 左下角：对应教材右图的 2D 轴向投影小窗 */
+    #proj-card {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      z-index: 10;
+      background: var(--panel-bg);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 14px;
+      width: 268px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+    }
+
+    .proj-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #cbd5e1;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    #proj-canvas {
+      width: 240px;
+      height: 215px;
+      background: rgba(8, 12, 22, 0.85);
+      border-radius: 8px;
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      display: block;
+    }
+
+    /* 右侧：交互控制面板 */
+    #ui-panel {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      z-index: 10;
+      width: 385px;
+      max-height: calc(100vh - 32px);
+      overflow-y: auto;
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px 18px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+    }
+
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 6px;
+    }
+
+    .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+    }
+
+    .btn {
+      padding: 8px 10px;
+      background: rgba(30, 41, 59, 0.85);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+
+    .btn.full-width {
+      grid-column: 1 / -1;
+    }
+
+    .btn:hover {
+      background: rgba(51, 65, 85, 0.92);
+      border-color: rgba(148, 163, 184, 0.45);
+    }
+
+    .btn.active {
+      background: rgba(56, 189, 248, 0.2);
+      border-color: #38bdf8;
+      color: #38bdf8;
+      font-weight: 600;
+    }
+
+    .btn.action-random {
+      background: rgba(16, 185, 129, 0.18);
+      border-color: rgba(16, 185, 129, 0.55);
+      color: #34d399;
+      font-weight: 600;
+    }
+
+    .btn.action-random:hover {
+      background: rgba(16, 185, 129, 0.30);
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .control-label {
+      font-size: 12px;
+      color: var(--text-dim);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .control-val {
+      font-weight: 600;
+      color: #f1f5f9;
+      font-family: "SF Mono", "Menlo", monospace;
+    }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%;
+      background: transparent;
+    }
+
+    input[type=range]::-webkit-slider-runnable-track {
+      width: 100%;
+      height: 5px;
+      cursor: pointer;
+      background: #334155;
+      border-radius: 3px;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      height: 15px;
+      width: 15px;
+      border-radius: 50%;
+      background: #38bdf8;
+      cursor: pointer;
+      -webkit-appearance: none;
+      margin-top: -5px;
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+      background: rgba(15, 23, 42, 0.65);
+      padding: 9px 10px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    .stat-num {
+      font-size: 13px;
+      font-weight: 700;
+      font-family: "SF Mono", monospace;
+    }
+
+    .check-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #cbd5e1;
+      cursor: pointer;
+    }
+
+    .check-row input {
+      accent-color: #38bdf8;
+      cursor: pointer;
+    }
+
+    .theory-box {
+      background: rgba(15, 23, 42, 0.65);
+      border-left: 3px solid var(--c-a);
+      border-radius: 6px;
+      padding: 9px 11px;
+      font-size: 11.8px;
+      color: #cbd5e1;
+      line-height: 1.55;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 全屏 3D 渲染画布 -->
+  <div id="webgl-container"></div>
+
+  <!-- 左上角：题目与醒目颜色图例 -->
+  <div id="header-card">
+    <h1>
+      <span>半径为 \(a\) 的环形导线有电流 \(I\). 求矢势和磁感应强度.</span>
+    </h1>
+    <p>
+      所求点 \(P(r, \theta_P, z)\) 为<strong>三维空间中的任意一点</strong>（不必在中轴线正上方）。
+      过中心轴线与点 \(P\) 的子午面构成左图几何关系；沿轴向投影到线圈平面即得左下角右图。
+    </p>
+    <div class="legend-strip">
+      <div class="legend-item">
+        <span class="legend-swatch" style="background: var(--c-wire);"></span>
+        <span>环形导线 \(I\) (银色)</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-swatch" style="background: var(--c-a);"></span>
+        <span style="color: var(--c-a); font-weight: 600;">半径 \(a\) (翠绿)</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-swatch" style="background: var(--c-R);"></span>
+        <span style="color: var(--c-R); font-weight: 600;">距离 \(R\) (天蓝)</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-swatch" style="background: var(--c-rprime);"></span>
+        <span style="color: var(--c-rprime); font-weight: 600;">距离 \(r'\) (玫红)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 左下角：对应教材右图的线圈平面 2D 投影图 -->
+  <div id="proj-card">
+    <div class="proj-title">
+      <span>⭕ 在线圈平面的投影（对应右图）</span>
+      <span style="color: var(--c-phi); font-family: monospace;" id="proj-phi-txt">φ = 40°</span>
+    </div>
+    <canvas id="proj-canvas" width="480" height="430"></canvas>
+  </div>
+
+  <!-- 右侧控制面板 -->
+  <div id="ui-panel">
+    <div class="section-title">🎥 视角切换与交互操作</div>
+    <div class="btn-grid">
+      <button class="btn" id="btn-view-side" onclick="setCameraPreset('SIDE')">
+        <span>📐 对齐左图 (子午面侧视)</span>
+      </button>
+      <button class="btn" id="btn-view-ring" onclick="setCameraPreset('RING')">
+        <span>👁️ 对着圆环看 (轴向视角)</span>
+      </button>
+      <button class="btn action-random" onclick="randomizePointP()">
+        <span>🎲 随机变换 P 点位置</span>
+      </button>
+      <button class="btn" id="btn-sweep-phi" onclick="toggleSweepPhi()">
+        <span>🔄 循环环上电流元 φ</span>
+      </button>
+    </div>
+
+    <div class="section-title">🎛️ 空间场点 \(P\) 与电流元调节</div>
+
+    <!-- 电流元相对夹角 φ -->
+    <div class="control-group">
+      <div class="control-label">
+        <span>电流元相对场点子午面夹角 \(\varphi\)</span>
+        <span class="control-val" style="color: var(--c-phi);" id="val-phi">40°</span>
+      </div>
+      <input type="range" id="slider-phi" min="0" max="360" step="1" value="40">
+    </div>
+
+    <!-- 所求点 P 的空间方位角 θ_P -->
+    <div class="control-group">
+      <div class="control-label">
+        <span>所求点 \(P\) 空间方位角 \(\theta_P\) (任一点方向)</span>
+        <span class="control-val" id="val-thetaP">42°</span>
+      </div>
+      <input type="range" id="slider-thetaP" min="-180" max="180" step="1" value="42">
+    </div>
+
+    <!-- 场点轴向距离 z -->
+    <div class="control-group">
+      <div class="control-label">
+        <span>场点轴向距离 \(z\)</span>
+        <span class="control-val" id="val-z">2.10 m</span>
+      </div>
+      <input type="range" id="slider-z" min="0.6" max="3.2" step="0.05" value="2.10">
+    </div>
+
+    <!-- 场点离轴距离 r -->
+    <div class="control-group">
+      <div class="control-label">
+        <span>场点离轴距离 \(r\)</span>
+        <span class="control-val" id="val-r">1.45 m</span>
+      </div>
+      <input type="range" id="slider-r" min="0.3" max="2.2" step="0.05" value="1.45">
+    </div>
+
+    <!-- 圆环半径 a -->
+    <div class="control-group">
+      <div class="control-label">
+        <span>环形导线半径 \(a\)</span>
+        <span class="control-val" style="color: var(--c-a);" id="val-a">1.20 m</span>
+      </div>
+      <input type="range" id="slider-a" min="0.6" max="1.7" step="0.05" value="1.20">
+    </div>
+
+    <!-- 辅助显示复选框 -->
+    <label class="check-row">
+      <input type="checkbox" id="chk-meridian" checked onchange="updateScene()">
+      <span>显示空间点 \(P\) 的 \(z\text{-}r\text{-}R\) 子午面与投影虚线</span>
+    </label>
+    <label class="check-row">
+      <input type="checkbox" id="chk-sym" onchange="updateScene()">
+      <span>显示对称电流元 \(-\varphi\)（验证径向分量抵消）</span>
+    </label>
+    <label class="check-row">
+      <input type="checkbox" id="chk-vecB" onchange="updateScene()">
+      <span>同时显示磁感应强度矢量 \(\vec{B} = \nabla \times \vec{A}\)</span>
+    </label>
+
+    <!-- 实时物理量统计 -->
+    <div class="stat-grid">
+      <div class="stat-item">
+        <span class="stat-label">圆环半径 \(a\)</span>
+        <span class="stat-num" style="color: var(--c-a);" id="stat-a">1.20 m</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">距环心 \(R = \sqrt{r^2+z^2}\)</span>
+        <span class="stat-num" style="color: var(--c-R);" id="stat-R">2.55 m</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">距电流元 \(r'(\varphi)\)</span>
+        <span class="stat-num" style="color: var(--c-rprime);" id="stat-rprime">2.34 m</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">环向矢势 \(A_\varphi(r,z)\)</span>
+        <span class="stat-num" style="color: var(--c-vecA);" id="stat-A">0.138 μ₀I</span>
+      </div>
+    </div>
+
+    <!-- 公式说明 -->
+    <div class="theory-box">
+      <b>📐 空间余弦定理与矢势积分：</b><br>
+      \(r' = \sqrt{z^2 + (r - a\cos\varphi)^2 + (a\sin\varphi)^2} = \sqrt{R^2 + a^2 - 2ar\cos\varphi}\)<br>
+      \(\vec{A}(r,z) = \hat{e}_\varphi \frac{\mu_0 I a}{2\pi}\int_0^\pi \frac{\cos\varphi\,\mathrm{d}\varphi}{\sqrt{R^2 + a^2 - 2ar\cos\varphi}}\)
+    </div>
+  </div>
+
+  <script>
+    /* ==============================================================
+       1. Three.js 全屏三维场景初始化
+       ============================================================== */
+    const container = document.getElementById('webgl-container');
+    const scene = new THREE.Scene();
+
+    const camera = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const controls = new THREE.OrbitControls(camera, container);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+
+    // 初始 3D 空间视角（稍向画面左中偏置，避开右侧控制面板）
+    camera.position.set(3.4, 2.0, 4.6);
+    controls.target.set(1.15, 0.20, -0.25);
+    controls.update();
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.appendChild(renderer.domElement);
+
+    // 照明：突出银色导线的金属质感
+    scene.add(new THREE.AmbientLight(0xffffff, 0.9));
+    const dirLight1 = new THREE.DirectionalLight(0xffffff, 1.0);
+    dirLight1.position.set(5, 8, 6);
+    scene.add(dirLight1);
+    const dirLight2 = new THREE.DirectionalLight(0x94a3b8, 0.5);
+    dirLight2.position.set(-5, -4, -4);
+    scene.add(dirLight2);
+
+    /* ==============================================================
+       2. 醒目颜色常量（全图无金色）与无矩形框数学变量标签
+       - 环形导线：亮银色 #e2e8f0
+       - 半径 a：醒目翠绿 #10b981
+       - 距离 R：醒目天蓝 #38bdf8
+       - 距离 r'：醒目玫红 #f43f5e
+       - 距离 z, r：亮银白 #e2e8f0
+       - 夹角 φ：亮紫 #c084fc
+       - 矢势 A：亮青色 #22d3ee
+       ============================================================== */
+    const COLORS = {
+      wire: 0xe2e8f0,
+      a: 0x10b981,
+      R: 0x38bdf8,
+      rprime: 0xf43f5e,
+      zr: 0xe2e8f0,
+      phi: 0xc084fc,
+      vecA: 0x22d3ee,
+      vecB: 0xfb7185
+    };
+
+    // 绘制无矩形框的纯净斜体数学符号标签
+    function makeLabelSprite(text, color = '#ffffff', fontSize = 36, scaleHeight = 0.28) {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const fontStr = `italic bold ${fontSize}px "Times New Roman", "Georgia", serif`;
+      ctx.font = fontStr;
+      const textW = ctx.measureText(text).width;
+
+      const padX = 24;
+      canvas.width = Math.max(80, Math.ceil(textW + padX * 2));
+      canvas.height = 68;
+
+      ctx.font = fontStr;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      // 不加矩形框，仅加柔和暗色描边/阴影确保在线条上清晰醒目
+      ctx.shadowColor = 'rgba(2, 6, 23, 0.95)';
+      ctx.shadowBlur = 8;
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = 'rgba(2, 6, 23, 0.85)';
+      ctx.strokeText(text, canvas.width / 2, canvas.height / 2);
+
+      ctx.fillStyle = color;
+      ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+
+      const tex = new THREE.CanvasTexture(canvas);
+      const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+      const sprite = new THREE.Sprite(mat);
+      const aspect = canvas.width / canvas.height;
+      sprite.scale.set(scaleHeight * aspect, scaleHeight, 1);
+      return sprite;
+    }
+
+    function createDashedSegment(p1, p2, colorHex, dashSize = 0.08, gapSize = 0.05) {
+      const geo = new THREE.BufferGeometry().setFromPoints([p1, p2]);
+      const mat = new THREE.LineDashedMaterial({ color: colorHex, dashSize, gapSize, linewidth: 2 });
+      const line = new THREE.Line(geo, mat);
+      line.computeLineDistances();
+      return line;
+    }
+
+    function createSolidSegment(p1, p2, colorHex, radius = 0.015) {
+      const curve = new THREE.LineCurve3(p1, p2);
+      const geo = new THREE.TubeGeometry(curve, 8, radius, 10, false);
+      const mat = new THREE.MeshBasicMaterial({ color: colorHex });
+      return new THREE.Mesh(geo, mat);
+    }
+
+    /* ==============================================================
+       3. 物理状态与数值积分
+       - thetaQDeg 锚定环上所取电流元 Q1 在世界坐标系中的固定位置，
+         使得随机变换或调节 P 点位置时，圆环与所取电流元 a 完全保持不动！
+       ============================================================== */
+    const params = {
+      a: 1.20,
+      z: 2.10,
+      r: 1.45,
+      thetaPDeg: 42, // 空间任一点 P 绕中轴线的空间方位角
+      thetaQDeg: 82, // 环上所取电流元 Q1 在圆环上的世界方位角 (初始 42° + 40° = 82°)
+      phiDeg: 40     // 电流元 Q1 相对场点子午面径向 e_r 的夹角 φ = thetaQ - thetaP
+    };
+
+    let isSweepingPhi = false;
+
+    function computeVectorPotentialA(r, z, a) {
+      const N = 120;
+      const dPhi = Math.PI / N;
+      let sum = 0;
+      for (let i = 0; i < N; i++) {
+        const phi = (i + 0.5) * dPhi;
+        const dist = Math.sqrt(a * a + r * r + z * z - 2 * a * r * Math.cos(phi));
+        sum += (Math.cos(phi) / Math.max(0.05, dist)) * dPhi;
+      }
+      return (a / (2 * Math.PI)) * sum;
+    }
+
+    function computeMagneticFieldB(r, z, a) {
+      const eps = 1e-3;
+      const AzPlus = computeVectorPotentialA(r, z + eps, a);
+      const AzMinus = computeVectorPotentialA(r, z - eps, a);
+      const Br = -(AzPlus - AzMinus) / (2 * eps);
+
+      if (r < 1e-3) {
+        const Bz = (a * a) / (2 * Math.pow(a * a + z * z, 1.5));
+        return { Br: 0, Bz };
+      }
+      const rPlus = r + eps;
+      const rMinus = Math.max(1e-4, r - eps);
+      const ArPlus = rPlus * computeVectorPotentialA(rPlus, z, a);
+      const ArMinus = rMinus * computeVectorPotentialA(rMinus, z, a);
+      const Bz = (ArPlus - ArMinus) / (r * (rPlus - rMinus));
+      return { Br, Bz };
+    }
+
+    /* ==============================================================
+       4. 构建 3D 场景与左下角 2D 线圈平面投影
+       ============================================================== */
+    const rootGroup = new THREE.Group();
+    scene.add(rootGroup);
+
+    function updateScene() {
+      while (rootGroup.children.length > 0) rootGroup.remove(rootGroup.children[0]);
+
+      const { a, z, r, thetaPDeg, thetaQDeg } = params;
+      const thetaP = (thetaPDeg * Math.PI) / 180;
+      const thetaQ = (thetaQDeg * Math.PI) / 180;
+      // 电流元 Q1 相对场点 P 子午面径向 e_r 的有向夹角 φ ∈ (-π, π]
+      const phi = Math.atan2(Math.sin(thetaQ - thetaP), Math.cos(thetaQ - thetaP));
+      const phiDegNorm = Math.round(((thetaQDeg - thetaPDeg) % 360 + 360) % 360);
+      params.phiDeg = phiDegNorm;
+
+      const showMeridian = document.getElementById('chk-meridian').checked;
+      const showSym = document.getElementById('chk-sym').checked;
+      const showVecB = document.getElementById('chk-vecB').checked;
+
+      // 单位基矢：
+      // e_z = (1, 0, 0) 中心轴线
+      // e_r = (0, cos θ_P, -sin θ_P) 空间点 P 的径向单位矢
+      // e_φ = (0, -sin θ_P, -cos θ_P) 空间点 P 的顺时针切向单位矢
+      const ez = new THREE.Vector3(1, 0, 0);
+      const er = new THREE.Vector3(0, Math.cos(thetaP), -Math.sin(thetaP));
+      const ephi = new THREE.Vector3(0, -Math.sin(thetaP), -Math.cos(thetaP));
+      const origin = new THREE.Vector3(0, 0, 0);
+
+      // 1. 中心轴线 z 与环平面十字参考线
+      rootGroup.add(createDashedSegment(new THREE.Vector3(-0.95, 0, 0), origin, 0x94a3b8, 0.07, 0.05));
+      rootGroup.add(createSolidSegment(origin, new THREE.Vector3(Math.max(3.3, z + 0.55), 0, 0), 0x94a3b8, 0.011));
+      rootGroup.add(createDashedSegment(new THREE.Vector3(0, -1.9, 0), new THREE.Vector3(0, 1.9, 0), 0x334155, 0.05, 0.05));
+      rootGroup.add(createDashedSegment(new THREE.Vector3(0, 0, -1.9), new THREE.Vector3(0, 0, 1.9), 0x334155, 0.05, 0.05));
+
+      // 2. 银色环形导线 (半径 a)
+      const torusGeo = new THREE.TorusGeometry(a, 0.025, 24, 100);
+      torusGeo.rotateY(Math.PI / 2);
+      const torusMat = new THREE.MeshStandardMaterial({
+        color: COLORS.wire,
+        roughness: 0.22,
+        metalness: 0.85,
+        emissive: 0x334155,
+        emissiveIntensity: 0.25
+      });
+      rootGroup.add(new THREE.Mesh(torusGeo, torusMat));
+
+      // 严格复刻教材左图的电流方向箭头：圆环前侧 (0, 0, +a) 向上 (0, +1, 0)
+      const frontLoopPt = new THREE.Vector3(0, -0.08, a);
+      const upDir = new THREE.Vector3(0, 1, 0);
+      rootGroup.add(new THREE.ArrowHelper(upDir, frontLoopPt, 0.30, COLORS.wire, 0.14, 0.09));
+      const labelI = makeLabelSprite('I', '#f8fafc', 36);
+      labelI.position.set(0, 0.04, a + 0.22);
+      rootGroup.add(labelI);
+
+      // 3. 空间任一点 P(r, θ_P, z)
+      const ptAxisZ = new THREE.Vector3(z, 0, 0);
+      const ptP = new THREE.Vector3().copy(ptAxisZ).addScaledVector(er, r);
+      const ptPProjLoop = new THREE.Vector3().addScaledVector(er, r);
+
+      // 所求点 P 标记球
+      const pMesh = new THREE.Mesh(
+        new THREE.SphereGeometry(0.06, 20, 20),
+        new THREE.MeshBasicMaterial({ color: 0xffffff })
+      );
+      pMesh.position.copy(ptP);
+      rootGroup.add(pMesh);
+
+      const labelP = makeLabelSprite('P', '#ffffff', 34);
+      labelP.position.copy(ptP).addScaledVector(er, 0.20).add(new THREE.Vector3(0.10, 0, 0));
+      rootGroup.add(labelP);
+
+      // 【醒目天蓝色】实线 R (原点 O -> 空间点 P)
+      rootGroup.add(createSolidSegment(origin, ptP, COLORS.R, 0.017));
+      // 【亮银白色】实线 r (轴垂足 O' -> 空间点 P)
+      rootGroup.add(createSolidSegment(ptAxisZ, ptP, COLORS.zr, 0.014));
+
+      // 垂足直角符号 ⊥
+      const raSize = 0.14;
+      const raP1 = new THREE.Vector3(z - raSize, 0, 0);
+      const raP2 = new THREE.Vector3(z - raSize, 0, 0).addScaledVector(er, raSize);
+      const raP3 = new THREE.Vector3(z, 0, 0).addScaledVector(er, raSize);
+      rootGroup.add(new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([raP1, raP2, raP3]),
+        new THREE.LineBasicMaterial({ color: 0x94a3b8 })
+      ));
+
+      if (showMeridian) {
+        // 半透明子午面三角形 (O - O' - P)
+        const triGeo = new THREE.BufferGeometry().setFromPoints([origin, ptAxisZ, ptP]);
+        triGeo.setIndex([0, 1, 2]);
+        rootGroup.add(new THREE.Mesh(triGeo, new THREE.MeshBasicMaterial({
+          color: COLORS.R,
+          transparent: true,
+          opacity: 0.08,
+          side: THREE.DoubleSide,
+          depthWrite: false
+        })));
+
+        // P 所在的离轴圆周虚线 (半径 r)
+        const circlePts = [];
+        for (let i = 0; i <= 72; i++) {
+          const ang = (i / 72) * Math.PI * 2;
+          circlePts.push(new THREE.Vector3(z, r * Math.cos(ang), -r * Math.sin(ang)));
+        }
+        const circleLine = new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints(circlePts),
+          new THREE.LineDashedMaterial({ color: 0x475569, dashSize: 0.07, gapSize: 0.06 })
+        );
+        circleLine.computeLineDistances();
+        rootGroup.add(circleLine);
+
+        // P 到线圈平面的平行投影虚线 (P -> ptPProjLoop) 与径向基准虚线 (O -> ptPProjLoop)
+        rootGroup.add(createDashedSegment(ptP, ptPProjLoop, 0x475569, 0.06, 0.06));
+        rootGroup.add(createDashedSegment(origin, ptPProjLoop, 0x94a3b8, 0.06, 0.05));
+      }
+
+      // 标签 z, r, R（无矩形框）
+      const labelZ = makeLabelSprite('z', '#e2e8f0', 36);
+      labelZ.position.set(z * 0.55, -0.20 * Math.cos(thetaP), 0.20 * Math.sin(thetaP));
+      rootGroup.add(labelZ);
+
+      const labelSmallR = makeLabelSprite('r', '#e2e8f0', 36);
+      labelSmallR.position.copy(ptAxisZ).addScaledVector(er, r * 0.5).add(new THREE.Vector3(0.18, 0, 0));
+      rootGroup.add(labelSmallR);
+
+      const labelBigR = makeLabelSprite('R', '#38bdf8', 38);
+      labelBigR.position.copy(ptP).multiplyScalar(0.50).addScaledVector(er, -0.18);
+      rootGroup.add(labelBigR);
+
+      // 4. 环上电流元源点 Q1（由世界方位角 thetaQ 直接锚定，不随 P 点移动而跳动！）
+      const ptQ1 = new THREE.Vector3(0, a * Math.cos(thetaQ), -a * Math.sin(thetaQ));
+      const tanQ1 = new THREE.Vector3(0, -Math.sin(thetaQ), -Math.cos(thetaQ)).normalize();
+
+      const q1Mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(0.052, 16, 16),
+        new THREE.MeshBasicMaterial({ color: COLORS.a })
+      );
+      q1Mesh.position.copy(ptQ1);
+      rootGroup.add(q1Mesh);
+
+      // Q1 处顺时针切向电流箭头
+      rootGroup.add(new THREE.ArrowHelper(tanQ1, ptQ1, 0.42, COLORS.wire, 0.13, 0.08));
+
+      // 【醒目翠绿色】半径 a (O -> Q1)
+      rootGroup.add(createSolidSegment(origin, ptQ1, COLORS.a, 0.016));
+      // 【醒目玫红色】虚线 r' (Q1 -> P)
+      rootGroup.add(createDashedSegment(ptQ1, ptP, COLORS.rprime, 0.09, 0.05));
+
+      // 环平面内投影虚线 (a cosφ e_r -> Q1)
+      const ptFootEr = new THREE.Vector3().addScaledVector(er, a * Math.cos(phi));
+      const ptHorizExt = new THREE.Vector3()
+        .copy(ptFootEr)
+        .addScaledVector(ephi, a * (Math.sin(phi) >= 0 ? 1.25 : -1.25));
+      rootGroup.add(createDashedSegment(ptFootEr, ptHorizExt, 0x94a3b8, 0.05, 0.04));
+
+      // 夹角 φ 圆弧与标签
+      if (Math.abs(Math.sin(phi)) > 0.03) {
+        const arcPts = [];
+        const arcR = a * 0.36;
+        const steps = 28;
+        for (let i = 0; i <= steps; i++) {
+          const u = (i / steps) * phi;
+          arcPts.push(
+            new THREE.Vector3()
+              .addScaledVector(er, arcR * Math.cos(u))
+              .addScaledVector(ephi, arcR * Math.sin(u))
+          );
+        }
+        rootGroup.add(new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints(arcPts),
+          new THREE.LineBasicMaterial({ color: COLORS.phi })
+        ));
+      }
+      const labelPhi = makeLabelSprite('φ', '#c084fc', 36);
+      labelPhi.position
+        .addScaledVector(er, a * 0.46 * Math.cos(phi * 0.5))
+        .addScaledVector(ephi, a * 0.46 * Math.sin(phi * 0.5));
+      rootGroup.add(labelPhi);
+
+      const labelA = makeLabelSprite('a', '#10b981', 38);
+      labelA.position.copy(ptQ1).multiplyScalar(0.54).add(new THREE.Vector3(-0.13, 0.07, 0));
+      rootGroup.add(labelA);
+
+      const midRPrime = new THREE.Vector3().lerpVectors(ptQ1, ptP, 0.48);
+      const labelRPrime = makeLabelSprite("r'", '#f43f5e', 38);
+      labelRPrime.position.copy(midRPrime).addScaledVector(er, 0.18);
+      rootGroup.add(labelRPrime);
+
+      // 5. 可选：对称电流元 Q2 (-φ)
+      if (showSym) {
+        const ptQ2 = new THREE.Vector3()
+          .addScaledVector(er, a * Math.cos(-phi))
+          .addScaledVector(ephi, a * Math.sin(-phi));
+        const tanQ2 = new THREE.Vector3()
+          .addScaledVector(er, -Math.sin(-phi))
+          .addScaledVector(ephi, Math.cos(-phi))
+          .normalize();
+        const q2Mesh = new THREE.Mesh(
+          new THREE.SphereGeometry(0.048, 16, 16),
+          new THREE.MeshBasicMaterial({ color: COLORS.phi })
+        );
+        q2Mesh.position.copy(ptQ2);
+        rootGroup.add(q2Mesh);
+        rootGroup.add(new THREE.ArrowHelper(tanQ2, ptQ2, 0.40, COLORS.phi, 0.12, 0.07));
+        rootGroup.add(createDashedSegment(origin, ptQ2, COLORS.a, 0.06, 0.05));
+        rootGroup.add(createDashedSegment(ptQ2, ptP, COLORS.rprime, 0.07, 0.06));
+      }
+
+      // 6. 场点 P 处的矢势箭头（随环上电流元 φ 与距离 r'(φ) 实时变化！）
+      const rPrimeLen = ptQ1.distanceTo(ptP);
+      const AphiVal = computeVectorPotentialA(r, z, a);
+      const { Br, Bz } = computeMagneticFieldB(r, z, a);
+      const Bmag = Math.hypot(Br, Bz);
+
+      // 单个电流元产生的元矢势大小反比于 r'(φ)：|dA| ∝ 1 / r'(φ)，方向平行于该电流元切向 tanQ1
+      const dAMagScale = Math.min(1.05, Math.max(0.32, 1.55 / rPrimeLen));
+      let dirVecA, lenVecA;
+      if (showSym) {
+        // 若勾选对称电流元，两对称元合成矢势沿切向 e_φ，大小正比于 cos(φ) / r'(φ)
+        const pairCos = Math.cos(phi);
+        dirVecA = ephi.clone().multiplyScalar(pairCos >= 0 ? 1 : -1);
+        lenVecA = Math.max(0.04, dAMagScale * Math.abs(pairCos) * 1.35);
+      } else {
+        // 单个电流元 Q1 在 P 点产生的矢势方向平行于电流元切向 tanQ1，长度随 1/r'(φ) 动态变化
+        dirVecA = tanQ1.clone();
+        lenVecA = dAMagScale;
+      }
+
+      if (lenVecA > 0.06) {
+        rootGroup.add(new THREE.ArrowHelper(dirVecA, ptP, lenVecA, COLORS.vecA, 0.16, 0.10));
+      }
+
+      const labelVecA = makeLabelSprite('A', '#22d3ee', 34);
+      labelVecA.position.copy(ptP).addScaledVector(dirVecA, lenVecA + 0.16);
+      rootGroup.add(labelVecA);
+
+      if (showVecB && Bmag > 1e-5) {
+        const vecB = new THREE.Vector3()
+          .addScaledVector(ez, -Bz)
+          .addScaledVector(er, -Br)
+          .normalize();
+        const lenB = Math.min(0.9, Math.max(0.38, Bmag * 3.5));
+        rootGroup.add(new THREE.ArrowHelper(vecB, ptP, lenB, COLORS.vecB, 0.15, 0.09));
+        const labelVecB = makeLabelSprite('B', '#fb7185', 34);
+        labelVecB.position.copy(ptP).addScaledVector(vecB, lenB + 0.16);
+        rootGroup.add(labelVecB);
+      }
+
+      // 更新统计数据与左下角 2D 投影图
+      const Rval = Math.hypot(r, z);
+      document.getElementById('stat-a').innerText = `${a.toFixed(2)} m`;
+      document.getElementById('stat-R').innerText = `${Rval.toFixed(2)} m`;
+      document.getElementById('stat-rprime').innerText = `${rPrimeLen.toFixed(2)} m`;
+      document.getElementById('stat-A').innerText = `${AphiVal.toFixed(3)} μ₀I`;
+      document.getElementById('proj-phi-txt').innerText = `φ = ${phiDegNorm}°`;
+      document.getElementById('slider-phi').value = phiDegNorm;
+      document.getElementById('val-phi').innerText = `${phiDegNorm}°`;
+
+      drawRightProjectionCanvas(a, r, phi, rPrimeLen, showSym);
+    }
+
+    /* ==============================================================
+       5. 左下角：绘制在线圈平面上的投影图 (严格对应教材右图)
+       ============================================================== */
+    const projCanvas = document.getElementById('proj-canvas');
+    const projCtx = projCanvas.getContext('2d');
+
+    function drawRightProjectionCanvas(a, r, phi, rPrimeLen, showSym) {
+      const W = projCanvas.width;
+      const H = projCanvas.height;
+      const cx = W * 0.5;
+      const cy = H * 0.57;
+      const scale = 96;
+
+      projCtx.clearRect(0, 0, W, H);
+
+      // 背景淡坐标格
+      projCtx.strokeStyle = 'rgba(148, 163, 184, 0.08)';
+      projCtx.lineWidth = 1;
+      for (let x = 0; x <= W; x += 30) {
+        projCtx.beginPath(); projCtx.moveTo(x, 0); projCtx.lineTo(x, H); projCtx.stroke();
+      }
+      for (let y = 0; y <= H; y += 30) {
+        projCtx.beginPath(); projCtx.moveTo(0, y); projCtx.lineTo(W, y); projCtx.stroke();
+      }
+
+      // 十字坐标轴
+      projCtx.strokeStyle = 'rgba(148, 163, 184, 0.45)';
+      projCtx.lineWidth = 1.5;
+      projCtx.beginPath();
+      projCtx.moveTo(16, cy); projCtx.lineTo(W - 16, cy);
+      projCtx.moveTo(cx, 16); projCtx.lineTo(cx, H - 16);
+      projCtx.stroke();
+
+      const Rpx = a * scale;
+      const rFieldPx = Math.min(cy - 32, r * scale);
+
+      // 银色圆形导线环 (半径 a)
+      projCtx.strokeStyle = '#e2e8f0';
+      projCtx.lineWidth = 3.0;
+      projCtx.beginPath();
+      projCtx.arc(cx, cy, Rpx, 0, Math.PI * 2);
+      projCtx.stroke();
+
+      // 源点 Q1 坐标 (cx + Rpx sinφ, cy - Rpx cosφ)
+      const q1x = cx + Rpx * Math.sin(phi);
+      const q1y = cy - Rpx * Math.cos(phi);
+
+      // 场点投影黑点坐标 (cx, py)
+      const px = cx;
+      const py = cy - rFieldPx;
+
+      // 教材右图中的竖直与水平虚线
+      projCtx.save();
+      projCtx.setLineDash([6, 5]);
+      projCtx.strokeStyle = '#94a3b8';
+      projCtx.lineWidth = 1.8;
+      projCtx.beginPath();
+      projCtx.moveTo(cx, cy);
+      projCtx.lineTo(cx, cy - Rpx);
+      projCtx.moveTo(cx, q1y);
+      projCtx.lineTo(cx + Rpx * 1.38, q1y);
+      projCtx.stroke();
+      projCtx.restore();
+
+      // 【醒目翠绿色】半径实线 a (O -> Q1)
+      projCtx.strokeStyle = '#10b981';
+      projCtx.lineWidth = 3.0;
+      projCtx.beginPath();
+      projCtx.moveTo(cx, cy);
+      projCtx.lineTo(q1x, q1y);
+      projCtx.stroke();
+
+      // 半径 a 标签
+      projCtx.fillStyle = '#10b981';
+      projCtx.font = 'italic bold 20px "Times New Roman", serif';
+      projCtx.fillText('a', cx + Rpx * 0.52 * Math.sin(phi) + 10, cy - Rpx * 0.52 * Math.cos(phi) + 12);
+
+      // φ 角扇形圆弧与标签
+      projCtx.strokeStyle = '#c084fc';
+      projCtx.lineWidth = 2.0;
+      projCtx.beginPath();
+      projCtx.arc(cx, cy, Rpx * 0.36, -Math.PI / 2, -Math.PI / 2 + phi, phi < 0);
+      projCtx.stroke();
+      projCtx.fillStyle = '#c084fc';
+      projCtx.font = 'italic bold 22px "Times New Roman", serif';
+      projCtx.fillText('φ', cx + 10, cy - Rpx * 0.42);
+
+      // Q1 处顺时针切向电流箭头 (完全对应教材右图圆环上的切向箭头)
+      const tanLen = 46;
+      const tx = q1x + tanLen * Math.cos(phi);
+      const ty = q1y + tanLen * Math.sin(phi);
+      drawCanvasArrow(projCtx, q1x, q1y, tx, ty, '#e2e8f0', 2.6);
+
+      projCtx.fillStyle = '#10b981';
+      projCtx.beginPath();
+      projCtx.arc(q1x, q1y, 5, 0, Math.PI * 2);
+      projCtx.fill();
+
+      // 对称点 Q2 (-φ)
+      if (showSym) {
+        const q2x = cx - Rpx * Math.sin(phi);
+        const q2y = cy - Rpx * Math.cos(phi);
+        projCtx.save();
+        projCtx.setLineDash([5, 5]);
+        projCtx.strokeStyle = '#10b981';
+        projCtx.lineWidth = 1.8;
+        projCtx.beginPath();
+        projCtx.moveTo(cx, cy);
+        projCtx.lineTo(q2x, q2y);
+        projCtx.stroke();
+        projCtx.restore();
+        drawCanvasArrow(projCtx, q2x, q2y, q2x + tanLen * Math.cos(-phi), q2y + tanLen * Math.sin(-phi), '#c084fc', 2.2);
+      }
+
+      // 顶部场点 P 投影圆点及随电流元 φ 与 1/r'(φ) 动态变化的矢势箭头
+      const arrowBaseLen = Math.min(62, Math.max(24, 115 / rPrimeLen));
+      let ax2, ay2;
+      if (showSym) {
+        ax2 = px + arrowBaseLen * 1.25 * Math.cos(phi);
+        ay2 = py;
+      } else {
+        ax2 = px + arrowBaseLen * Math.cos(phi);
+        ay2 = py + arrowBaseLen * Math.sin(phi);
+      }
+      if (Math.hypot(ax2 - px, ay2 - py) > 4) {
+        drawCanvasArrow(projCtx, px, py, ax2, ay2, '#22d3ee', 2.8);
+      }
+      projCtx.fillStyle = '#ffffff';
+      projCtx.beginPath();
+      projCtx.arc(px, py, 6, 0, Math.PI * 2);
+      projCtx.fill();
+      projCtx.fillStyle = '#22d3ee';
+      projCtx.font = 'italic bold 19px "Times New Roman", serif';
+      projCtx.fillText('A', ax2 + (ax2 >= px ? 8 : -20), ay2 + 6);
+    }
+
+    function drawCanvasArrow(ctx, x1, y1, x2, y2, color, width) {
+      const headLen = 10;
+      const ang = Math.atan2(y2 - y1, x2 - x1);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.lineTo(x2 - headLen * Math.cos(ang - Math.PI / 6), y2 - headLen * Math.sin(ang - Math.PI / 6));
+      ctx.moveTo(x2, y2);
+      ctx.lineTo(x2 - headLen * Math.cos(ang + Math.PI / 6), y2 - headLen * Math.sin(ang + Math.PI / 6));
+      ctx.stroke();
+    }
+
+    /* ==============================================================
+       6. 视角切换、「随机变换 P 点位置」与「循环环上电流元 φ」功能
+       ============================================================== */
+    let currentViewMode = '3D';
+    let camAnimId = null;
+
+    function setCameraPreset(mode) {
+      currentViewMode = mode;
+      document.getElementById('btn-view-ring').classList.toggle('active', mode === 'RING');
+      document.getElementById('btn-view-side').classList.toggle('active', mode === 'SIDE');
+
+      const thetaP = (params.thetaPDeg * Math.PI) / 180;
+      const er = new THREE.Vector3(0, Math.cos(thetaP), -Math.sin(thetaP));
+      const ephi = new THREE.Vector3(0, -Math.sin(thetaP), -Math.cos(thetaP));
+
+      let endPos, endTarget, endUp;
+      if (mode === '3D') {
+        endPos = new THREE.Vector3(3.4, 2.0, 4.6);
+        endTarget = new THREE.Vector3(1.15, 0.20, -0.25);
+        endUp = new THREE.Vector3(0, 1, 0);
+      } else if (mode === 'RING') {
+        // 对着圆环看（沿中轴线 +X 正对圆环中心观察，固定世界竖直向上 +Y，圆环始终静止居中）
+        endTarget = new THREE.Vector3(0, 0, 0);
+        endPos = new THREE.Vector3(6.2, 0, 0);
+        endUp = new THREE.Vector3(0, 1, 0);
+      } else if (mode === 'SIDE') {
+        // 垂直于场点子午面侧视（对应教材左图）
+        const viewDir = new THREE.Vector3(0.26, 0.08 * er.y - 0.96 * ephi.y, 0.08 * er.z - 0.96 * ephi.z).normalize();
+        endTarget = new THREE.Vector3(params.z * 0.50, er.y * params.r * 0.35, er.z * params.r * 0.35);
+        endPos = endTarget.clone().addScaledVector(viewDir, 6.2);
+        endUp = er.clone();
+      }
+
+      if (camAnimId) cancelAnimationFrame(camAnimId);
+      const startPos = camera.position.clone();
+      const startTarget = controls.target.clone();
+      const startUp = camera.up.clone();
+      let u = 0;
+
+      function step() {
+        u += 0.05;
+        const t = Math.min(1, 0.5 - 0.5 * Math.cos(u * Math.PI));
+        camera.position.lerpVectors(startPos, endPos, t);
+        controls.target.lerpVectors(startTarget, endTarget, t);
+        camera.up.lerpVectors(startUp, endUp, t).normalize();
+        controls.update();
+        if (u < 1) camAnimId = requestAnimationFrame(step);
+      }
+      step();
+    }
+
+    // 随机变换空间所求点 P 的位置 (z, r, θ_P)：
+    // 严格保持相机视角、银色圆环、以及环上所取电流元 Q1 (thetaQDeg) 与半径 a 完全不变，只改变由 P 引起的各个矢量！
+    function randomizePointP() {
+      const randZ = +(1.1 + Math.random() * 1.9).toFixed(2);
+      const randR = +(0.65 + Math.random() * 1.35).toFixed(2);
+      const signs = [-1, 1];
+      const sign = signs[Math.floor(Math.random() * 2)];
+      const randThetaP = sign * Math.floor(25 + Math.random() * 120);
+
+      params.z = randZ;
+      params.r = randR;
+      params.thetaPDeg = randThetaP;
+
+      document.getElementById('slider-z').value = randZ;
+      document.getElementById('val-z').innerText = `${randZ.toFixed(2)} m`;
+      document.getElementById('slider-r').value = randR;
+      document.getElementById('val-r').innerText = `${randR.toFixed(2)} m`;
+      document.getElementById('slider-thetaP').value = randThetaP;
+      document.getElementById('val-thetaP').innerText = `${randThetaP}°`;
+
+      updateScene();
+    }
+
+    // 循环环上电流元 φ（还原 loop 电流环上的电流元动画按钮）
+    function toggleSweepPhi() {
+      isSweepingPhi = !isSweepingPhi;
+      const btn = document.getElementById('btn-sweep-phi');
+      btn.classList.toggle('active', isSweepingPhi);
+      btn.innerHTML = isSweepingPhi
+        ? '<span>⏸️ 暂停电流元循环</span>'
+        : '<span>🔄 循环环上电流元 φ</span>';
+    }
+
+    // 绑定滑块事件
+    document.getElementById('slider-phi').addEventListener('input', (e) => {
+      if (isSweepingPhi) toggleSweepPhi();
+      const newPhiDeg = parseInt(e.target.value, 10);
+      params.phiDeg = newPhiDeg;
+      params.thetaQDeg = (params.thetaPDeg + newPhiDeg) % 360;
+      document.getElementById('val-phi').innerText = `${params.phiDeg}°`;
+      updateScene();
+    });
+
+    document.getElementById('slider-thetaP').addEventListener('input', (e) => {
+      params.thetaPDeg = parseInt(e.target.value, 10);
+      document.getElementById('val-thetaP').innerText = `${params.thetaPDeg}°`;
+      // 保持 thetaQDeg 不变，从而圆环与所取电流元 Q1 在空间中完全静止
+      updateScene();
+    });
+
+    document.getElementById('slider-z').addEventListener('input', (e) => {
+      params.z = parseFloat(e.target.value);
+      document.getElementById('val-z').innerText = `${params.z.toFixed(2)} m`;
+      updateScene();
+    });
+
+    document.getElementById('slider-r').addEventListener('input', (e) => {
+      params.r = parseFloat(e.target.value);
+      document.getElementById('val-r').innerText = `${params.r.toFixed(2)} m`;
+      updateScene();
+    });
+
+    document.getElementById('slider-a').addEventListener('input', (e) => {
+      params.a = parseFloat(e.target.value);
+      document.getElementById('val-a').innerText = `${params.a.toFixed(2)} m`;
+      updateScene();
+    });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    /* ==============================================================
+       7. 初始化与渲染循环
+       ============================================================== */
+    updateScene();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      if (isSweepingPhi) {
+        params.thetaQDeg = (params.thetaQDeg + 1) % 360;
+        updateScene();
+      }
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>
