@@ -515,22 +515,33 @@
       });
       rootGroup.add(new THREE.Mesh(torusGeo, torusMat));
 
-      // 严格复刻教材原图左下方的电流箭头：圆环前侧下缘处开叉的双翼箭头（类似 chevron/翼状箭头）
-      const arrowBasePt = new THREE.Vector3(0, -0.05, a);
-      const wingLen = 0.22;
-      const wingMat = new THREE.MeshBasicMaterial({ color: COLORS.wire });
-      // 沿圆环切向向上的主切向微段
-      rootGroup.add(createSolidSegment(new THREE.Vector3(0, -0.16, a), new THREE.Vector3(0, 0.08, a), COLORS.wire, LINE_RADIUS * 1.05));
-      // 左侧箭翼：由顶点向左后下方倾斜
-      const wingLeftEnd = new THREE.Vector3(-wingLen * 0.72, -0.05 - wingLen * 0.70, a);
-      rootGroup.add(createSolidSegment(arrowBasePt, wingLeftEnd, COLORS.wire, LINE_RADIUS * 0.85));
-      // 右侧箭翼：由顶点向右后下方倾斜
-      const wingRightEnd = new THREE.Vector3(wingLen * 0.72, -0.05 - wingLen * 0.70, a);
-      rootGroup.add(createSolidSegment(arrowBasePt, wingRightEnd, COLORS.wire, LINE_RADIUS * 0.85));
+      // 靠近圆环外侧的一小段弯曲电流指示箭头及 I 标签（不标在电流环上）
+      const aCurved = a + 0.20;
+      const bStart = -0.36; // 弧度范围：沿切向从下至上
+      const bEnd = 0.18;
+      const curvedArrowPts = [];
+      const curvedSteps = 24;
+      for (let i = 0; i <= curvedSteps; i++) {
+        const u = bStart + (i / curvedSteps) * (bEnd - bStart);
+        curvedArrowPts.push(new THREE.Vector3(0, aCurved * Math.sin(u), aCurved * Math.cos(u)));
+      }
+      const curvedCurve = new THREE.CatmullRomCurve3(curvedArrowPts);
+      const curvedTubeGeo = new THREE.TubeGeometry(curvedCurve, 24, 0.013, 10, false);
+      const curvedMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+      rootGroup.add(new THREE.Mesh(curvedTubeGeo, curvedMat));
 
-      // 电流符号 I 标签放在教材对应的箭头旁
-      const labelI = makeLabelSprite('I', '#f8fafc', 38);
-      labelI.position.set(-0.24, 0.05, a + 0.16);
+      // 弯曲箭头的白色圆锥尖端
+      const tipPt = new THREE.Vector3(0, aCurved * Math.sin(bEnd), aCurved * Math.cos(bEnd));
+      const tipDir = new THREE.Vector3(0, Math.cos(bEnd), -Math.sin(bEnd)).normalize();
+      const tipConeGeo = new THREE.ConeGeometry(0.046, 0.14, 20);
+      const tipConeMesh = new THREE.Mesh(tipConeGeo, curvedMat);
+      tipConeMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), tipDir);
+      tipConeMesh.position.copy(tipPt).addScaledVector(tipDir, 0.07);
+      rootGroup.add(tipConeMesh);
+
+      // 电流符号 I 标签放在弯曲箭头外侧旁边
+      const labelI = makeLabelSprite('I', '#ffffff', 38);
+      labelI.position.set(0, aCurved * Math.sin((bStart + bEnd) * 0.5), aCurved * Math.cos((bStart + bEnd) * 0.5) + 0.20);
       rootGroup.add(labelI);
 
       // 3. 空间任一点 P(r, θ_P, z)
@@ -622,13 +633,6 @@
       rootGroup.add(createThickDashedSegment(origin, ptQ1, COLORS.a, LINE_RADIUS, 0.095, 0.06));
       // 【醒目红色实线】距离 r' (Q1 -> P，solid 红色实线)
       rootGroup.add(createSolidSegment(ptQ1, ptP, COLORS.rprime, LINE_RADIUS, 1.0));
-
-      // 环平面内投影虚线 (a cosφ e_r -> Q1)
-      const ptFootEr = new THREE.Vector3().addScaledVector(er, a * Math.cos(phi));
-      const ptHorizExt = new THREE.Vector3()
-        .copy(ptFootEr)
-        .addScaledVector(ephi, a * (Math.sin(phi) >= 0 ? 1.25 : -1.25));
-      rootGroup.add(createThinDashedSegment(ptFootEr, ptHorizExt, 0x94a3b8, 0.05, 0.04, 0.8));
 
       // 夹角 φ 圆弧与标签
       if (Math.abs(Math.sin(phi)) > 0.03) {
