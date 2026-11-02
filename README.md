@@ -2,7 +2,7 @@
 
 🌐 **在线演示网站（GitHub Pages）**：[**https://shijunlj.github.io/physics-em-visualizer/**](https://shijunlj.github.io/physics-em-visualizer/)
 
-本项目包含 6 个基于 **Three.js (WebGL)** 的独立单文件 HTML 交互式物理演示页面（及 `index.html` 导航主页），用于直观展示大学物理电磁学（稳恒磁场）的核心概念、实验现象与场分布规律。所有页面均可直接在浏览器中打开运行，支持 360° 自由旋转、缩放与实时参数调节。
+本项目包含 7 个基于 **Three.js (WebGL)** 的独立单文件 HTML 交互式物理演示页面（及 `index.html` 导航主页），用于直观展示大学物理电磁学（稳恒磁场）的核心概念、实验现象与场分布规律。所有页面均可直接在浏览器中打开运行，支持 360° 自由旋转、缩放与实时参数调节。
 
 ---
 
@@ -16,6 +16,7 @@
 | 4 | [`solenoid_magnetic_field.html`](./solenoid_magnetic_field.html) | **载流长直螺线管的磁场** | 支持匝数 $N$ 从有限长向无限长平滑过渡、2D 截面与 3D 空间磁感线切换，并提供上下两排相邻导线磁场的微观矢量分解（间隙垂直抵消、管内水平同向增强）。 |
 | 5 | [`magnetic_gauss_law.html`](./magnetic_gauss_law.html) | **磁场高斯定理** | 验证 $\oint_S \vec{B}\cdot\mathrm{d}\vec{A} \equiv 0$：支持**导线外闭合曲面**与**包围部分电流闭合曲面**一键切换、任意随机形状畸变、磁感线分层显示及穿入/穿出交点实时统计。 |
 | 6 | [`parallel_currents_interaction.html`](./parallel_currents_interaction.html) | **平行载流导线间的相互作用** | 演示两根平行通电导线的安培力作用机理（同向相吸、反向相斥），直观展现导线1激发磁场 $\vec{B}_1$ 对导线2施力 $\vec{F}_{12}$ 的完整过程。 |
+| 7 | [`current_loop_torus.html`](./current_loop_torus.html) | **环形电流与相套环面** | 展示浅亮银色环形导线电流穿过半透明环面（甜甜圈）的中心孔心，环面内部嵌入穿过各截面圆心的中心圆线，直观呈现不能定义单值磁标势的多连通空间区域拓扑。 |
 
 ---
 

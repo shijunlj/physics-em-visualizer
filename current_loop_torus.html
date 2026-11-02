@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>环形电流与相套环面</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+    body {
+      background-color: #070b14;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+    #webgl-container {
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div id="webgl-container"></div>
+
+  <script>
+    // 1. 初始化场景、相机与渲染器
+    const container = document.getElementById('webgl-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x070b14);
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.set(4.6, 3.4, 5.0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.target.set(0.9, 0, 0);
+
+    // 2. 光照设置
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+    scene.add(ambientLight);
+
+    const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.9);
+    dirLight1.position.set(6, 10, 8);
+    scene.add(dirLight1);
+
+    const dirLight2 = new THREE.DirectionalLight(0x38bdf8, 0.5);
+    dirLight2.position.set(-8, -4, -6);
+    scene.add(dirLight2);
+
+    // 3. 几何模型构建
+
+    // 环形电流半径 (置于水平 xz 平面，中心在 (0, 0, 0))
+    const wireRadius = 1.80;
+    const wireTubeRadius = 0.038;
+
+    // (A) 半透明绿色环面 (甜甜圈 Torus)
+    // 竖直置于 xy 平面，中心精确设在导线穿过的位置 (wireRadius, 0, 0)
+    // 使得导线电流精确穿过环面的几何中心！
+    const torusR = 1.80; // 大半径（恰好向内触及环形电流中心原点）
+    const tubeR = 0.44;  // 管道截面半径
+    const torusCenter = new THREE.Vector3(wireRadius, 0, 0);
+
+    const torusGroup = new THREE.Group();
+    torusGroup.position.copy(torusCenter);
+
+    // 半透明曲面
+    const torusGeo = new THREE.TorusGeometry(torusR, tubeR, 36, 100);
+    const torusMat = new THREE.MeshPhysicalMaterial({
+      color: 0x10b981,
+      transparent: true,
+      opacity: 0.38,
+      roughness: 0.18,
+      metalness: 0.1,
+      clearcoat: 0.6,
+      clearcoatRoughness: 0.15,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+    const torusMesh = new THREE.Mesh(torusGeo, torusMat);
+    torusGroup.add(torusMesh);
+
+    // 环面表面网格线框（增强曲面立体结构感）
+    const torusWireGeo = new THREE.TorusGeometry(torusR, tubeR, 18, 48);
+    const torusWireMat = new THREE.MeshBasicMaterial({
+      color: 0x34d399,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.18,
+      depthWrite: false
+    });
+    torusGroup.add(new THREE.Mesh(torusWireGeo, torusWireMat));
+
+    // 环面内部中心线：穿过环面各截面圆心的圆
+    const centerCircleGeo = new THREE.TorusGeometry(torusR, 0.014, 16, 120);
+    const centerCircleMat = new THREE.MeshBasicMaterial({
+      color: 0xc084fc // 亮紫色，透过半透明环面清晰可见
+    });
+    const centerCircleMesh = new THREE.Mesh(centerCircleGeo, centerCircleMat);
+    torusGroup.add(centerCircleMesh);
+
+    scene.add(torusGroup);
+
+    // (B) 环形电流 (浅亮银色金属圆导线，置于水平 xz 平面，中心在 (0, 0, 0))
+    const wireGeo = new THREE.TorusGeometry(wireRadius, wireTubeRadius, 24, 100);
+    wireGeo.rotateX(Math.PI / 2); // 旋转至水平面
+    const wireMat = new THREE.MeshStandardMaterial({
+      color: 0xf1f5f9,        // 浅亮银色金属质感
+      roughness: 0.16,
+      metalness: 0.95,
+      emissive: 0x1e293b,
+      emissiveIntensity: 0.12
+    });
+    const wireMesh = new THREE.Mesh(wireGeo, wireMat);
+    scene.add(wireMesh);
+
+    // 导线表面柔和银白微反光轮廓
+    const glowGeo = new THREE.TorusGeometry(wireRadius, wireTubeRadius * 1.18, 16, 80);
+    glowGeo.rotateX(Math.PI / 2);
+    const glowMat = new THREE.MeshBasicMaterial({
+      color: 0xe2e8f0,
+      transparent: true,
+      opacity: 0.08
+    });
+    scene.add(new THREE.Mesh(glowGeo, glowMat));
+
+    // (C) 普通紧凑白色弯曲箭头与标签 I
+    const curvedR = wireRadius + 0.22; // 紧凑间距 (外侧约 2.02m)
+    const startTheta = 1.15;           // 起始角 (~66°)
+    const endTheta = 1.62;             // 终止角 (~93°，更小更紧凑)
+    const arcPts = [];
+    const arcSteps = 28;
+    for (let i = 0; i <= arcSteps; i++) {
+      const t = startTheta + (i / arcSteps) * (endTheta - startTheta);
+      arcPts.push(new THREE.Vector3(curvedR * Math.cos(t), 0, curvedR * Math.sin(t)));
+    }
+    const arcCurve = new THREE.CatmullRomCurve3(arcPts);
+    const arcTubeGeo = new THREE.TubeGeometry(arcCurve, 28, 0.012, 10, false);
+    const whiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff }); // 纯白色普通材质
+    scene.add(new THREE.Mesh(arcTubeGeo, whiteMat));
+
+    // 普通白色圆锥箭头尖端
+    const tipPos = new THREE.Vector3(curvedR * Math.cos(endTheta), 0, curvedR * Math.sin(endTheta));
+    const tipDir = new THREE.Vector3(-Math.sin(endTheta), 0, Math.cos(endTheta)).normalize();
+    const tipConeGeo = new THREE.ConeGeometry(0.048, 0.15, 20);
+    const tipCone = new THREE.Mesh(tipConeGeo, whiteMat);
+    tipCone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), tipDir);
+    tipCone.position.copy(tipPos).addScaledVector(tipDir, 0.075);
+    scene.add(tipCone);
+
+    // 标注纯白色斜体 I 符号
+    function makeTextSprite(text, colorStr, fontSize) {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = 160;
+      canvas.height = 80;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.font = `italic bold ${fontSize}px "Times New Roman", serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = colorStr;
+      ctx.fillText(text, 80, 40);
+
+      const tex = new THREE.CanvasTexture(canvas);
+      const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false });
+      const sprite = new THREE.Sprite(mat);
+      sprite.scale.set(0.62, 0.31, 1);
+      return sprite;
+    }
+
+    const midTheta = (startTheta + endTheta) * 0.5;
+    const labelI = makeTextSprite('I', '#ffffff', 42);
+    labelI.position.set((curvedR + 0.22) * Math.cos(midTheta), 0.10, (curvedR + 0.22) * Math.sin(midTheta));
+    scene.add(labelI);
+
+    // 导线上的电流流动微粒 (柔和银白色)
+    const PULSE_COUNT = 36;
+    const pulsePositions = new Float32Array(PULSE_COUNT * 3);
+    for (let i = 0; i < PULSE_COUNT; i++) {
+      const ang = (i / PULSE_COUNT) * Math.PI * 2;
+      pulsePositions[i * 3]     = wireRadius * Math.cos(ang);
+      pulsePositions[i * 3 + 1] = 0;
+      pulsePositions[i * 3 + 2] = wireRadius * Math.sin(ang);
+    }
+    const pulseGeo = new THREE.BufferGeometry();
+    pulseGeo.setAttribute('position', new THREE.BufferAttribute(pulsePositions, 3));
+    const pulseMat = new THREE.PointsMaterial({
+      color: 0xf8fafc,
+      size: 0.075,
+      transparent: true,
+      opacity: 0.85
+    });
+    const pulsePoints = new THREE.Points(pulseGeo, pulseMat);
+    scene.add(pulsePoints);
+
+    // 4. 窗口大小自适应
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // 5. 动画循环
+    let phase = 0;
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // 电流微粒沿圆环平滑流动
+      phase += 0.016;
+      const pos = pulsePoints.geometry.attributes.position.array;
+      for (let i = 0; i < PULSE_COUNT; i++) {
+        const ang = (i / PULSE_COUNT) * Math.PI * 2 + phase;
+        pos[i * 3]     = wireRadius * Math.cos(ang);
+        pos[i * 3 + 1] = 0;
+        pos[i * 3 + 2] = wireRadius * Math.sin(ang);
+      }
+      pulsePoints.geometry.attributes.position.needsUpdate = true;
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>

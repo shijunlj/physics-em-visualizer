@@ -713,6 +713,43 @@
         </div>
       </article>
 
+      <!-- 07 环形电流与相套环面 -->
+      <article class="card">
+        <div class="card-visual">
+          <span class="card-num">EXP 07</span>
+          <svg viewBox="0 0 360 175" fill="none">
+            <!-- 浅银亮色环形圆导线 -->
+            <ellipse cx="140" cy="95" rx="68" ry="25" stroke="#f1f5f9" stroke-width="4"/>
+            <!-- 翡翠绿半透环面（立式） -->
+            <ellipse cx="208" cy="95" rx="38" ry="62" stroke="#10b981" stroke-width="6" stroke-dasharray="140 25" opacity="0.85"/>
+            <!-- 环面内中心圆线（紫色） -->
+            <ellipse cx="208" cy="95" rx="28" ry="46" stroke="#c084fc" stroke-width="2" stroke-dasharray="5 3"/>
+            <!-- 电流白色弯曲指示箭头 -->
+            <path d="M100 82 A75 28 0 0 1 125 74" stroke="#ffffff" stroke-width="2" fill="none"/>
+            <polygon points="125,71 131,76 123,78" fill="#ffffff"/>
+          </svg>
+          <span class="card-formula-tag">\(\oint_C \vec{B}\cdot\mathrm{d}\vec{l} = \mu_0 I \neq 0\)</span>
+        </div>
+        <div class="card-body">
+          <div class="card-title">
+            <span>🍩 环形电流与相套环面</span>
+          </div>
+          <p class="card-desc">
+            3D 空间直观展示浅亮银色环形导线电流穿过半透明环面（甜甜圈）的中心孔心，环面内部嵌入穿过各截面圆心的中心圆线，直观呈现不能定义单值磁标势的多连通空间区域拓扑。
+          </p>
+          <div class="card-tags">
+            <span class="tag">多连通区域拓扑</span>
+            <span class="tag">磁标势不可单值定义</span>
+            <span class="tag">环面中心圆线</span>
+            <span class="tag">环形电流穿孔</span>
+          </div>
+          <div class="card-actions">
+            <a class="btn-launch" href="./current_loop_torus.html">🚀 进入 3D 实验</a>
+            <button class="btn-preview" onclick="openPreview(6)">页内速览</button>
+          </div>
+        </div>
+      </article>
+
     </main>
 
     <footer>
@@ -744,7 +781,8 @@
       { title: '03 毕奥-萨伐尔(圆线圈)', url: './biot_savart_loop.html' },
       { title: '04 载流长直螺线管磁场', url: './solenoid_magnetic_field.html' },
       { title: '05 磁场高斯定理', url: './magnetic_gauss_law.html' },
-      { title: '06 平行载流导线相互作用', url: './parallel_currents_interaction.html' }
+      { title: '06 平行载流导线相互作用', url: './parallel_currents_interaction.html' },
+      { title: '07 环形电流与相套环面', url: './current_loop_torus.html' }
     ];
 
     const modal = document.getElementById('viewer-modal');
