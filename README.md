@@ -2,7 +2,7 @@
 
 🌐 **在线演示网站（GitHub Pages）**：[**https://shijunlj.github.io/physics-em-visualizer/**](https://shijunlj.github.io/physics-em-visualizer/)
 
-本项目包含 6 个基于 **Three.js (WebGL)** 的独立单文件 HTML 交互式物理演示页面（及 `index.html` 极简导航主页），用于直观展示电磁学与电动力学（稳恒磁场与空间拓扑）的核心概念、实验现象与场分布规律。所有页面均可直接在浏览器中打开运行，支持 360° 自由旋转、缩放与实时参数调节。
+本项目包含 7 个基于 **Three.js (WebGL)** 的独立单文件 HTML 交互式物理演示页面（及 `index.html` 极简导航主页），用于直观展示电磁学与电动力学（稳恒磁场与空间拓扑）的核心概念、实验现象与场分布规律。所有页面均可直接在浏览器中打开运行，支持 360° 自由旋转、缩放与实时参数调节。
 
 ---
 
@@ -16,6 +16,7 @@
 | 4 | [`magnetic_gauss_law.html`](./magnetic_gauss_law.html) | **磁场高斯定理与任意闭合曲面** | 验证 $\oint_S \vec{B}\cdot\mathrm{d}\vec{A} \equiv 0$：支持**导线外闭合曲面**与**包围部分电流闭合曲面**一键切换、任意随机形状畸变、磁感线分层显示及穿入/穿出交点实时统计。 |
 | 5 | [`parallel_currents_interaction.html`](./parallel_currents_interaction.html) | **平行载流直导线间的相互作用** | 演示两根平行通电导线的安培力作用机理（同向相吸、反向相斥），直观展现导线1激发磁场 $\vec{B}_1$ 对导线2施力 $\vec{F}_{12}$ 的完整过程。 |
 | 6 | [`current_loop_torus.html`](./current_loop_torus.html) | **环形电流与相套环面（不能定义单值磁标势的多连通区域）** | 展示浅亮银色环形导线电流穿过半透明环面（甜甜圈）的中心孔心，环面内部嵌入穿过各截面圆心的中心圆线，直观呈现不能定义单值磁标势的多连通空间区域拓扑。 |
+| 7 | [`toroid_solenoid_magnetic_field.html`](./toroid_solenoid_magnetic_field.html) | **载流螺绕环的磁场与空间分布** | 3D 空间展示 360° 均匀密绕线圈、半透明骨架及环内非均匀磁感线（内密外疏，渐变明暗强弱），红虚线标示截面几何中心轴；右侧 2D 联动图将管道截面连续色影、强度色标尺（Colorbar）与理论曲线 $B(r) \propto 1/r$ 进行 1:1 空间几何投影对齐，直观揭示中心孔腔与环外 $B \equiv 0$ 以及环内 $B$ 随半径 $r$ 的衰减特性。 |
 
 ---
 
@@ -24,6 +25,9 @@
 无需安装本地服务器或构建工具，直接在现代浏览器（Chrome / Edge / Safari / Firefox）中双击打开对应 `.html` 文件，或在终端中运行：
 
 ```bash
+# 示例：打开载流螺绕环磁场与空间分布演示
+open toroid_solenoid_magnetic_field.html
+
 # 示例：打开圆线圈磁矢势对称抵消演示
 open vector_potential_loop_symmetry_v2.html
 

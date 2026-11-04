@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>载流环形螺线管（螺绕环）稳恒磁场分布</title>
+  <!-- 引入 Three.js 与 OrbitControls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <!-- 引入 KaTeX 渲染数学公式 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '\\(', right: '\\)', display: false}]});"></script>
+  <style>
+    :root {
+      --bg: #070b14;
+      --panel-bg: rgba(15, 23, 42, 0.85);
+      --border: rgba(148, 163, 184, 0.20);
+      --c-copper: #f59e0b;
+      --c-bline: #38bdf8;
+      --c-core: #10b981;
+      --text: #f8fafc;
+      --text-dim: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #webgl-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* 顶部标题与公式卡片 */
+    .header-card {
+      position: absolute;
+      top: 16px;
+      left: 20px;
+      z-index: 10;
+      background: var(--panel-bg);
+      backdrop-filter: blur(14px);
+      padding: 14px 20px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+      max-width: 500px;
+    }
+
+    .header-card h1 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header-card p {
+      font-size: 12.5px;
+      color: var(--text-dim);
+      margin-top: 6px;
+      line-height: 1.5;
+    }
+
+    .formula-tag {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 4px 10px;
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      border-radius: 6px;
+      font-size: 12px;
+      color: #7dd3fc;
+    }
+
+    /* 右侧控制面板 */
+    .control-panel {
+      position: absolute;
+      top: 16px;
+      right: 20px;
+      z-index: 10;
+      width: 340px;
+      max-height: calc(100vh - 32px);
+      overflow-y: auto;
+      background: var(--panel-bg);
+      backdrop-filter: blur(14px);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+    }
+
+    .control-panel::-webkit-scrollbar {
+      width: 4px;
+    }
+    .control-panel::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.25);
+      border-radius: 2px;
+    }
+
+    .control-section {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+
+    .section-title {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #f1f5f9;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .btn-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .btn {
+      background: rgba(30, 41, 59, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      color: #f8fafc;
+      padding: 6px 10px;
+      font-size: 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+
+    .btn:hover {
+      background: rgba(56, 189, 248, 0.20);
+      border-color: rgba(56, 189, 248, 0.50);
+      color: #38bdf8;
+    }
+
+    .btn.active {
+      background: rgba(16, 185, 129, 0.25);
+      border-color: #10b981;
+      color: #34d399;
+      font-weight: 600;
+    }
+
+    .control-row {
+      margin-bottom: 10px;
+    }
+
+    .control-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .label-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-bottom: 4px;
+    }
+
+    .val-text {
+      color: #38bdf8;
+      font-weight: 600;
+      font-family: monospace;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      background: rgba(148, 163, 184, 0.25);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #38bdf8;
+      cursor: pointer;
+      box-shadow: 0 0 6px rgba(56, 189, 248, 0.6);
+    }
+
+    .switch-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #cbd5e1;
+      padding: 4px 0;
+    }
+
+    .toggle-checkbox {
+      width: 34px;
+      height: 18px;
+      appearance: none;
+      background: rgba(148, 163, 184, 0.25);
+      border-radius: 10px;
+      position: relative;
+      cursor: pointer;
+      outline: none;
+      transition: background 0.25s;
+    }
+
+    .toggle-checkbox:checked {
+      background: #10b981;
+    }
+
+    .toggle-checkbox::before {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: white;
+      transition: transform 0.25s;
+    }
+
+    .toggle-checkbox:checked::before {
+      transform: translateX(16px);
+    }
+
+    /* 底部图例 */
+    .bottom-hint {
+      position: absolute;
+      bottom: 16px;
+      left: 20px;
+      z-index: 10;
+      background: var(--panel-bg);
+      backdrop-filter: blur(10px);
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 11.5px;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-color {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+    }
+  </style>
+</head>
+<body>
+  <div id="webgl-container"></div>
+
+  <!-- 顶部标题卡片 -->
+  <div class="header-card">
+    <h1>
+      <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#38bdf8; box-shadow:0 0 8px #38bdf8;"></span>
+      载流环形螺线管（螺绕环）稳恒磁场分布
+    </h1>
+    <p>
+      稳恒直流电流流经紧密绕制的环形螺线管，由安培环路定理可知，磁感线为完全闭合在螺绕环内部的同心圆，环外与内孔中磁场严格为零（无漏磁）。
+    </p>
+    <div class="formula-tag">
+      环内磁场：\(B(r) = \frac{\mu_0 N I}{2\pi r}\hat{e}_\varphi \quad (R_1 < r < R_2)\)；环外：\(B \equiv 0\)
+    </div>
+  </div>
+
+  <!-- 右侧交互控制面板 -->
+  <div class="control-panel">
+    <!-- 几何与绕线控制 -->
+    <div class="control-section">
+      <div class="section-title">
+        <span>螺绕线圈参数</span>
+      </div>
+      <div class="control-row">
+        <div class="label-row">
+          <span>线圈总匝数 \(N\)</span>
+          <span id="txt-turns" class="val-text">36 匝</span>
+        </div>
+        <input type="range" id="slider-turns" min="20" max="60" step="2" value="36">
+      </div>
+
+      <div class="control-row">
+        <div class="label-row">
+          <span>骨架透明度</span>
+          <span id="txt-core-op" class="val-text">0.20</span>
+        </div>
+        <input type="range" id="slider-core-op" min="0.05" max="0.60" step="0.02" value="0.20">
+      </div>
+    </div>
+
+    <!-- 可视化对象开关 -->
+    <div class="control-section">
+      <div class="section-title">
+        <span>可视化层</span>
+      </div>
+      <div class="switch-row">
+        <span>显示环内闭合磁感线 (\(\vec{B}\))</span>
+        <input type="checkbox" id="chk-field-lines" class="toggle-checkbox" checked>
+      </div>
+      <div class="switch-row">
+        <span>显示截面中心轴线 (红色虚线)</span>
+        <input type="checkbox" id="chk-centerline" class="toggle-checkbox" checked>
+      </div>
+      <div class="switch-row">
+        <span>显示电流微粒流动动画</span>
+        <input type="checkbox" id="chk-flow-anim" class="toggle-checkbox" checked>
+      </div>
+    </div>
+
+    <!-- 径向剖面与 B(r) 理论分布图 -->
+    <div class="control-section">
+      <div class="section-title">
+        <span>径向截面与磁场强度分布 \(B(r)\)</span>
+      </div>
+      <canvas id="b-curve-canvas" width="310" height="415" style="width:100%; height:auto; background:rgba(7,11,20,0.85); border-radius:6px; border:1px solid rgba(148,163,184,0.18); display:block; margin-bottom:8px;"></canvas>
+      <div id="chart-desc" style="font-size: 11px; color: #94a3b8; line-height: 1.5;">
+        <div>• <b style="color:#34d399;">1:1 空间投影对齐</b>：截面横向位置与尺寸与下方 \(B(r)\) 曲线的 \([R_1, R_2]\) 严格几何对齐！</div>
+        <div style="margin-top:2px;">• <b style="color:#38bdf8;">色条强弱指示</b>：附带连续色阶标尺，白亮代表强磁场（\(B_{\max}\)），幽蓝代表弱磁场（\(B_{\min}\)）。</div>
+        <div style="margin-top:2px;">• <b style="color:#ef4444;">垂直投影虚线</b>：左边界 \(R_1\) 对齐峰值，中心线 \(R\) 对齐几何中心，右边界 \(R_2\) 归零。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部图例 -->
+  <div class="bottom-hint">
+    <div class="legend-item">
+      <span class="legend-color" style="background:#f59e0b;"></span>
+      <span>通电螺绕导线 \(I\)</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-color" style="background:#10b981;"></span>
+      <span>环形绝缘骨架</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-color" style="background:#38bdf8;"></span>
+      <span>环内磁感线 \(\vec{B}\) (内密外疏，渐变强弱)</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-color" style="background:#ef4444; border: 1px dashed rgba(255,255,255,0.6);"></span>
+      <span>螺环截面中心轴线 (红色虚线)</span>
+    </div>
+    <span style="margin-left:auto; color:var(--text-dim);">💡 鼠标左键旋转视角 | 滚轮缩放 | 右键平移</span>
+  </div>
+
+  <script>
+    /* ==============================================================
+       1. 物理几何参数与全局状态
+       ============================================================== */
+    const STATE = {
+      R: 1.80,            // 螺绕环中心大半径 (m)
+      r: 0.46,            // 螺绕环管道截面半径 (m)
+      N: 36,              // 线圈总匝数（铺满全环）
+      coreOpacity: 0.20,  // 骨架透明度
+      showFieldLines: true,
+      showCenterline: true,
+      flowAnim: true
+    };
+
+    /* ==============================================================
+       2. 初始化 Three.js 场景、相机与渲染器
+       ============================================================== */
+    const container = document.getElementById('webgl-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x070b14);
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.set(3.8, 3.2, 4.6);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.target.set(0, 0, 0);
+
+    // 光照设置
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+    scene.add(ambientLight);
+
+    const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.9);
+    dirLight1.position.set(6, 10, 8);
+    scene.add(dirLight1);
+
+    const dirLight2 = new THREE.DirectionalLight(0x38bdf8, 0.5);
+    dirLight2.position.set(-8, -4, -6);
+    scene.add(dirLight2);
+
+    // 微弱参考坐标格
+    const gridHelper = new THREE.GridHelper(8, 16, 0x1e293b, 0x0f172a);
+    gridHelper.position.y = -1.2;
+    scene.add(gridHelper);
+
+    /* ==============================================================
+       3. 场景对象容器群组
+       ============================================================== */
+    const rootToroidGroup = new THREE.Group();
+    const rootFieldGroup = new THREE.Group();
+    scene.add(rootToroidGroup);
+    scene.add(rootFieldGroup);
+
+    /* ==============================================================
+       4. 构建完整螺绕环线圈 (完整 360° 铺满圆环) 与完整中间甜甜圈骨架
+       ============================================================== */
+    // 自定义闭合环面螺旋曲线 (完整 360° 环绕)
+    class ToroidalHelixCurve extends THREE.Curve {
+      constructor(R, r, N) {
+        super();
+        this.R = R;
+        this.r = r;
+        this.N = N;
+      }
+      getPoint(t, optionalTarget = new THREE.Vector3()) {
+        const theta = t * Math.PI * 2;
+        const phi = this.N * theta;
+        const rad = this.R + this.r * Math.cos(phi);
+        const x = rad * Math.cos(theta);
+        const z = rad * Math.sin(theta);
+        const y = this.r * Math.sin(phi);
+        return optionalTarget.set(x, y, z);
+      }
+    }
+
+    let coreMesh = null;
+    let coilMesh = null;
+
+    function rebuildToroid() {
+      while (rootToroidGroup.children.length > 0) {
+        const obj = rootToroidGroup.children[0];
+        rootToroidGroup.remove(obj);
+        if (obj.geometry) obj.geometry.dispose();
+      }
+
+      const R = STATE.R;
+      const r = STATE.r;
+
+      // 1. 完整半透明中间甜甜圈骨架 (完整的 360° 封闭环面)
+      const coreGeo = new THREE.TorusGeometry(R, r, 36, 120);
+      coreGeo.rotateX(Math.PI / 2); // 旋转至水平 xz 平面
+      const coreMat = new THREE.MeshPhysicalMaterial({
+        color: 0x10b981,
+        transparent: true,
+        opacity: STATE.coreOpacity,
+        roughness: 0.15,
+        metalness: 0.10,
+        clearcoat: 0.5,
+        clearcoatRoughness: 0.15,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      });
+      coreMesh = new THREE.Mesh(coreGeo, coreMat);
+      rootToroidGroup.add(coreMesh);
+
+      // 骨架轻微表面线框 (辅助呈现圆环曲面几何轮廓)
+      const coreWireGeo = new THREE.TorusGeometry(R, r, 18, 64);
+      coreWireGeo.rotateX(Math.PI / 2);
+      const coreWireMat = new THREE.MeshBasicMaterial({
+        color: 0x34d399,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.12,
+        depthWrite: false
+      });
+      rootToroidGroup.add(new THREE.Mesh(coreWireGeo, coreWireMat));
+
+      // 2. 螺绕导线线圈 (完整 360° 铺满整个圆环)
+      const effectiveN = STATE.N;
+      const helixCurve = new ToroidalHelixCurve(R, r, effectiveN);
+      const tubeSegments = Math.round(effectiveN * 36);
+      const coilGeo = new THREE.TubeGeometry(helixCurve, tubeSegments, 0.024, 10, true);
+      const coilMat = new THREE.MeshStandardMaterial({
+        color: 0xf59e0b,
+        roughness: 0.25,
+        metalness: 0.85,
+        emissive: 0x78350f,
+        emissiveIntensity: 0.25
+      });
+      coilMesh = new THREE.Mesh(coilGeo, coilMat);
+      rootToroidGroup.add(coilMesh);
+
+      // 3. 在导线圈上均匀分布标注多个醒目的电流方向箭头与符号 I
+      const arrowTList = [0.12, 0.37, 0.62, 0.87];
+      arrowTList.forEach(tVal => {
+        const arrowPt = helixCurve.getPoint(tVal);
+        const arrowDir = helixCurve.getTangent(tVal).normalize();
+        const inArrow = new THREE.ArrowHelper(arrowDir, arrowPt, 0.36, 0xfbbf24, 0.13, 0.065);
+        rootToroidGroup.add(inArrow);
+
+        const labelI = makeTextSprite('I', '#fbbf24', 42);
+        const normOut = arrowPt.clone().setY(0).normalize();
+        labelI.position.copy(arrowPt).addScaledVector(normOut, 0.22).add(new THREE.Vector3(0, 0.18, 0));
+        rootToroidGroup.add(labelI);
+      });
+    }
+
+    // 辅助函数：创建三维光滑圆环虚线
+    function createDashedCircle(radius, y, color, tubeRadius, dashCount = 48, dashRatio = 0.60) {
+      const group = new THREE.Group();
+      const dTheta = (Math.PI * 2) / dashCount;
+      const dashAng = dTheta * dashRatio;
+      const dashMat = new THREE.MeshBasicMaterial({ color: color });
+
+      for (let i = 0; i < dashCount; i++) {
+        const theta0 = i * dTheta;
+        const subSteps = 5;
+        const pts = [];
+        for (let s = 0; s <= subSteps; s++) {
+          const th = theta0 + (s / subSteps) * dashAng;
+          pts.push(new THREE.Vector3(radius * Math.cos(th), y, radius * Math.sin(th)));
+        }
+        const curve = new THREE.CatmullRomCurve3(pts);
+        const geo = new THREE.TubeGeometry(curve, subSteps, tubeRadius, 6, false);
+        group.add(new THREE.Mesh(geo, dashMat));
+      }
+      return group;
+    }
+
+    /* ==============================================================
+       5. 环内稳恒磁感线生成与截面中心虚线轴（方案3：内密外疏 + 明暗渐变）
+       ============================================================== */
+    function rebuildFieldLines() {
+      while (rootFieldGroup.children.length > 0) {
+        const obj = rootFieldGroup.children[0];
+        rootFieldGroup.remove(obj);
+        if (obj.geometry) obj.geometry.dispose();
+      }
+
+      const R = STATE.R;
+      const r = STATE.r;
+
+      // 1. 螺环截面中心轴线（几何圆心基准线：醒目红色虚线）
+      if (STATE.showCenterline) {
+        rootFieldGroup.add(createDashedCircle(R, 0, 0xef4444, 0.010, 48, 0.60));
+      }
+
+      // 2. 环内闭合磁感线（内密外疏，依据 B(r) ∝ 1/r 呈现密度与亮度渐变）
+      if (!STATE.showFieldLines) return;
+
+      const FIELD_WIDTH = 0.012;
+      // 内密外疏布局：内半区 (dr < 0) 7 条更致密、明亮（包括水平面 3 条）；外半区 (dr > 0) 3 条更疏朗、幽蓝（水平面仅 1 条）
+      const fieldLoops = [
+        // 内半区 (近轴强磁场区)：间距密集，颜色更亮，箭头更大
+        { dr: -0.34, dy:  0.00, color: 0xcffafe, emissive: 0x38bdf8, opacity: 0.92, arrowScale: 1.20 },
+        { dr: -0.22, dy:  0.00, color: 0x7dd3fc, emissive: 0x0284c7, opacity: 0.85, arrowScale: 1.12 },
+        { dr: -0.10, dy:  0.00, color: 0x38bdf8, emissive: 0x0284c7, opacity: 0.80, arrowScale: 1.05 },
+        { dr: -0.24, dy:  0.18, color: 0x7dd3fc, emissive: 0x0284c7, opacity: 0.82, arrowScale: 1.10 },
+        { dr: -0.24, dy: -0.18, color: 0x7dd3fc, emissive: 0x0284c7, opacity: 0.82, arrowScale: 1.10 },
+        { dr: -0.12, dy:  0.22, color: 0x38bdf8, emissive: 0x0369a1, opacity: 0.75, arrowScale: 1.00 },
+        { dr: -0.12, dy: -0.22, color: 0x38bdf8, emissive: 0x0369a1, opacity: 0.75, arrowScale: 1.00 },
+        // 外半区 (远轴弱磁场区)：间距疏朗，颜色偏深偏幽蓝，箭头较小
+        { dr:  0.18, dy:  0.20, color: 0x0284c7, emissive: 0x075985, opacity: 0.65, arrowScale: 0.88 },
+        { dr:  0.18, dy: -0.20, color: 0x0284c7, emissive: 0x075985, opacity: 0.65, arrowScale: 0.88 },
+        { dr:  0.30, dy:  0.00, color: 0x0369a1, emissive: 0x0c4a6e, opacity: 0.55, arrowScale: 0.80 }
+      ];
+
+      fieldLoops.forEach((cfg, idx) => {
+        const loopR = R + cfg.dr;
+        const loopY = cfg.dy;
+
+        // 生成闭合圆环磁感线
+        const linePts = [];
+        const steps = 80;
+        for (let i = 0; i <= steps; i++) {
+          const ang = (i / steps) * Math.PI * 2;
+          linePts.push(new THREE.Vector3(loopR * Math.cos(ang), loopY, loopR * Math.sin(ang)));
+        }
+        const lineCurve = new THREE.CatmullRomCurve3(linePts, true);
+        const lineGeo = new THREE.TubeGeometry(lineCurve, 80, FIELD_WIDTH, 8, true);
+        const lineMat = new THREE.MeshStandardMaterial({
+          color: cfg.color,
+          emissive: cfg.emissive,
+          emissiveIntensity: 0.45,
+          roughness: 0.20,
+          metalness: 0.80,
+          transparent: true,
+          opacity: cfg.opacity
+        });
+        rootFieldGroup.add(new THREE.Mesh(lineGeo, lineMat));
+
+        // 在磁感线上间隔放置切向锥形箭头 (指示 B 的环向方向，大小依 1/r 变化)
+        const arrowCount = 6;
+        for (let j = 0; j < arrowCount; j++) {
+          const ang = (j / arrowCount) * Math.PI * 2 + (idx * 0.35);
+          const pos = new THREE.Vector3(loopR * Math.cos(ang), loopY, loopR * Math.sin(ang));
+          const dir = new THREE.Vector3(-Math.sin(ang), 0, Math.cos(ang)).normalize();
+          const scale = cfg.arrowScale || 1.0;
+          const arrowConeGeo = new THREE.ConeGeometry(FIELD_WIDTH * 2.8 * scale, FIELD_WIDTH * 7.0 * scale, 16);
+          const arrowConeMat = new THREE.MeshBasicMaterial({ color: cfg.color });
+          const arrowCone = new THREE.Mesh(arrowConeGeo, arrowConeMat);
+          arrowCone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+          arrowCone.position.copy(pos);
+          rootFieldGroup.add(arrowCone);
+        }
+      });
+
+      // 标出 B 矢量符号放在内侧最强磁感线上方
+      const labelB = makeTextSprite('B', '#cffafe', 42);
+      labelB.position.set(0, 0.22, R - 0.26);
+      rootFieldGroup.add(labelB);
+    }
+
+    /* ==============================================================
+       6. 绘制径向截面与 B(r) 理论分布画布 (1:1 空间投影对齐 + 强弱色阶标尺)
+       ============================================================== */
+    const bCanvas = document.getElementById('b-curve-canvas');
+    const bCtx = bCanvas ? bCanvas.getContext('2d') : null;
+
+    // 辅助函数：绘制箭头三角
+    function drawArrowHead(tipX, tipY, dirX, dirY, size = 7, color = '#fbbf24') {
+      const perpX = -dirY;
+      const perpY = dirX;
+      bCtx.beginPath();
+      bCtx.moveTo(tipX, tipY);
+      bCtx.lineTo(tipX - dirX * size + perpX * (size * 0.5), tipY - dirY * size + perpY * (size * 0.5));
+      bCtx.lineTo(tipX - dirX * size - perpX * (size * 0.5), tipY - dirY * size - perpY * (size * 0.5));
+      bCtx.closePath();
+      bCtx.fillStyle = color;
+      bCtx.fill();
+    }
+
+    // 核心组件：绘制磁场强度色条标尺 (Colorbar：白亮为强 ➔ 幽蓝为弱)
+    function drawColorbar(W, barY = 222) {
+      const barX0 = 50;
+      const barW = 210;
+      const barH = 9;
+
+      // 标尺区域半透明背景衬底（使纵向投影虚线不干扰文字与刻度）
+      bCtx.fillStyle = 'rgba(7, 11, 20, 0.88)';
+      bCtx.fillRect(16, barY - 12, W - 32, 40);
+      bCtx.strokeStyle = 'rgba(148, 163, 184, 0.15)';
+      bCtx.strokeRect(16, barY - 12, W - 32, 40);
+
+      // 标尺说明文字
+      bCtx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      bCtx.fillStyle = '#94a3b8';
+      bCtx.textAlign = 'center';
+      bCtx.fillText('磁场强度色条标尺 (Colorbar：白亮为强 ➔ 幽蓝为弱)', W * 0.5, barY - 2);
+
+      // 色带平滑渐变 (极亮纯白 -> 亮青白 -> 天蓝 -> 湛蓝 -> 深海蓝 -> 幽暗蓝)
+      const barGrad = bCtx.createLinearGradient(barX0, 0, barX0 + barW, 0);
+      barGrad.addColorStop(0.00, '#ffffff'); // 峰值极强：纯白
+      barGrad.addColorStop(0.15, '#bae6fd'); // 亮青白
+      barGrad.addColorStop(0.35, '#38bdf8'); // 明天蓝
+      barGrad.addColorStop(0.60, '#0284c7'); // 湛蓝
+      barGrad.addColorStop(0.85, '#0369a1'); // 深海蓝
+      barGrad.addColorStop(1.00, '#082f49'); // 相对较弱：幽暗蓝
+
+      // 渐变色条主体
+      bCtx.beginPath();
+      if (bCtx.roundRect) {
+        bCtx.roundRect(barX0, barY, barW, barH, 2.5);
+      } else {
+        bCtx.rect(barX0, barY, barW, barH);
+      }
+      bCtx.fillStyle = barGrad;
+      bCtx.fill();
+      bCtx.strokeStyle = 'rgba(148, 163, 184, 0.40)';
+      bCtx.lineWidth = 1;
+      bCtx.stroke();
+
+      // 零场 (B = 0) 图例方块（对应中轴孔腔与环外的无场暗区）
+      bCtx.fillStyle = 'rgba(15, 23, 42, 0.95)';
+      bCtx.fillRect(barX0 - 24, barY, 14, barH);
+      bCtx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
+      bCtx.strokeRect(barX0 - 24, barY, 14, barH);
+
+      bCtx.font = '8.5px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      bCtx.fillStyle = '#64748b';
+      bCtx.textAlign = 'center';
+      bCtx.fillText('0', barX0 - 17, barY + barH + 11);
+
+      // 刻度线与强度文本标注
+      // 1. 左端：B_max (极强)
+      bCtx.beginPath();
+      bCtx.moveTo(barX0, barY + barH);
+      bCtx.lineTo(barX0, barY + barH + 3.5);
+      bCtx.strokeStyle = '#38bdf8';
+      bCtx.lineWidth = 1.2;
+      bCtx.stroke();
+
+      bCtx.font = '9px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      bCtx.fillStyle = '#bae6fd';
+      bCtx.textAlign = 'left';
+      bCtx.fillText('B_max (极强·白)', barX0 - 2, barY + barH + 12);
+
+      // 2. 中间：B(R) (几何中心)
+      const barXmid = barX0 + barW * 0.5;
+      bCtx.beginPath();
+      bCtx.moveTo(barXmid, barY + barH);
+      bCtx.lineTo(barXmid, barY + barH + 3.5);
+      bCtx.strokeStyle = '#ef4444';
+      bCtx.stroke();
+
+      bCtx.fillStyle = '#ef4444';
+      bCtx.textAlign = 'center';
+      bCtx.fillText('B(R) (中心值)', barXmid, barY + barH + 12);
+
+      // 3. 右端：B_min (较弱)
+      bCtx.beginPath();
+      bCtx.moveTo(barX0 + barW, barY + barH);
+      bCtx.lineTo(barX0 + barW, barY + barH + 3.5);
+      bCtx.strokeStyle = '#64748b';
+      bCtx.stroke();
+
+      bCtx.fillStyle = '#94a3b8';
+      bCtx.textAlign = 'right';
+      bCtx.fillText('B_min (较弱·蓝)', barX0 + barW + 2, barY + barH + 12);
+    }
+
+    function drawBCurveCanvas() {
+      if (!bCanvas || !bCtx) return;
+      const W = bCanvas.width;
+      const H = bCanvas.height;
+
+      bCtx.clearRect(0, 0, W, H);
+      bCtx.save();
+      drawAlignMode(W, H);
+      bCtx.restore();
+    }
+
+    /* --------------------------------------------------------------
+       管截面与理论曲线 1:1 空间投影对齐
+       -------------------------------------------------------------- */
+    function drawAlignMode(W, H) {
+      // 坐标映射参数：与下方横坐标严格完全共用
+      const axisX0 = 36;
+      const axisY0 = 380;
+      const axisW = W - 52; // 258
+      const axisH = 88;
+      const rMax = 2.65;
+      const mapRtoX = (rv) => axisX0 + (rv / rMax) * axisW;
+
+      // 响应要求：R1 往左移至原 B=0 区域的一半 (0.67)，R2 保持 2.26 不变
+      // 从而使截面圆直径增大 (+73%)，B=0 区域缩短一半，空间投影 1:1 严格对齐
+      const R1 = 0.67;
+      const R2 = 2.26;
+      const R_mid = (R1 + R2) * 0.5; // 1.465
+
+      const xR1 = mapRtoX(R1);     // ≈ 101.2
+      const xR2 = mapRtoX(R2);     // ≈ 256.0
+      const xRmid = mapRtoX(R_mid); // ≈ 178.6
+
+      // 上方截面圆的几何对齐：
+      const secCx = xRmid;
+      const secCy = 118;
+      const secRad = (xR2 - xR1) * 0.5; // 77.4px
+      const wireRad = secRad + 6;       // 83.4px
+
+      // 标题
+      bCtx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      bCtx.fillStyle = '#f1f5f9';
+      bCtx.textAlign = 'center';
+      bCtx.fillText('管截面与理论曲线 1:1 空间投影对齐', W * 0.5, 14);
+
+      bCtx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      bCtx.fillStyle = '#34d399';
+      bCtx.fillText('截面横向位置与下方 B(r) 坐标轴 [R₁, R₂] 严格几何对齐', W * 0.5, 27);
+
+      // 1. 左侧中心孔腔区域 (r < R1)
+      bCtx.fillStyle = 'rgba(15, 23, 42, 0.65)';
+      bCtx.fillRect(axisX0, secCy - secRad - 2, xR1 - axisX0, secRad * 2 + 4);
+      bCtx.strokeStyle = 'rgba(148, 163, 184, 0.20)';
+      bCtx.strokeRect(axisX0, secCy - secRad - 2, xR1 - axisX0, secRad * 2 + 4);
+
+      // 对称中轴 (r = 0)
+      bCtx.beginPath();
+      bCtx.setLineDash([4, 3]);
+      bCtx.strokeStyle = 'rgba(148, 163, 184, 0.45)';
+      bCtx.lineWidth = 1.2;
+      bCtx.moveTo(axisX0, secCy - secRad - 8);
+      bCtx.lineTo(axisX0, axisY0);
+      bCtx.stroke();
+      bCtx.setLineDash([]);
+
+      bCtx.font = '9px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      bCtx.fillStyle = '#94a3b8';
+      bCtx.textAlign = 'center';
+      bCtx.fillText('z 轴 (r=0)', axisX0, secCy - secRad - 12);
+
+      bCtx.font = '9.5px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      bCtx.fillStyle = '#64748b';
+      bCtx.fillText('螺绕环内孔', (axisX0 + xR1) * 0.5, secCy - 2);
+      bCtx.fillText('(B ≡ 0)', (axisX0 + xR1) * 0.5, secCy + 10);
+
+      // 2. 贯穿上下的纵向空间投影虚线 (先行绘制，穿过色带底层)
+      bCtx.setLineDash([3, 2.5]);
+      bCtx.lineWidth = 1.2;
+
+      // 左边界 R1 投影线 (极亮青)
+      bCtx.strokeStyle = 'rgba(56, 189, 248, 0.70)';
+      bCtx.beginPath();
+      bCtx.moveTo(xR1, secCy);
+      bCtx.lineTo(xR1, axisY0);
+      bCtx.stroke();
+
+      // 中心线 R 投影线 (红虚线)
+      bCtx.strokeStyle = 'rgba(239, 68, 68, 0.85)';
+      bCtx.beginPath();
+      bCtx.moveTo(xRmid, secCy);
+      bCtx.lineTo(xRmid, axisY0);
+      bCtx.stroke();
+
+      // 右边界 R2 投影线 (深海蓝)
+      bCtx.strokeStyle = 'rgba(2, 132, 199, 0.65)';
+      bCtx.beginPath();
+      bCtx.moveTo(xR2, secCy);
+      bCtx.lineTo(xR2, axisY0);
+      bCtx.stroke();
+      bCtx.setLineDash([]);
+
+      // 3. 螺绕环管壁截面与连续伪彩 (白亮 -> 幽蓝)
+      bCtx.save();
+      bCtx.beginPath();
+      bCtx.arc(secCx, secCy, secRad, 0, Math.PI * 2);
+      bCtx.clip();
+
+      const grad = bCtx.createLinearGradient(xR1, 0, xR2, 0);
+      grad.addColorStop(0.00, '#ffffff'); // 近轴峰值：极亮白
+      grad.addColorStop(0.15, '#bae6fd');
+      grad.addColorStop(0.35, '#38bdf8');
+      grad.addColorStop(0.60, '#0284c7');
+      grad.addColorStop(0.85, '#0369a1');
+      grad.addColorStop(1.00, '#082f49');
+      bCtx.fillStyle = grad;
+      bCtx.fillRect(xR1, secCy - secRad, xR2 - xR1, secRad * 2);
+
+      // 截面中心红线
+      bCtx.beginPath();
+      bCtx.setLineDash([4, 3]);
+      bCtx.strokeStyle = 'rgba(239, 68, 68, 0.95)';
+      bCtx.lineWidth = 1.5;
+      bCtx.moveTo(secCx, secCy - secRad);
+      bCtx.lineTo(secCx, secCy + secRad);
+      bCtx.stroke();
+      bCtx.setLineDash([]);
+
+      bCtx.restore();
+
+      // 绿色管壁外圈
+      bCtx.beginPath();
+      bCtx.arc(secCx, secCy, secRad, 0, Math.PI * 2);
+      bCtx.strokeStyle = 'rgba(16, 185, 129, 0.85)';
+      bCtx.lineWidth = 1.8;
+      bCtx.stroke();
+
+      // 金色导线环与逆时针电流
+      bCtx.beginPath();
+      bCtx.arc(secCx, secCy, wireRad, 0, Math.PI * 2);
+      bCtx.strokeStyle = 'rgba(245, 158, 11, 0.80)';
+      bCtx.lineWidth = 1.8;
+      bCtx.stroke();
+
+      drawArrowHead(secCx - 3, secCy - wireRad, -1, 0, 6);
+      drawArrowHead(secCx - wireRad, secCy + 3, 0, 1, 6);
+      drawArrowHead(secCx + 3, secCy + wireRad, 1, 0, 6);
+      drawArrowHead(secCx + wireRad, secCy - 3, 0, -1, 6);
+
+      bCtx.font = 'italic bold 11px "Times New Roman", serif';
+      bCtx.fillStyle = '#fbbf24';
+      bCtx.fillText('I', secCx - 18, secCy - wireRad - 2);
+
+      // 4. 中间插入：磁场强度色彩标尺 (Colorbar)
+      drawColorbar(W, 222);
+
+      // 5. 下半部分：理论 B(r) 曲线 (与上方完全对齐)
+      drawAlignedBCurve(W, H, axisX0, axisY0, axisW, axisH, rMax, xR1, xRmid, xR2, R1, R_mid, R2);
+    }
+
+    /* --------------------------------------------------------------
+       辅助：与上方几何严格对齐的 B(r) 曲线
+       -------------------------------------------------------------- */
+    function drawAlignedBCurve(W, H, axisX0, axisY0, axisW, axisH, rMax, xR1, xRmid, xR2, R1, R_mid, R2) {
+      const mapRtoX = (rv) => axisX0 + (rv / rMax) * axisW;
+
+      // 坐标轴
+      bCtx.beginPath();
+      bCtx.strokeStyle = '#64748b';
+      bCtx.lineWidth = 1.2;
+      bCtx.moveTo(axisX0, axisY0);
+      bCtx.lineTo(axisX0, axisY0 - axisH);
+      bCtx.moveTo(axisX0, axisY0);
+      bCtx.lineTo(axisX0 + axisW, axisY0);
+      bCtx.stroke();
+
+      // 轴箭头
+      bCtx.fillStyle = '#64748b';
+      bCtx.beginPath();
+      bCtx.moveTo(axisX0 - 3, axisY0 - axisH + 4);
+      bCtx.lineTo(axisX0 + 3, axisY0 - axisH + 4);
+      bCtx.lineTo(axisX0, axisY0 - axisH - 2);
+      bCtx.fill();
+
+      bCtx.beginPath();
+      bCtx.moveTo(axisX0 + axisW - 4, axisY0 - 3);
+      bCtx.lineTo(axisX0 + axisW - 4, axisY0 + 3);
+      bCtx.lineTo(axisX0 + axisW + 2, axisY0);
+      bCtx.fill();
+
+      bCtx.font = 'italic 11px "Times New Roman", serif';
+      bCtx.fillStyle = '#94a3b8';
+      bCtx.textAlign = 'right';
+      bCtx.fillText('B', axisX0 - 6, axisY0 - axisH + 6);
+      bCtx.textAlign = 'left';
+      bCtx.fillText('r', axisX0 + axisW + 4, axisY0 + 4);
+
+      // 刻度文字
+      bCtx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      bCtx.textAlign = 'center';
+      bCtx.fillStyle = '#94a3b8';
+      bCtx.fillText('0', axisX0, axisY0 + 13);
+      bCtx.fillText('R₁', xR1, axisY0 + 13);
+      bCtx.fillStyle = '#ef4444';
+      bCtx.fillText('R', xRmid, axisY0 + 13);
+      bCtx.fillStyle = '#94a3b8';
+      bCtx.fillText('R₂', xR2, axisY0 + 13);
+
+      // B(r) 曲线
+      bCtx.beginPath();
+      bCtx.lineWidth = 2.2;
+      bCtx.strokeStyle = '#38bdf8';
+      bCtx.moveTo(axisX0, axisY0);
+      bCtx.lineTo(xR1, axisY0);
+      bCtx.stroke();
+
+      bCtx.beginPath();
+      bCtx.moveTo(xR2, axisY0);
+      bCtx.lineTo(axisX0 + axisW - 8, axisY0);
+      bCtx.stroke();
+
+      const bMaxHeight = axisH - 18;
+      const bAtR = (rv) => bMaxHeight * (R1 / rv);
+
+      bCtx.beginPath();
+      bCtx.moveTo(xR1, axisY0);
+      bCtx.lineTo(xR1, axisY0 - bAtR(R1));
+
+      const curveSteps = 40;
+      for (let i = 0; i <= curveSteps; i++) {
+        const curR = R1 + (i / curveSteps) * (R2 - R1);
+        const curX = mapRtoX(curR);
+        const curY = axisY0 - bAtR(curR);
+        bCtx.lineTo(curX, curY);
+      }
+      bCtx.lineTo(xR2, axisY0);
+      bCtx.strokeStyle = '#38bdf8';
+      bCtx.lineWidth = 2.2;
+      bCtx.stroke();
+
+      // 阴影填充
+      bCtx.lineTo(xR1, axisY0);
+      bCtx.closePath();
+      const fillGrad = bCtx.createLinearGradient(xR1, 0, xR2, 0);
+      fillGrad.addColorStop(0, 'rgba(56, 189, 248, 0.28)');
+      fillGrad.addColorStop(1, 'rgba(2, 132, 199, 0.08)');
+      bCtx.fillStyle = fillGrad;
+      bCtx.fill();
+
+      // 在投影落点标出高亮点 (突出几何与物理联动)
+      const drawPointMarker = (px, py, col, lbl) => {
+        bCtx.beginPath();
+        bCtx.arc(px, py, 3.2, 0, Math.PI * 2);
+        bCtx.fillStyle = col;
+        bCtx.fill();
+        bCtx.strokeStyle = '#ffffff';
+        bCtx.lineWidth = 1.2;
+        bCtx.stroke();
+
+        bCtx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        bCtx.fillStyle = col;
+        bCtx.textAlign = 'center';
+        bCtx.fillText(lbl, px, py - 6);
+      };
+
+      drawPointMarker(xR1, axisY0 - bAtR(R1), '#38bdf8', 'B_max');
+      drawPointMarker(xRmid, axisY0 - bAtR(R_mid), '#ef4444', 'B(R)');
+      drawPointMarker(xR2, axisY0 - bAtR(R2), '#0284c7', 'B_min');
+
+      // 曲线公式标注
+      bCtx.font = '10.5px "Times New Roman", serif';
+      bCtx.fillStyle = '#7dd3fc';
+      bCtx.textAlign = 'center';
+      bCtx.fillText('B ∝ 1/r', (xR1 + xR2) * 0.5, axisY0 - bAtR(R_mid) - 16);
+    }
+
+    /* ==============================================================
+       7. 文本标签发生器
+       ============================================================== */
+    function makeTextSprite(text, colorStr, fontSize) {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = 160;
+      canvas.height = 80;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.font = `italic bold ${fontSize}px "Times New Roman", serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = colorStr;
+      ctx.fillText(text, 80, 40);
+
+      const tex = new THREE.CanvasTexture(canvas);
+      const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false });
+      const sprite = new THREE.Sprite(mat);
+      sprite.scale.set(0.65, 0.325, 1);
+      return sprite;
+    }
+
+    /* ==============================================================
+       7. UI 交互控制
+       ============================================================== */
+    // 匝数滑块 (控制铺满全环的绕线密度)
+    document.getElementById('slider-turns').addEventListener('input', e => {
+      STATE.N = parseInt(e.target.value);
+      document.getElementById('txt-turns').innerText = STATE.N + ' 匝';
+      rebuildToroid();
+    });
+
+    // 骨架透明度滑块
+    document.getElementById('slider-core-op').addEventListener('input', e => {
+      STATE.coreOpacity = parseFloat(e.target.value);
+      document.getElementById('txt-core-op').innerText = STATE.coreOpacity.toFixed(2);
+      if (coreMesh) coreMesh.material.opacity = STATE.coreOpacity;
+    });
+
+    // 显示开关
+    document.getElementById('chk-field-lines').addEventListener('change', e => {
+      STATE.showFieldLines = e.target.checked;
+      rebuildFieldLines();
+    });
+    document.getElementById('chk-centerline').addEventListener('change', e => {
+      STATE.showCenterline = e.target.checked;
+      rebuildFieldLines();
+    });
+    document.getElementById('chk-flow-anim').addEventListener('change', e => {
+      STATE.flowAnim = e.target.checked;
+    });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    /* ==============================================================
+       8. 动画与主循环
+       ============================================================== */
+    let animClock = 0;
+    function animate() {
+      requestAnimationFrame(animate);
+
+      if (STATE.flowAnim && STATE.showFieldLines) {
+        animClock += 0.015;
+        // 让环内磁感线产生微弱顺滑的环向呼吸与流动质感
+        rootFieldGroup.children.forEach((child, i) => {
+          if (child.isMesh && child.geometry.type === 'ConeGeometry') {
+            // 微妙旋转与脉动
+          }
+        });
+      }
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    // 初始化构建
+    rebuildToroid();
+    rebuildFieldLines();
+    drawBCurveCanvas();
+    animate();
+  </script>
+</body>
+</html>
