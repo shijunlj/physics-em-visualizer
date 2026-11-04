@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>带电粒子在匀强磁场中的运动与螺旋圆柱阴影三维演示</title>
+  <!-- Three.js 与 OrbitControls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <!-- KaTeX 数学公式渲染 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '\\(', right: '\\)', display: false}]});"></script>
+  <style>
+    :root {
+      --bg: #070b14;
+      --panel-bg: rgba(15, 23, 42, 0.88);
+      --border: rgba(148, 163, 184, 0.20);
+      --c-v: #fbbf24;      /* 速度金黄 */
+      --c-f: #f43f5e;      /* 洛伦兹力霓虹红 */
+      --c-b: #38bdf8;      /* 磁场天蓝 */
+      --c-cyl: #06b6d4;    /* 圆柱阴影青色 */
+      --c-pos: #ef4444;    /* 正电荷红 */
+      --c-neg: #0ea5e9;    /* 负电荷蓝 */
+      --text: #f8fafc;
+      --text-dim: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #webgl-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* 顶部标题栏 */
+    .top-header {
+      position: absolute;
+      top: 16px;
+      left: 20px;
+      z-index: 10;
+      pointer-events: auto;
+    }
+
+    .top-header h1 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: #ffffff;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .top-header .subtitle {
+      font-size: 12.5px;
+      color: var(--text-dim);
+      margin-top: 4px;
+      letter-spacing: 0.3px;
+    }
+
+    /* 右侧控制面板卡片 */
+    .control-panel {
+      position: absolute;
+      top: 16px;
+      right: 20px;
+      width: 340px;
+      max-height: calc(100vh - 80px);
+      overflow-y: auto;
+      background: var(--panel-bg);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 20px;
+      z-index: 10;
+      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.55);
+    }
+
+    .control-panel::-webkit-scrollbar {
+      width: 5px;
+    }
+    .control-panel::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.28);
+      border-radius: 4px;
+    }
+
+    .control-section {
+      margin-bottom: 16px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+    }
+    .control-section:last-child {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #e2e8f0;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* 按键组 */
+    .btn-group {
+      display: flex;
+      gap: 6px;
+      width: 100%;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 7px 10px;
+      background: rgba(30, 41, 59, 0.75);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 6px;
+      color: #cbd5e1;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+
+    .btn:hover {
+      background: rgba(51, 65, 85, 0.90);
+      border-color: rgba(148, 163, 184, 0.45);
+      color: #ffffff;
+    }
+
+    .btn.active {
+      background: #0284c7;
+      border-color: #38bdf8;
+      color: #ffffff;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.35);
+    }
+
+    .btn.btn-pos.active {
+      background: #dc2626;
+      border-color: #f87171;
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+    }
+
+    .btn.btn-neg.active {
+      background: #0284c7;
+      border-color: #38bdf8;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+    }
+
+    /* 滑块控件 */
+    .slider-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #cbd5e1;
+    }
+
+    .slider-val {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      color: #38bdf8;
+      font-weight: 600;
+    }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 5px;
+      background: rgba(51, 65, 85, 0.7);
+      border-radius: 3px;
+      outline: none;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: #38bdf8;
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.75);
+      transition: transform 0.15s ease;
+    }
+
+    input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    /* 开关项 */
+    .switch-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #cbd5e1;
+      margin-bottom: 8px;
+      cursor: pointer;
+    }
+    .switch-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .toggle-checkbox {
+      accent-color: #38bdf8;
+      width: 15px;
+      height: 15px;
+      cursor: pointer;
+    }
+
+    /* 物理量实时数据仪表卡片 */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .metric-card {
+      background: rgba(30, 41, 59, 0.55);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      border-radius: 7px;
+      padding: 7px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .metric-label {
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    .metric-val {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #f1f5f9;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    /* 底部图例 */
+    .bottom-hint {
+      position: absolute;
+      bottom: 16px;
+      left: 20px;
+      right: 20px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      padding: 10px 18px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      font-size: 12px;
+      color: #cbd5e1;
+      z-index: 10;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-color {
+      width: 11px;
+      height: 11px;
+      border-radius: 3px;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+  <div id="webgl-container"></div>
+
+  <!-- 顶部标题 -->
+  <div class="top-header">
+    <h1>
+      <span>带电粒子在匀强磁场中的运动</span>
+      <span style="font-size: 12px; padding: 2px 8px; border-radius: 4px; background: rgba(56,189,248,0.18); border: 1px solid rgba(56,189,248,0.4); color: #38bdf8; font-weight: normal;">三维动态仿真</span>
+    </h1>
+    <div class="subtitle">洛伦兹力 \(\vec{F} = q(\vec{v} \times \vec{B})\) · 速度分解 · 螺旋运动与外接圆柱阴影</div>
+  </div>
+
+  <!-- 右侧交互控制面板 -->
+  <div class="control-panel">
+    <!-- 1. 速度方向模式预设 -->
+    <div class="control-section">
+      <div class="section-title">
+        <span>速度方向与磁场夹角 \(\theta = \langle\vec{v}, \vec{B}\rangle\)</span>
+      </div>
+      <div class="btn-group" style="margin-bottom: 8px;">
+        <button id="btn-v-perp" class="btn active">垂直 (\(90^\circ\))</button>
+        <button id="btn-v-helix" class="btn">任意夹角 (\(60^\circ\))</button>
+        <button id="btn-v-para" class="btn">平行 (\(0^\circ\))</button>
+      </div>
+
+      <!-- 连续夹角滑块 -->
+      <div class="slider-row">
+        <div class="slider-header">
+          <span>夹角调节 \(\theta\)</span>
+          <span class="slider-val" id="txt-angle">90°</span>
+        </div>
+        <input type="range" id="slider-angle" min="0" max="180" step="1" value="90">
+      </div>
+    </div>
+
+    <!-- 2. 电荷属性与速度大小 -->
+    <div class="control-section">
+      <div class="section-title">
+        <span>带电粒子电荷属性</span>
+      </div>
+      <div class="btn-group">
+        <button id="btn-q-pos" class="btn btn-pos active">正电荷 (\(+q\))</button>
+        <button id="btn-q-neg" class="btn btn-neg">负电荷 (\(-q\))</button>
+      </div>
+
+      <div class="slider-row" style="margin-top: 12px;">
+        <div class="slider-header">
+          <span>粒子速率 \(v_0\)</span>
+          <span class="slider-val" id="txt-speed">2.0 m/s</span>
+        </div>
+        <input type="range" id="slider-speed" min="0.5" max="3.5" step="0.1" value="2.0">
+      </div>
+    </div>
+
+    <!-- 3. 几何显示与辅助阴影 -->
+    <div class="control-section">
+      <div class="section-title">
+        <span>几何显示与投影辅助</span>
+      </div>
+      <div class="switch-row">
+        <span>显示螺旋轨迹的圆柱阴影包络面</span>
+        <input type="checkbox" id="chk-cylinder" class="toggle-checkbox" checked>
+      </div>
+      <div class="switch-row">
+        <span>显示速度分量 (\(v_\parallel\) 与 \(v_\perp\))</span>
+        <input type="checkbox" id="chk-components" class="toggle-checkbox" checked>
+      </div>
+      <div class="switch-row">
+        <span>显示洛伦兹力矢量 (\(\vec{F}\))</span>
+        <input type="checkbox" id="chk-force" class="toggle-checkbox" checked>
+      </div>
+      <div class="switch-row">
+        <span>显示空间匀强磁感线群 (\(\vec{B}\))</span>
+        <input type="checkbox" id="chk-bfield" class="toggle-checkbox" checked>
+      </div>
+      <div class="switch-row">
+        <span>显示粒子运行历史轨迹线</span>
+        <input type="checkbox" id="chk-trail" class="toggle-checkbox" checked>
+      </div>
+    </div>
+
+    <!-- 4. 运动与播放控制 -->
+    <div class="control-section">
+      <div class="section-title">
+        <span>动画播放控制</span>
+      </div>
+      <div class="btn-group">
+        <button id="btn-play-pause" class="btn" style="background:#0284c7; border-color:#38bdf8; color:#ffffff; font-weight:600;">▶ 开始运动 (Start)</button>
+        <button id="btn-reset" class="btn">🔄 重置位置</button>
+      </div>
+      <div class="slider-row" style="margin-top: 10px;">
+        <div class="slider-header">
+          <span>动画速度倍率</span>
+          <span class="slider-val" id="txt-sim-speed">1.0x</span>
+        </div>
+        <input type="range" id="slider-sim-speed" min="0.2" max="2.5" step="0.1" value="1.0">
+      </div>
+    </div>
+
+    <!-- 5. 理论物理量实时计算仪表 -->
+    <div class="control-section">
+      <div class="section-title">
+        <span>运动理论物理量</span>
+      </div>
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <span class="metric-label">回旋半径 \(R = \frac{m v_\perp}{|q|B}\)</span>
+          <span class="metric-val" id="val-R">1.25 m</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">螺旋螺距 \(h = v_\parallel T\)</span>
+          <span class="metric-val" id="val-h">0.00 m</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">垂直速度 \(v_\perp = v\sin\theta\)</span>
+          <span class="metric-val" id="val-vperp">2.00 m/s</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">平行速度 \(v_\parallel = v\cos\theta\)</span>
+          <span class="metric-val" id="val-vpara">0.00 m/s</span>
+        </div>
+        <div class="metric-card" style="grid-column: span 2;">
+          <span class="metric-label">洛伦兹力 \(F = |q| v B \sin\theta\)</span>
+          <span class="metric-val" id="val-F" style="color:#f43f5e;">2.00 N (指向曲率中心)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部图例与操作提示 -->
+  <div class="bottom-hint">
+    <div class="legend-item">
+      <span class="legend-color" style="background:var(--c-v);"></span>
+      <span>速度矢量 \(\vec{v}\) (金色)</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-color" style="background:var(--c-f);"></span>
+      <span>洛伦兹力 \(\vec{F}\) (霓虹红·向心)</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-color" style="background:#ffffff; box-shadow: 0 0 6px rgba(255, 255, 255, 0.7);"></span>
+      <span>匀强磁场 \(\vec{B}\) (白色·水平向右)</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-color" style="background:rgba(6, 182, 212, 0.45); border: 1px solid var(--c-cyl);"></span>
+      <span>螺旋圆柱阴影 (半径 \(R\))</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-color" style="background:var(--c-pos); border-radius:50%;"></span>
+      <span>\(+q\) 正电荷</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-color" style="background:var(--c-neg); border-radius:50%;"></span>
+      <span>\(-q\) 负电荷</span>
+    </div>
+    <span style="margin-left:auto; color:var(--text-dim);">💡 鼠标左键旋转视角 | 滚轮缩放 | 右键平移</span>
+  </div>
+
+  <script>
+    /* ==============================================================
+       1. 物理全局状态
+       ============================================================== */
+    const STATE = {
+      q: 1,             // 电荷符号: +1 或 -1
+      m: 1.0,           // 粒子质量 (kg)
+      B: 1.6,           // 磁感应强度 (T), 沿 +X 轴水平向右
+      v0: 2.0,          // 初始速率 (m/s)
+      thetaDeg: 90,     // v 与 B 的夹角 (度)
+      showCylinder: true,
+      showComponents: true,
+      showForce: true,
+      showBField: true,
+      showTrail: true,
+      isPaused: true,   // 默认打开不运动，等待用户点击 Start 启动
+      hasStarted: false,
+      simSpeed: 1.0,    // 时间缩放
+      time: 0           // 仿真时间 (s)
+    };
+
+    /* ==============================================================
+       2. 初始化 Three.js 场景与渲染器
+       ============================================================== */
+    const container = document.getElementById('webgl-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x070b14);
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.set(3.4, 3.8, 6.2);
+
+    function updateCameraViewOffset() {
+      const panel = document.querySelector('.control-panel');
+      const panelW = panel ? (panel.offsetWidth + 30) : 370;
+      // 将视口渲染中心向左偏移，使 3D 场景完美居中于左侧可视开阔区域，避免被右侧控制面板遮挡
+      const offsetX = window.innerWidth > 900 ? panelW * 0.5 : panelW * 0.25;
+      camera.setViewOffset(window.innerWidth, window.innerHeight, offsetX, 0, window.innerWidth, window.innerHeight);
+    }
+    updateCameraViewOffset();
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.target.set(0, 0, 0);
+
+    // 光照环境
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+    scene.add(ambientLight);
+
+    const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.9);
+    dirLight1.position.set(6, 10, 8);
+    scene.add(dirLight1);
+
+    const dirLight2 = new THREE.DirectionalLight(0x38bdf8, 0.5);
+    dirLight2.position.set(-8, -4, -6);
+    scene.add(dirLight2);
+
+    // 微弱水平参考网格（放置在底层 y = -3.2）
+    const gridHelper = new THREE.GridHelper(12, 24, 0x1e293b, 0x0f172a);
+    gridHelper.position.y = -3.2;
+    scene.add(gridHelper);
+
+    /* ==============================================================
+       3. 场景静态与动态群组
+       ============================================================== */
+    const bFieldGroup = new THREE.Group();
+    const cylinderGroup = new THREE.Group();
+    const particleGroup = new THREE.Group();
+    const trailGroup = new THREE.Group();
+    const vectorGroup = new THREE.Group();
+
+    scene.add(bFieldGroup);
+    scene.add(cylinderGroup);
+    scene.add(trailGroup);
+    scene.add(vectorGroup);
+    scene.add(particleGroup);
+
+    /* ==============================================================
+       4. 文本标签与指示器发生器
+       ============================================================== */
+    function makeTextSprite(text, colorStr, fontSize = 42) {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = 180;
+      canvas.height = 90;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.font = `italic bold ${fontSize}px "Times New Roman", serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = colorStr;
+      ctx.fillText(text, 90, 45);
+
+      const tex = new THREE.CanvasTexture(canvas);
+      const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false });
+      const sprite = new THREE.Sprite(mat);
+      sprite.scale.set(0.7, 0.35, 1);
+      return sprite;
+    }
+
+    // 绘制极简开叉三维矢量箭头 (细长柱身 + 镂空开叉箭头，简洁非实体)
+    class VectorArrow3D {
+      constructor(colorHex, radius = 0.013, headLen = 0.20, headRad = 0.055) {
+        this.group = new THREE.Group();
+        this.radius = radius;
+        this.headLen = headLen;
+        this.headRad = headRad;
+        this.color = colorHex;
+
+        // 发光与反光材质
+        this.mat = new THREE.MeshStandardMaterial({
+          color: colorHex,
+          roughness: 0.3,
+          metalness: 0.6,
+          emissive: colorHex,
+          emissiveIntensity: 0.45
+        });
+
+        // 1. 细长柱身 (锚点置于原点，朝 +y 方向延伸)
+        this.shaftGeo = new THREE.CylinderGeometry(radius, radius, 1, 16);
+        this.shaftGeo.translate(0, 0.5, 0); // 锚点置于原点
+        this.shaftMesh = new THREE.Mesh(this.shaftGeo, this.mat);
+        this.group.add(this.shaftMesh);
+
+        // 2. 简洁开叉箭头群组 (三根对称向后张开的纤细柱条，镂空非实体设计)
+        this.headGroup = new THREE.Group();
+        const barbRad = Math.max(0.006, radius * 0.85);
+
+        for (let k = 0; k < 3; k++) {
+          const ang = (k * Math.PI * 2) / 3;
+          const xEnd = headRad * Math.cos(ang);
+          const zEnd = headRad * Math.sin(ang);
+
+          // 顶点 (0, headLen, 0) 连接至底部开叉点 (xEnd, 0, zEnd)
+          const pTip = new THREE.Vector3(0, headLen, 0);
+          const pBase = new THREE.Vector3(xEnd, 0, zEnd);
+          const vBarb = pTip.clone().sub(pBase);
+          const barbLen = vBarb.length();
+          const pMid = pTip.clone().add(pBase).multiplyScalar(0.5);
+
+          const barbGeo = new THREE.CylinderGeometry(barbRad, barbRad, barbLen, 8);
+          const barbMesh = new THREE.Mesh(barbGeo, this.mat);
+          barbMesh.position.copy(pMid);
+          barbMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), vBarb.normalize());
+          this.headGroup.add(barbMesh);
+        }
+
+        // 顶端微型圆润球帽
+        const tipGeo = new THREE.SphereGeometry(barbRad * 1.15, 12, 12);
+        const tipMesh = new THREE.Mesh(tipGeo, this.mat);
+        tipMesh.position.set(0, headLen, 0);
+        this.headGroup.add(tipMesh);
+
+        this.group.add(this.headGroup);
+        this.visible = true;
+      }
+
+      set(origin, dir, length) {
+        if (length < 0.001) {
+          this.group.visible = false;
+          return;
+        }
+        this.group.visible = this.visible;
+        this.group.position.copy(origin);
+
+        const vUp = new THREE.Vector3(0, 1, 0);
+        const normDir = dir.clone().normalize();
+        this.group.quaternion.setFromUnitVectors(vUp, normDir);
+
+        const hLen = Math.min(this.headLen, length * 0.45);
+        const sLen = Math.max(0.0001, length - hLen);
+
+        // 细柱身长度缩放
+        this.shaftMesh.scale.set(1, sLen, 1);
+
+        // 箭头放置在柱身末端，按比例缩放
+        this.headGroup.position.set(0, sLen, 0);
+        const scaleH = hLen / this.headLen;
+        this.headGroup.scale.set(scaleH, scaleH, scaleH);
+      }
+
+      setVisible(val) {
+        this.visible = val;
+        this.group.visible = val;
+      }
+    }
+
+    /* ==============================================================
+       5. 构建背景匀强磁感线群 (\vec{B} 白色，细长精致，填充略大于阴影截面的正方形区域)
+       ============================================================== */
+    function rebuildBField() {
+      while (bFieldGroup.children.length > 0) {
+        const obj = bFieldGroup.children[0];
+        bFieldGroup.remove(obj);
+        if (obj.geometry) obj.geometry.dispose();
+      }
+
+      if (!STATE.showBField) return;
+
+      const rad = Math.toRadians(STATE.thetaDeg);
+      const v_perp = STATE.v0 * Math.sin(rad);
+      const omega = (Math.abs(STATE.q) * STATE.B) / STATE.m;
+      const R = v_perp / omega; // 阴影圆柱当前截面半径
+
+      // 正方形区域半边长：比阴影圆截面略大 (约 1.25 倍，基准下限确保平行直飞时依然合理覆盖)
+      const refR = (R > 0.25) ? R : (STATE.v0 / omega);
+      const halfSide = Math.max(1.25, refR * 1.25);
+
+      const LINE_LEN = 7.0;
+      const B_RADIUS = 0.0055; // 磁感线更细（半径 0.0055），纤细精致不扎眼
+
+      // 共享磁感线柱体几何体 (水平沿 +x 轴延伸)
+      const lineCylGeo = new THREE.CylinderGeometry(B_RADIUS, B_RADIUS, LINE_LEN, 8);
+      lineCylGeo.rotateZ(-Math.PI / 2); // 旋转至沿水平 x 轴对齐
+
+      // 白色材质
+      const lineMat = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.55
+      });
+      const centerLineMat = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.85
+      });
+
+      // 共享极简开叉箭头群组 (指向 +x 方向，非实体，纤细优雅)
+      const chevronGroupTemplate = new THREE.Group();
+      const chRad = 0.0042;
+      const chLen = 0.12;
+      const chSpread = 0.032;
+
+      // 3根向后掠开的细柱
+      for (let k = 0; k < 3; k++) {
+        const ang = (k * Math.PI * 2) / 3;
+        const yBack = chSpread * Math.cos(ang);
+        const zBack = chSpread * Math.sin(ang);
+
+        const pTip = new THREE.Vector3(0, 0, 0);
+        const pBack = new THREE.Vector3(-chLen, yBack, zBack);
+        const vArm = pTip.clone().sub(pBack);
+        const armLen = vArm.length();
+        const pMid = pTip.clone().add(pBack).multiplyScalar(0.5);
+
+        const armGeo = new THREE.CylinderGeometry(chRad, chRad, armLen, 6);
+        const armMesh = new THREE.Mesh(armGeo, lineMat);
+        armMesh.position.copy(pMid);
+        armMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), vArm.normalize());
+        chevronGroupTemplate.add(armMesh);
+      }
+
+      // 填充比阴影截面大一点的正方形区域 (3x3 均匀稀疏点阵共 9 根，清爽透气，彻底消除密集感)
+      const coords = [-halfSide, 0, halfSide];
+      for (let iy = 0; iy < coords.length; iy++) {
+        for (let iz = 0; iz < coords.length; iz++) {
+          const y = coords[iy];
+          const z = coords[iz];
+
+          const isCenter = (iy === 1 && iz === 1);
+          const lineMesh = new THREE.Mesh(lineCylGeo, isCenter ? centerLineMat : lineMat);
+          lineMesh.position.set(0, y, z);
+          bFieldGroup.add(lineMesh);
+
+          // 简洁开叉箭头 (每条线放置 2 个，分别位于 x = -1.2 与 x = 1.6)
+          const chevron1 = chevronGroupTemplate.clone(true);
+          chevron1.position.set(-1.2, y, z);
+          bFieldGroup.add(chevron1);
+
+          const chevron2 = chevronGroupTemplate.clone(true);
+          chevron2.position.set(1.6, y, z);
+          bFieldGroup.add(chevron2);
+        }
+      }
+
+      // 磁感应强度标识 B (亮白色，置于右上方磁感线旁)
+      const labelB = makeTextSprite('B', '#ffffff', 44);
+      labelB.position.set(2.4, halfSide * 0.7, halfSide * 0.7);
+      bFieldGroup.add(labelB);
+    }
+
+    /* ==============================================================
+       6. 构建螺旋运动的外接圆柱阴影包络面 (水平向右，中心轴沿 x 轴)
+       ============================================================== */
+    function rebuildCylinderEnvelope() {
+      while (cylinderGroup.children.length > 0) {
+        const obj = cylinderGroup.children[0];
+        cylinderGroup.remove(obj);
+        if (obj.geometry) obj.geometry.dispose();
+      }
+
+      if (!STATE.showCylinder) return;
+
+      const rad = Math.toRadians(STATE.thetaDeg);
+      const v_perp = STATE.v0 * Math.sin(rad);
+      const v_para = STATE.v0 * Math.cos(rad);
+      const omega = (Math.abs(STATE.q) * STATE.B) / STATE.m;
+      const R = v_perp / omega; // 回旋半径
+
+      // 若处于平行状态 (R 接近 0)，绘制水平导向轴线
+      if (R < 0.05) {
+        const axisPts = [new THREE.Vector3(-3.5, 0, 0), new THREE.Vector3(3.5, 0, 0)];
+        const axisGeo = new THREE.BufferGeometry().setFromPoints(axisPts);
+        const axisMat = new THREE.LineDashedMaterial({ color: 0x94a3b8, dashSize: 0.15, gapSize: 0.1 });
+        const line = new THREE.Line(axisGeo, axisMat);
+        line.computeLineDistances();
+        cylinderGroup.add(line);
+        return;
+      }
+
+      const CYL_L = 6.4;
+
+      // 1. 半透明幽蓝青色圆柱侧表面 (轴线沿 x 轴水平放置)
+      const cylGeo = new THREE.CylinderGeometry(R, R, CYL_L, 48, 1, true);
+      cylGeo.rotateZ(-Math.PI / 2); // 旋转使其中心对称轴对齐 x 轴
+
+      const cylMat = new THREE.MeshPhysicalMaterial({
+        color: 0x06b6d4,
+        roughness: 0.20,
+        metalness: 0.15,
+        transparent: true,
+        opacity: 0.15,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+        clearcoat: 0.6
+      });
+      const cylMesh = new THREE.Mesh(cylGeo, cylMat);
+      cylMesh.position.set(0, 0, 0);
+      cylinderGroup.add(cylMesh);
+
+      // 2. 细微经线 (母线轮廓：4条沿 x 轴方向的细线)
+      for (let k = 0; k < 4; k++) {
+        const ang = (k * Math.PI) / 2;
+        const yk = R * Math.cos(ang);
+        const zk = R * Math.sin(ang);
+        const edgePts = [new THREE.Vector3(-CYL_L * 0.5, yk, zk), new THREE.Vector3(CYL_L * 0.5, yk, zk)];
+        const edgeGeo = new THREE.BufferGeometry().setFromPoints(edgePts);
+        const edgeMat = new THREE.LineBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.35 });
+        cylinderGroup.add(new THREE.Line(edgeGeo, edgeMat));
+      }
+
+      // 3. 螺距截面环标线 (沿 x 轴等距刻画垂直于 x 的圆截面线，直观突显螺距 h)
+      const T = (Math.PI * 2) / omega;
+      const pitch = Math.abs(v_para) * T;
+
+      if (pitch > 0.35 && pitch < CYL_L) {
+        const numRings = Math.floor((CYL_L * 0.5) / pitch);
+        for (let rIdx = -numRings; rIdx <= numRings; rIdx++) {
+          const ringX = rIdx * pitch;
+          const ringPts = [];
+          for (let s = 0; s <= 48; s++) {
+            const th = (s / 48) * Math.PI * 2;
+            ringPts.push(new THREE.Vector3(ringX, R * Math.cos(th), R * Math.sin(th)));
+          }
+          const ringGeo = new THREE.BufferGeometry().setFromPoints(ringPts);
+          const ringMat = new THREE.LineDashedMaterial({
+            color: 0x38bdf8,
+            dashSize: 0.12,
+            gapSize: 0.08,
+            transparent: true,
+            opacity: 0.45
+          });
+          const ringLine = new THREE.Line(ringGeo, ringMat);
+          ringLine.computeLineDistances();
+          cylinderGroup.add(ringLine);
+        }
+      }
+
+      // 4. 左右两端封口圆盘边缘 (在 yz 平面内)
+      const createCapRing = (xVal) => {
+        const ringPts = [];
+        for (let s = 0; s <= 64; s++) {
+          const th = (s / 64) * Math.PI * 2;
+          ringPts.push(new THREE.Vector3(xVal, R * Math.cos(th), R * Math.sin(th)));
+        }
+        const ringGeo = new THREE.BufferGeometry().setFromPoints(ringPts);
+        const ringMat = new THREE.LineBasicMaterial({ color: 0x06b6d4, transparent: true, opacity: 0.65 });
+        return new THREE.Line(ringGeo, ringMat);
+      };
+      cylinderGroup.add(createCapRing(CYL_L * 0.5));
+      cylinderGroup.add(createCapRing(-CYL_L * 0.5));
+
+      // 5. 中心轴线 (沿 x 轴红色细虚线，指示圆周曲率中心轴)
+      const centerPts = [new THREE.Vector3(-CYL_L * 0.5 - 0.2, 0, 0), new THREE.Vector3(CYL_L * 0.5 + 0.2, 0, 0)];
+      const centerGeo = new THREE.BufferGeometry().setFromPoints(centerPts);
+      const centerMat = new THREE.LineDashedMaterial({ color: 0xef4444, dashSize: 0.14, gapSize: 0.1 });
+      const centerLine = new THREE.Line(centerGeo, centerMat);
+      centerLine.computeLineDistances();
+      cylinderGroup.add(centerLine);
+
+      // 半径 R 标注箭头与文字 (放置在右端面)
+      const rArrPts = [new THREE.Vector3(CYL_L * 0.5, 0, 0), new THREE.Vector3(CYL_L * 0.5, R, 0)];
+      const rArrGeo = new THREE.BufferGeometry().setFromPoints(rArrPts);
+      const rArrMat = new THREE.LineBasicMaterial({ color: 0x22d3ee, lineWidth: 1.5 });
+      cylinderGroup.add(new THREE.Line(rArrGeo, rArrMat));
+
+      const labelR = makeTextSprite('R', '#22d3ee', 40);
+      labelR.position.set(CYL_L * 0.5 + 0.15, R * 0.5, 0);
+      cylinderGroup.add(labelR);
+    }
+
+    /* ==============================================================
+       7. 粒子小球、发光体与符号
+       ============================================================== */
+    let particleMesh = null;
+    let particleGlow = null;
+    let particleSignSprite = null;
+
+    function initParticleMesh() {
+      // 粒子实体球体
+      const geo = new THREE.SphereGeometry(0.12, 32, 32);
+      const mat = new THREE.MeshStandardMaterial({
+        color: STATE.q > 0 ? 0xef4444 : 0x0284c7,
+        roughness: 0.2,
+        metalness: 0.5,
+        emissive: STATE.q > 0 ? 0xb91c1c : 0x0369a1,
+        emissiveIntensity: 0.5
+      });
+      particleMesh = new THREE.Mesh(geo, mat);
+      particleGroup.add(particleMesh);
+
+      // 外发光层
+      const glowGeo = new THREE.SphereGeometry(0.18, 24, 24);
+      const glowMat = new THREE.MeshBasicMaterial({
+        color: STATE.q > 0 ? 0xf87171 : 0x38bdf8,
+        transparent: true,
+        opacity: 0.35,
+        depthWrite: false
+      });
+      particleGlow = new THREE.Mesh(glowGeo, glowMat);
+      particleGroup.add(particleGlow);
+
+      // 电荷正负符号标注 (+ / -)
+      particleSignSprite = makeTextSprite(STATE.q > 0 ? '+' : '−', '#ffffff', 52);
+      particleSignSprite.scale.set(0.42, 0.21, 1);
+      particleGroup.add(particleSignSprite);
+    }
+
+    function updateParticleStyle() {
+      if (!particleMesh) return;
+      const isPos = STATE.q > 0;
+      particleMesh.material.color.setHex(isPos ? 0xef4444 : 0x0284c7);
+      particleMesh.material.emissive.setHex(isPos ? 0xb91c1c : 0x0369a1);
+      particleGlow.material.color.setHex(isPos ? 0xf87171 : 0x38bdf8);
+
+      particleGroup.remove(particleSignSprite);
+      particleSignSprite = makeTextSprite(isPos ? '+' : '−', '#ffffff', 52);
+      particleSignSprite.scale.set(0.42, 0.21, 1);
+      particleGroup.add(particleSignSprite);
+    }
+
+    /* ==============================================================
+       8. 动态矢量箭头 (速度 v, 受力 F, 速度分量)
+       ============================================================== */
+    const arrowV = new VectorArrow3D(0xfbbf24, 0.013, 0.20, 0.055);        // 速度合矢量 (稍细，极简开叉箭头)
+    const arrowF = new VectorArrow3D(0xf43f5e, 0.013, 0.20, 0.055);        // 洛伦兹力 (稍细，极简开叉箭头)
+    const arrowVperp = new VectorArrow3D(0xfef08a, 0.009, 0.14, 0.038);    // 垂直分量
+    const arrowVpara = new VectorArrow3D(0xfef08a, 0.009, 0.14, 0.038);    // 平行分量
+
+    vectorGroup.add(arrowV.group);
+    vectorGroup.add(arrowF.group);
+    vectorGroup.add(arrowVperp.group);
+    vectorGroup.add(arrowVpara.group);
+
+    const labelV = makeTextSprite('v', '#fbbf24', 44);
+    const labelF = makeTextSprite('F', '#f43f5e', 44);
+    vectorGroup.add(labelV);
+    vectorGroup.add(labelF);
+
+    /* ==============================================================
+       9. 粒子运动历史发光轨迹 (Trail)
+       ============================================================== */
+    const MAX_TRAIL_PTS = 360;
+    const trailPositions = new Float32Array(MAX_TRAIL_PTS * 3);
+    const trailColors = new Float32Array(MAX_TRAIL_PTS * 3);
+
+    const trailGeo = new THREE.BufferGeometry();
+    trailGeo.setAttribute('position', new THREE.BufferAttribute(trailPositions, 3));
+    trailGeo.setAttribute('color', new THREE.BufferAttribute(trailColors, 3));
+
+    const trailMat = new THREE.LineBasicMaterial({
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.9,
+      linewidth: 2
+    });
+    const trailLine = new THREE.Line(trailGeo, trailMat);
+    trailGroup.add(trailLine);
+
+    let trailCount = 0;
+    const trailHistory = [];
+
+    function resetTrail() {
+      trailHistory.length = 0;
+      trailCount = 0;
+      for (let i = 0; i < MAX_TRAIL_PTS * 3; i++) {
+        trailPositions[i] = 0;
+        trailColors[i] = 0;
+      }
+      trailGeo.attributes.position.needsUpdate = true;
+      trailGeo.attributes.color.needsUpdate = true;
+    }
+
+    /* ==============================================================
+       10. 动力学解析计算与位置推演
+       ============================================================== */
+    Math.toRadians = function(deg) { return (deg * Math.PI) / 180; };
+
+    function getParticleStateAt(t) {
+      const rad = Math.toRadians(STATE.thetaDeg);
+      const v_perp = STATE.v0 * Math.sin(rad);
+      const v_para = STATE.v0 * Math.cos(rad);
+
+      const omega = (Math.abs(STATE.q) * STATE.B) / STATE.m; // 回旋角速度
+      const R = v_perp / omega;                              // 回旋半径
+
+      // 正负电荷绕转规律 (磁场沿 +x 水平向右)
+      // v x B = (0, vz * B, -vy * B)
+      // 洛伦兹向心力始终严格指向水平轴 (x(t), 0, 0)
+      const sgn = STATE.q > 0 ? 1 : -1;
+
+      // yz 竖直平面的回旋运动
+      const y = R * Math.cos(omega * t);
+      const z = -sgn * R * Math.sin(omega * t);
+
+      // x 轴方向的平行匀速运动 (沿磁场水平向右)
+      const X_SPAN = 6.4;
+      let x = (v_para * t) % X_SPAN;
+      if (x > X_SPAN * 0.5) x -= X_SPAN;
+      if (x < -X_SPAN * 0.5) x += X_SPAN;
+
+      // 速度矢量
+      const vx = v_para;
+      const vy = -R * omega * Math.sin(omega * t);
+      const vz = -sgn * R * omega * Math.cos(omega * t);
+
+      // 洛伦兹力 F = q * (v x B) = -m * omega^2 * (0, y, z)
+      // 严格指向回旋圆心 (x(t), 0, 0)
+      const Fx = 0;
+      const Fy = -STATE.m * omega * omega * y;
+      const Fz = -STATE.m * omega * omega * z;
+
+      return {
+        pos: new THREE.Vector3(x, y, z),
+        vel: new THREE.Vector3(vx, vy, vz),
+        v_perp_vec: new THREE.Vector3(0, vy, vz),
+        v_para_vec: new THREE.Vector3(vx, 0, 0),
+        force: new THREE.Vector3(Fx, Fy, Fz),
+        R: R,
+        omega: omega,
+        v_perp: v_perp,
+        v_para: v_para,
+        F_mag: Math.hypot(Fy, Fz)
+      };
+    }
+
+    /* ==============================================================
+       11. 实时数据与 UI 响应
+       ============================================================== */
+    function updateMetrics(st) {
+      document.getElementById('val-R').innerText = st.R.toFixed(2) + ' m';
+      const T = (Math.PI * 2) / st.omega;
+      const pitch = Math.abs(st.v_para) * T;
+      document.getElementById('val-h').innerText = (Math.abs(st.v_para) > 0.001 ? pitch.toFixed(2) + ' m' : '0.00 m (圆周闭合)');
+      document.getElementById('val-vperp').innerText = st.v_perp.toFixed(2) + ' m/s';
+      document.getElementById('val-vpara').innerText = st.v_para.toFixed(2) + ' m/s';
+      document.getElementById('val-F').innerText = st.F_mag.toFixed(2) + ' N (提供向心力)';
+    }
+
+    // 模式切换联动
+    const btnVPerp = document.getElementById('btn-v-perp');
+    const btnVHelix = document.getElementById('btn-v-helix');
+    const btnVPara = document.getElementById('btn-v-para');
+    const sliderAngle = document.getElementById('slider-angle');
+    const txtAngle = document.getElementById('txt-angle');
+
+    function setAngle(deg) {
+      STATE.thetaDeg = deg;
+      sliderAngle.value = deg;
+      txtAngle.innerText = deg + '°';
+
+      btnVPerp.classList.toggle('active', deg === 90);
+      btnVHelix.classList.toggle('active', deg === 60);
+      btnVPara.classList.toggle('active', deg === 0);
+
+      rebuildCylinderEnvelope();
+      rebuildBField();
+      resetTrail();
+    }
+
+    btnVPerp.addEventListener('click', () => setAngle(90));
+    btnVHelix.addEventListener('click', () => setAngle(60));
+    btnVPara.addEventListener('click', () => setAngle(0));
+
+    sliderAngle.addEventListener('input', e => {
+      setAngle(parseInt(e.target.value));
+    });
+
+    // 正负电荷切换
+    const btnQPos = document.getElementById('btn-q-pos');
+    const btnQNeg = document.getElementById('btn-q-neg');
+
+    btnQPos.addEventListener('click', () => {
+      STATE.q = 1;
+      btnQPos.classList.add('active');
+      btnQNeg.classList.remove('active');
+      updateParticleStyle();
+      resetTrail();
+    });
+
+    btnQNeg.addEventListener('click', () => {
+      STATE.q = -1;
+      btnQNeg.classList.add('active');
+      btnQPos.classList.remove('active');
+      updateParticleStyle();
+      resetTrail();
+    });
+
+    // 速率调节
+    const sliderSpeed = document.getElementById('slider-speed');
+    const txtSpeed = document.getElementById('txt-speed');
+    sliderSpeed.addEventListener('input', e => {
+      STATE.v0 = parseFloat(e.target.value);
+      txtSpeed.innerText = STATE.v0.toFixed(1) + ' m/s';
+      rebuildCylinderEnvelope();
+      rebuildBField();
+      resetTrail();
+    });
+
+    // 复选开关
+    document.getElementById('chk-cylinder').addEventListener('change', e => {
+      STATE.showCylinder = e.target.checked;
+      rebuildCylinderEnvelope();
+    });
+    document.getElementById('chk-components').addEventListener('change', e => {
+      STATE.showComponents = e.target.checked;
+      arrowVperp.setVisible(STATE.showComponents);
+      arrowVpara.setVisible(STATE.showComponents);
+    });
+    document.getElementById('chk-force').addEventListener('change', e => {
+      STATE.showForce = e.target.checked;
+      arrowF.setVisible(STATE.showForce);
+      labelF.visible = STATE.showForce;
+    });
+    document.getElementById('chk-bfield').addEventListener('change', e => {
+      STATE.showBField = e.target.checked;
+      rebuildBField();
+    });
+    document.getElementById('chk-trail').addEventListener('change', e => {
+      STATE.showTrail = e.target.checked;
+      trailGroup.visible = STATE.showTrail;
+      if (!STATE.showTrail) resetTrail();
+    });
+
+    // 播放与重置
+    const btnPlayPause = document.getElementById('btn-play-pause');
+    btnPlayPause.addEventListener('click', () => {
+      STATE.isPaused = !STATE.isPaused;
+      STATE.hasStarted = true;
+      if (STATE.isPaused) {
+        btnPlayPause.innerText = '▶ 继续 (Resume)';
+        btnPlayPause.style.background = 'rgba(30, 41, 59, 0.75)';
+        btnPlayPause.style.borderColor = 'rgba(148, 163, 184, 0.25)';
+      } else {
+        btnPlayPause.innerText = '⏸ 暂停 (Pause)';
+        btnPlayPause.style.background = 'rgba(30, 41, 59, 0.75)';
+        btnPlayPause.style.borderColor = 'rgba(148, 163, 184, 0.25)';
+      }
+    });
+
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      STATE.time = 0;
+      STATE.isPaused = true;
+      STATE.hasStarted = false;
+      btnPlayPause.innerText = '▶ 开始运动 (Start)';
+      btnPlayPause.style.background = '#0284c7';
+      btnPlayPause.style.borderColor = '#38bdf8';
+      resetTrail();
+    });
+
+    // 时间速率
+    const sliderSimSpeed = document.getElementById('slider-sim-speed');
+    const txtSimSpeed = document.getElementById('txt-sim-speed');
+    sliderSimSpeed.addEventListener('input', e => {
+      STATE.simSpeed = parseFloat(e.target.value);
+      txtSimSpeed.innerText = STATE.simSpeed.toFixed(1) + 'x';
+    });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      updateCameraViewOffset();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    /* ==============================================================
+       12. 主动画循环
+       ============================================================== */
+    let lastClock = performance.now();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const now = performance.now();
+      const dt = Math.min((now - lastClock) * 0.001, 0.05);
+      lastClock = now;
+
+      if (!STATE.isPaused) {
+        STATE.time += dt * STATE.simSpeed * 1.5;
+      }
+
+      // 实时获取粒子动力学状态
+      const st = getParticleStateAt(STATE.time);
+
+      // 更新粒子球体与文字标示位置
+      particleMesh.position.copy(st.pos);
+      particleGlow.position.copy(st.pos);
+      particleSignSprite.position.copy(st.pos).add(new THREE.Vector3(0, 0.22, 0));
+
+      // 矢量箭头尺寸缩放基准
+      const V_SCALE = 0.65;
+      const F_SCALE = 0.55;
+
+      // 1. 速度合矢量 v
+      arrowV.set(st.pos, st.vel, st.vel.length() * V_SCALE);
+      labelV.position.copy(st.pos).addScaledVector(st.vel.clone().normalize(), st.vel.length() * V_SCALE + 0.18);
+
+      // 2. 洛伦兹力 F
+      if (STATE.showForce) {
+        if (st.F_mag > 0.001) {
+          arrowF.set(st.pos, st.force, st.F_mag * F_SCALE);
+          labelF.position.copy(st.pos).addScaledVector(st.force.clone().normalize(), st.F_mag * F_SCALE + 0.18);
+        } else {
+          arrowF.setVisible(false);
+          labelF.visible = false;
+        }
+      }
+
+      // 3. 速度分量 v_perp 与 v_para
+      if (STATE.showComponents) {
+        arrowVperp.set(st.pos, st.v_perp_vec, st.v_perp_vec.length() * V_SCALE);
+        arrowVpara.set(st.pos, st.v_para_vec, st.v_para_vec.length() * V_SCALE);
+      }
+
+      // 4. 维护粒子动态拖尾轨迹
+      if (STATE.showTrail && !STATE.isPaused) {
+        trailHistory.push(st.pos.clone());
+        if (trailHistory.length > MAX_TRAIL_PTS) {
+          trailHistory.shift();
+        }
+
+        const count = trailHistory.length;
+        for (let i = 0; i < count; i++) {
+          const pt = trailHistory[i];
+          const i3 = i * 3;
+          trailPositions[i3]     = pt.x;
+          trailPositions[i3 + 1] = pt.y;
+          trailPositions[i3 + 2] = pt.z;
+
+          // 尾迹渐变色与淡出明暗
+          const progress = i / count;
+          if (STATE.q > 0) {
+            trailColors[i3]     = 1.0; // R
+            trailColors[i3 + 1] = 0.3 * progress + 0.1;
+            trailColors[i3 + 2] = 0.3 * progress + 0.1;
+          } else {
+            trailColors[i3]     = 0.1 * progress;
+            trailColors[i3 + 1] = 0.7 * progress + 0.2;
+            trailColors[i3 + 2] = 1.0; // B
+          }
+        }
+        trailGeo.setDrawRange(0, count);
+        trailGeo.attributes.position.needsUpdate = true;
+        trailGeo.attributes.color.needsUpdate = true;
+      }
+
+      // 更新界面指标
+      updateMetrics(st);
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    // 初始化场景对象
+    rebuildBField();
+    rebuildCylinderEnvelope();
+    initParticleMesh();
+    animate();
+  </script>
+</body>
+</html>
