@@ -2,7 +2,7 @@
 
 🌐 **在线演示网站（GitHub Pages）**：[**https://shijunlj.github.io/physics-em-visualizer/**](https://shijunlj.github.io/physics-em-visualizer/)
 
-本项目包含 8 个基于 **Three.js (WebGL)** 的独立单文件 HTML 交互式物理演示页面（及 `index.html` 极简导航主页），用于直观展示电磁学与电动力学（稳恒磁场与空间拓扑）的核心概念、实验现象与场分布规律。所有页面均可直接在浏览器中打开运行，支持 360° 自由旋转、缩放与实时参数调节。
+本项目包含 10 个基于 **Three.js (WebGL)** 的独立单文件 HTML 交互式物理演示页面（及 `index.html` 极简导航主页），用于直观展示电磁学与电动力学（稳恒磁场与空间拓扑）的核心概念、实验现象与场分布规律。所有页面均可直接在浏览器中打开运行，支持 360° 自由旋转、缩放与实时参数调节。
 
 ---
 
@@ -18,6 +18,8 @@
 | 6 | [`current_loop_torus.html`](./current_loop_torus.html) | **环形电流与相套环面（不能定义单值磁标势的多连通区域）** | 展示浅亮银色环形导线电流穿过半透明环面（甜甜圈）的中心孔心，环面内部嵌入穿过各截面圆心的中心圆线，直观呈现不能定义单值磁标势的多连通空间区域拓扑。 |
 | 7 | [`toroid_solenoid_magnetic_field.html`](./toroid_solenoid_magnetic_field.html) | **载流螺绕环的磁场与空间分布** | 3D 空间展示 360° 均匀密绕线圈、半透明骨架及环内非均匀磁感线（内密外疏，渐变明暗强弱），红虚线标示截面几何中心轴；右侧 2D 联动图将管道截面连续色影、强度色标尺（Colorbar）与理论曲线 $B(r) \propto 1/r$ 进行 1:1 空间几何投影对齐，直观揭示中心孔腔与环外 $B \equiv 0$ 以及环内 $B$ 随半径 $r$ 的衰减特性。 |
 | 8 | [`charged_particle_magnetic_field.html`](./charged_particle_magnetic_field.html) | **带电粒子在匀强磁场中的运动** | 3D 空间动态演示正/负电荷粒子在水平匀强磁场 $\vec{B}$ 中的轨迹演化，展示速度 $\vec{v}$、洛伦兹力 $\vec{F}$ 及分速度矢量（极简开叉箭头）；一键切换 $\vec{v}\perp\vec{B}$（圆周运动）、$\vec{v}\parallel\vec{B}$（匀速直线）及任意夹角螺旋运动，并绘制半透明回旋圆柱阴影包络面与等螺距截面标线，背景磁感线稀疏精致、自适应匹配阴影截面。 |
+| 9 | [`magnetic_mirror.html`](./magnetic_mirror.html) | **磁镜原理与带电粒子全反射** | 严格对齐大学物理教材图 6-21：3D 动态展示非均匀汇聚磁场中的带电粒子回旋运动，精确分解合洛伦兹力 $\vec{F}$、圆周向心分力 $\vec{F}_r$ 与轴向磁镜阻碍力 $\vec{F}_x$（紧凑极简开叉箭头）；直观揭示磁矩绝热不变量 $\mu$、动能守恒及沿漏斗瓶颈的螺距压缩减速与全反射全过程，支持暂停/开始、单帧拖拽与侧视对齐。 |
+| 10 | [`magnetic_focusing.html`](./magnetic_focusing.html) | **磁聚焦（轴向匀强磁场）** | 3D 交互演示电子束在轴向匀强磁场中的螺旋回旋运动与近轴磁聚焦现象：支持“轴向速度相同”与“总速率相同”两种发射模式对比，配备首次回轴位置 $L_f = v_\parallel T$ 横轴放大图表、发射角 $\alpha$ 与磁场 $B$ 实时调节，直观展现不同发散角电子周期性重新汇聚于焦点的物理规律。 |
 
 ---
 
@@ -26,6 +28,12 @@
 无需安装本地服务器或构建工具，直接在现代浏览器（Chrome / Edge / Safari / Firefox）中双击打开对应 `.html` 文件，或在终端中运行：
 
 ```bash
+# 示例：打开磁镜原理与带电粒子全反射演示
+open magnetic_mirror.html
+
+# 示例：打开磁聚焦演示
+open magnetic_focusing.html
+
 # 示例：打开带电粒子在匀强磁场中运动演示
 open charged_particle_magnetic_field.html
 

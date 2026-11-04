@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>磁聚焦 · 3D 演示</title>
+<style>
+  :root{color-scheme:dark;--bg:#0b1120;--panel:rgba(15,23,42,.92);--border:rgba(148,163,184,.23);--text:#f8fafc;--dim:#a0aec2;--cyan:#38bdf8;--green:#4ade80;--pink:#fb7185;--orange:#fb923c}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif}
+  main{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;padding:16px 20px;min-height:100svh}
+  .scene{position:relative;isolation:isolate;container-type:inline-size;min-height:530px;overflow:hidden;background:radial-gradient(ellipse at 49% 50%,#14243d 0%,#0b1120 72%);border-radius:12px}
+  canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:grab}
+  canvas:active{cursor:grabbing}
+  .header,.legend,.panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;box-shadow:0 10px 25px #0005}
+  .header,.legend{position:absolute;left:0;pointer-events:none}
+  .header{top:0;padding:11px 18px}
+  h1{font-size:17px;letter-spacing:.04em;margin:0;font-weight:600}
+  .header small,.hint,.note{color:var(--dim)}
+  .legend{bottom:4px;padding:9px 13px;display:flex;gap:7px 17px;flex-wrap:wrap;font-size:12px}
+  .legend span{display:flex;align-items:center;gap:6px}
+  .legend i{width:10px;height:10px;background:var(--swatch);border-radius:2px}
+  .hint{position:absolute;bottom:49px;left:0;font-size:12px;pointer-events:none}
+  .panel{align-self:start;overflow:hidden}
+  .panel h2{font-size:15px;margin:0;padding:14px 17px;border-bottom:1px solid var(--border)}
+  .controls{padding:15px 17px;display:grid;gap:14px}
+  .formula{padding:10px 12px;border-left:3px solid var(--pink);border-radius:8px;background:#050a14;display:grid;gap:3px}
+  .math{font:16px/1.5 "Cambria Math","Times New Roman",serif;white-space:nowrap}
+  .label,.readout{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .label,.readout,.note{font-size:13px}
+  output{color:var(--cyan);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .readout output{color:var(--pink)}
+  input[type=range]{width:100%;margin:5px 0 0;accent-color:var(--cyan)}
+  .buttons{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  button{font:inherit;color:inherit;background:#26364d;border:1px solid var(--border);border-radius:8px;padding:8px 5px;cursor:pointer}
+  button:hover{background:#354962}
+  button.primary{background:#2155ac;border-color:#3b82f6}
+  button[aria-pressed=true]{background:#2155ac;border-color:#3b82f6}
+  button:focus-visible,input:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+  .note{margin:0;padding-top:10px;border-top:1px solid var(--border)}
+  .return-chart{position:absolute;top:0;right:0;width:286px;margin:0;padding:9px 7px 5px;border:1px solid var(--border);border-radius:8px;background:var(--panel);pointer-events:none}
+  .return-chart figcaption{padding:0 5px 3px;font-size:13px;font-weight:600}
+  .return-chart svg{display:block;width:100%;height:auto}
+  .return-chart text{fill:var(--dim);font-size:12px;font-variant-numeric:tabular-nums}
+  .return-chart .return-value{fill:#fda4af}
+  .return-chart .return-angle{fill:var(--text);stroke:#0f172a;stroke-width:4;stroke-linejoin:round;paint-order:stroke fill}
+  @container(max-width:560px){
+    .return-chart{top:74px;width:min(245px,100%)}
+    #scene{top:52px;height:calc(100% - 52px)}
+  }
+  @media(max-width:760px){
+    main{grid-template-columns:1fr;gap:10px;padding:10px}
+    .scene{min-height:400px;height:57svh}
+    .legend{column-gap:10px}
+    .hint{bottom:64px}
+  }
+</style>
+</head>
+<body>
+<main>
+  <section class="scene" aria-label="磁聚焦三维视图">
+    <canvas id="scene" aria-label="轴向匀强磁场中的电子螺旋轨迹和首次回轴位置。"></canvas>
+    <header class="header"><h1>磁聚焦 · 轴向匀强磁场</h1><small>Magnetic Focusing</small></header>
+    <figure class="return-chart">
+      <figcaption>首次回轴位置 · 横轴放大</figcaption>
+      <svg viewBox="0 0 270 118" role="img" aria-labelledby="return-chart-title">
+        <title id="return-chart-title">不同发射角的首次回轴位置</title>
+        <g id="return-chart-marks"></g>
+      </svg>
+    </figure>
+    <div class="hint">拖动旋转视角 · 滚轮缩放</div>
+    <div class="legend" aria-label="图例">
+      <span><i style="--swatch:var(--cyan)"></i>电子轨迹</span>
+      <span><i style="--swatch:var(--green)"></i>轴向磁场 B</span>
+      <span><i style="--swatch:var(--pink)"></i>首次回轴位置</span>
+    </div>
+  </section>
+  <aside class="panel" aria-labelledby="controls-title">
+    <h2 id="controls-title">磁聚焦参数</h2>
+    <div class="controls">
+      <div class="buttons" role="group" aria-label="电子发射条件">
+        <button type="button" id="mode-axial" aria-pressed="false">轴向速度相同</button>
+        <button type="button" id="mode-total" aria-pressed="true">总速率相同</button>
+      </div>
+      <div class="formula">
+        <div class="math">T = 2πm<sub>e</sub> / (eB)</div>
+        <div class="math">L<sub>f</sub> = v<sub>∥</sub>T</div>
+        <div class="math" aria-label="回旋半径等于电子质量乘以横向速率，再除以元电荷与磁感应强度的乘积">r<sub>L</sub> = m<sub>e</sub>v<sub>⊥</sub> / (eB) = v<sub>⊥</sub>T / (2π)</div>
+        <div class="math" id="velocity-formula"></div>
+        <div class="readout"><span>首次回轴位置</span><output id="focus"></output></div>
+        <div class="readout"><span>回轴位置跨度</span><output id="focus-spread"></output></div>
+      </div>
+      <div><label class="label" for="field"><span>磁感应强度 B</span><output id="field-value" for="field"></output></label>
+        <input id="field" type="range" min=".45" max="2.2" step=".01" value="1"></div>
+      <div><label class="label" for="angle"><span>最大出射角 θ<sub>max</sub></span><output id="angle-value" for="angle"></output></label>
+        <input id="angle" type="range" min="5" max="32" step="1" value="22"></div>
+      <div><label class="label" for="position"><span>发射后经过时间</span><output id="position-value" for="position"></output></label>
+        <input id="position" type="range" min="0" max="1000" value="0"></div>
+      <div class="buttons">
+        <button type="button" id="play" class="primary">播放</button>
+        <button type="button" id="restart">回到出发点</button>
+        <button type="button" id="reset-field">重置 B</button>
+        <button type="button" id="view">重置视角</button>
+      </div>
+      <p class="note" id="mode-note"></p>
+    </div>
+  </aside>
+</main>
+<script>
+"use strict";
+const byId = id => document.getElementById(id);
+const canvas = byId("scene");
+const ctx = canvas.getContext("2d");
+const field = byId("field");
+const angle = byId("angle");
+const position = byId("position");
+const play = byId("play");
+const axialButton = byId("mode-axial");
+const totalButton = byId("mode-total");
+const charge = 1.602176634e-19;
+const mass = 9.1093837139e-31;
+const referenceSpeed = 1.5e7;
+const fullTurn = 2 * Math.PI;
+const axisEnd = 1.30;
+const defaultField = 1; // mT
+const angleFractions = [1, .84, .68, .20];
+const rays = Array.from({length: 12}, (_, index) => ({
+  azimuth: fullTurn * index / 12,
+  fraction: angleFractions[index % angleFractions.length]
+}));
+const colors = {
+  track: "#38bdf8", field: "#4ade80", focus: "#fb7185",
+  text: "#e2e8f0", dim: "#94a3b8"
+};
+const initialView = {yaw: -1.17, pitch: .30, distance: 2.05};
+const camera = {...initialView};
+const target = [0, 0, axisEnd / 2];
+let width = 0, height = 0, pixelRatio = 1;
+let magnet = defaultField, maxAngle = 22, sameTotalSpeed = true;
+let progress = 0, running = false, frame = null, previousTime = null;
+let trajectories = [], firstReturns = [];
+
+function trajectoryPoint(ray, z) {
+  const phase = fullTurn * z / ray.firstReturn;
+  const u = ray.radius * Math.sin(phase);
+  const v = ray.radius * 2 * Math.sin(phase / 2) ** 2;
+  const c = Math.cos(ray.azimuth), s = Math.sin(ray.azimuth);
+  return [u * c - v * s, u * s + v * c, z];
+}
+
+function updateModel() {
+  magnet = Number(field.value);
+  maxAngle = Number(angle.value);
+  const omega = charge * (magnet * 1e-3) / mass;
+  const period = fullTurn / omega;
+  for (const ray of rays) {
+    const theta = maxAngle * ray.fraction * Math.PI / 180;
+    ray.axialVelocity = sameTotalSpeed ? referenceSpeed * Math.cos(theta) : referenceSpeed;
+    ray.transverseVelocity = sameTotalSpeed ? referenceSpeed * Math.sin(theta) : referenceSpeed * Math.tan(theta);
+    ray.firstReturn = ray.axialVelocity * period;
+    ray.radius = ray.transverseVelocity / omega;
+  }
+  firstReturns = [...new Set(rays.map(ray => ray.firstReturn))].sort((a,b) => a-b);
+  trajectories = rays.map(ray => Array.from({length: 221}, (_, i) => trajectoryPoint(ray, axisEnd * i / 220)));
+  byId("field-value").textContent = magnet.toFixed(2) + " mT";
+  byId("angle-value").textContent = maxAngle + "°";
+  const first = firstReturns[0], last = firstReturns.at(-1);
+  byId("focus").textContent = (100 * first).toFixed(2)
+    + (firstReturns.length > 1 ? "–" + (100 * last).toFixed(2) : "") + " cm";
+  byId("focus-spread").textContent = (1000 * (last - first)).toFixed(2) + " mm";
+  byId("velocity-formula").textContent = sameTotalSpeed
+    ? "v∥ = v cos θ，v⊥ = v sin θ"
+    : "v∥ 固定，v⊥ = v∥ tan θ";
+  byId("mode-note").textContent = sameTotalSpeed
+    ? "电子束取四组不同的出射角，最大值由滑块控制。各组总速率和回旋周期相同，首次回轴距离为 vT cos θ。最大出射角较小时，各组才近似汇聚。"
+    : "电子束仍包含四组不同的出射角。各组轴向速度均为 1.5 × 10⁷ m/s，因此绕行一周后在同一点回到轴上。";
+  drawReturnChart(referenceSpeed * period);
+  draw();
+}
+
+function drawReturnChart(axialReturn) {
+  const marks = byId("return-chart-marks");
+  marks.replaceChildren();
+  function mark(tag, attributes, text) {
+    const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    for (const [name, value] of Object.entries(attributes)) node.setAttribute(name, value);
+    if (text !== undefined) node.textContent = text;
+    marks.append(node);
+  }
+  // Keep the zoom window unchanged when switching mode or angle at the same B.
+  const xAt = z => 51 + 145 * (z / axialReturn - .82) / .20;
+  const axisY = 94;
+  mark("path", {d:"M51 94H202 M197 90L202 94L197 98",fill:"none",stroke:colors.dim});
+  for (const fraction of [.84, .92, 1]) {
+    const z = fraction * axialReturn, x = xAt(z);
+    mark("line", {x1:x,y1:10,x2:x,y2:axisY+4,stroke:colors.dim,opacity:.25});
+    mark("text", {x,y:112,"text-anchor":"middle"}, (100 * z).toFixed(1));
+  }
+  mark("text", {x:269,y:112,"text-anchor":"end"}, "z (cm)");
+  const rows = rays.slice(0, angleFractions.length).map((ray, index) => ({
+    ray, x:xAt(ray.firstReturn), y:16 + 20 * index
+  }));
+  for (const {x,y} of rows) {
+    mark("line", {x1:x,y1:y+4,x2:x,y2:axisY,stroke:colors.focus,opacity:.46,"stroke-dasharray":"2 3"});
+  }
+  for (const {ray,x,y} of rows) {
+    mark("text", {x,y,"text-anchor":"middle",class:"return-angle"}, (maxAngle * ray.fraction).toFixed(1) + "°");
+    mark("text", {x:269,y,"text-anchor":"end",class:"return-value"}, (100 * ray.firstReturn).toFixed(2) + " cm");
+  }
+  for (const z of firstReturns) mark("circle", {cx:xAt(z),cy:axisY,r:3.2,fill:colors.focus});
+  byId("return-chart-title").textContent = "不同发射角的首次回轴位置。范围 " + byId("focus").textContent;
+}
+
+function projectScene() {
+  const sinYaw = Math.sin(camera.yaw), cosYaw = Math.cos(camera.yaw);
+  const sinPitch = Math.sin(camera.pitch), cosPitch = Math.cos(camera.pitch);
+  const focal = Math.min(width * 1.04, height * 1.28);
+  return ([x, y, z]) => {
+    const axial = z - target[2];
+    const horizontal = cosYaw * x - sinYaw * axial;
+    const vertical = -sinYaw * sinPitch * x + cosPitch * y - cosYaw * sinPitch * axial;
+    const depth = camera.distance - (sinYaw * cosPitch * x + sinPitch * y + cosYaw * cosPitch * axial);
+    const scale = focal / depth;
+    return {x: width / 2 + horizontal * scale, y: height / 2 - vertical * scale, depth, scale};
+  };
+}
+
+function draw() {
+  if (!width || !height) return;
+  ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+  ctx.clearRect(0, 0, width, height);
+  const project = projectScene();
+  const objects = [];
+  const labels = [];
+  function segment(a, b, color, weight, opacity, dash = []) {
+    if (Math.min(a.depth, b.depth) < .05) return;
+    objects.push({depth:(a.depth + b.depth) / 2, render() {
+      ctx.globalAlpha = opacity;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = weight;
+      ctx.setLineDash(dash);
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+    }});
+  }
+  function dot(p, color, radius, glow = 0) {
+    if (p.depth < .05) return;
+    objects.push({depth:p.depth - .002, render() {
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = color;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = glow;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, radius, 0, fullTurn);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }});
+  }
+  function label(point, caption, color, dx, dy) {
+    const p = project(point);
+    if (p.depth >= .05) labels.push({p, caption, color, dx, dy});
+  }
+  function axisArrow(x, y, z, length, color, opacity) {
+    const a = project([x,y,z]), b = project([x,y,z + length]);
+    segment(a,b,color,1.3,opacity);
+    const heading = Math.atan2(b.y-a.y,b.x-a.x);
+    const size = Math.min(8, Math.hypot(b.x-a.x,b.y-a.y) * .36);
+    for (const turn of [-.53,.53]) {
+      const tip = {x:b.x-size*Math.cos(heading+turn),y:b.y-size*Math.sin(heading+turn),depth:b.depth};
+      segment(tip,b,color,1.3,opacity);
+    }
+  }
+  for (let i = 0; i <= 13; i++) {
+    const z = axisEnd * i / 13;
+    segment(project([-.37,-.28,z]),project([.37,-.28,z]),colors.dim,1,.13);
+  }
+  for (let i = -4; i <= 4; i++) {
+    const x = .09 * i;
+    segment(project([x,-.28,0]),project([x,-.28,axisEnd]),colors.dim,1,.13);
+  }
+  axisArrow(0,0,-.035,axisEnd+.08,colors.dim,.65);
+  for (let i = 0; i < 4; i++) {
+    axisArrow(.09,.29,.05 + .30*i,.18,colors.field,.70);
+    axisArrow(-.14,-.19,.05 + .30*i,.18,colors.field,.46);
+  }
+  label([.09,.29,.55], "B", colors.field, 2, -11);
+  label([0,0,axisEnd+.045], "z", colors.dim, 9, 4);
+
+  const first = firstReturns[0], last = firstReturns.at(-1);
+  if (sameTotalSpeed) {
+    segment(project([0,0,first]),project([0,0,last]),colors.focus,2,.72);
+    label([0,0,(first + last)/2], "首次回轴范围", colors.focus, 7, 23);
+  } else {
+    label([0,0,first], "首个焦点", colors.focus, 7, 23);
+  }
+  dot(project([0,0,0]),colors.text,4,9);
+  label([0,0,0], "电子源", colors.text, -15, 23);
+  trajectories.forEach((points, index) => {
+    const z = progress * rays[index].axialVelocity / referenceSpeed;
+    let last = project(points[0]);
+    points.slice(1).forEach(point => {
+      const next = project(point);
+      const travelled = point[2] <= z;
+      segment(last,next,colors.track,index === 0 ? 1.9 : 1.25,travelled ? .83 : (index === 0 ? .47 : .29));
+      last = next;
+    });
+    dot(project(trajectoryPoint(rays[index],z)), index === 0 ? colors.text : "#7dd3fc", index === 0 ? 4 : 2.8,8);
+  });
+  objects.sort((a,b) => b.depth - a.depth);
+  objects.forEach(object => object.render());
+  ctx.globalAlpha = 1;
+  ctx.setLineDash([]);
+  ctx.fillStyle = colors.focus;
+  ctx.shadowColor = colors.focus;
+  ctx.shadowBlur = 8;
+  for (const z of firstReturns) {
+    const p = project([0,0,z]);
+    if (p.depth < .05) continue;
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,firstReturns.length === 1 ? 5.5 : 4,0,fullTurn);
+    ctx.fill();
+  }
+  ctx.shadowBlur = 0;
+  ctx.font = '13px -apple-system, "PingFang SC", sans-serif';
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = "#0b1120";
+  for (const {p, caption, color, dx, dy} of labels) {
+    ctx.fillStyle = color;
+    ctx.strokeText(caption,p.x+dx,p.y+dy);
+    ctx.fillText(caption,p.x+dx,p.y+dy);
+  }
+}
+
+function resize() {
+  const bounds = canvas.getBoundingClientRect();
+  width = bounds.width;
+  height = bounds.height;
+  pixelRatio = Math.min(devicePixelRatio || 1, 2);
+  canvas.width = Math.round(width * pixelRatio);
+  canvas.height = Math.round(height * pixelRatio);
+  draw();
+}
+
+function seek(distance) {
+  progress = Math.max(0, Math.min(axisEnd, distance));
+  position.value = Math.round(progress / axisEnd * 1000);
+  byId("position-value").textContent = (1e9 * progress / referenceSpeed).toFixed(1) + " ns";
+  draw();
+}
+
+function pause() {
+  running = false;
+  previousTime = null;
+  if (frame !== null) cancelAnimationFrame(frame);
+  frame = null;
+  play.textContent = progress >= axisEnd ? "重新播放" : "播放";
+}
+
+function animate(now) {
+  frame = null;
+  if (!running) return;
+  if (previousTime !== null) seek(progress + Math.min(now-previousTime, 40) * axisEnd / 8500);
+  previousTime = now;
+  if (progress >= axisEnd) pause();
+  else frame = requestAnimationFrame(animate);
+}
+
+play.addEventListener("click", () => {
+  if (running) { pause(); return; }
+  if (progress >= axisEnd) seek(0);
+  running = true;
+  play.textContent = "暂停";
+  frame = requestAnimationFrame(animate);
+});
+byId("restart").addEventListener("click", () => { seek(0); pause(); });
+function setSpeedMode(useTotalSpeed) {
+  sameTotalSpeed = useTotalSpeed;
+  axialButton.setAttribute("aria-pressed", String(!useTotalSpeed));
+  totalButton.setAttribute("aria-pressed", String(useTotalSpeed));
+  updateModel();
+}
+axialButton.addEventListener("click", () => setSpeedMode(false));
+totalButton.addEventListener("click", () => setSpeedMode(true));
+byId("reset-field").addEventListener("click", () => {
+  field.value = defaultField;
+  updateModel();
+});
+byId("view").addEventListener("click", () => { Object.assign(camera, initialView); draw(); });
+field.addEventListener("input", updateModel);
+angle.addEventListener("input", updateModel);
+position.addEventListener("input", () => { seek(axisEnd * Number(position.value) / 1000); pause(); });
+
+let pointer = null;
+canvas.addEventListener("pointerdown", event => {
+  if (pointer || event.button !== 0) return;
+  pointer = {id:event.pointerId,x:event.clientX,y:event.clientY};
+  canvas.setPointerCapture(event.pointerId);
+});
+canvas.addEventListener("pointermove", event => {
+  if (pointer?.id !== event.pointerId) return;
+  camera.yaw -= (event.clientX - pointer.x) * .008;
+  camera.pitch = Math.max(-1.35, Math.min(1.35, camera.pitch + (event.clientY - pointer.y) * .008));
+  pointer.x = event.clientX;
+  pointer.y = event.clientY;
+  draw();
+});
+canvas.addEventListener("lostpointercapture", () => { pointer = null; });
+canvas.addEventListener("wheel", event => {
+  event.preventDefault();
+  camera.distance = Math.max(1.20, Math.min(4.5, camera.distance * Math.exp(event.deltaY * .001)));
+  draw();
+}, {passive:false});
+
+updateModel();
+seek(0);
+new ResizeObserver(resize).observe(canvas);
+resize();
+</script>
+</body>
+</html>
