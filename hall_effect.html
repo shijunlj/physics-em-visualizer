@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>霍尔效应 · 动态演示</title>
+<style>
+  :root{color-scheme:dark;--bg:#0b1120;--panel:#10192bee;--border:#94a3b838;--text:#f8fafc;--dim:#a7b6ca;--cyan:#38bdf8;--green:#4ade80;--rose:#fb7185;--orange:#fb923c;--violet:#c4b5fd}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif}
+  main{display:grid;grid-template-columns:minmax(0,1fr) 332px;gap:16px;padding:16px 20px;min-height:100vh}
+  .scene{position:relative;display:grid;align-content:center;min-width:0;min-height:550px;padding:64px 0 48px;border-radius:12px;overflow:hidden;background:radial-gradient(ellipse at 49% 48%,#152742,#0b1120 75%)}
+  .header,.panel,.legend{background:var(--panel);border:1px solid var(--border);border-radius:11px;box-shadow:0 12px 25px #0004}
+  .header{position:absolute;left:0;top:0;padding:10px 16px}
+  h1{margin:0;font-size:17px;letter-spacing:.04em}
+  .header small,.muted{color:var(--dim)}
+  .scene canvas{position:absolute;top:63px;left:0;width:100%;height:calc(100% - 120px);touch-action:none;cursor:grab}
+  .scene canvas:active{cursor:grabbing}
+  .scene canvas:focus-visible{outline:2px solid var(--cyan);outline-offset:-3px}
+  .scene-tools{position:absolute;top:8px;right:8px;display:flex;align-items:center;gap:10px;color:var(--dim);font-size:12px}
+  .scene-tools button{padding:5px 9px}
+  .legend{position:absolute;left:0;bottom:3px;display:flex;flex-wrap:wrap;gap:4px 15px;padding:9px 12px;font-size:12px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{width:8px;height:8px;border-radius:50%;background:var(--key)}
+  .panel{align-self:start;overflow:hidden}
+  .panel h2{font-size:15px;margin:0;padding:13px 17px;border-bottom:1px solid var(--border)}
+  .controls{display:grid;gap:13px;padding:14px 16px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+  .transport{grid-template-columns:repeat(3,1fr)}
+  .speed-label{display:flex;justify-content:space-between;align-items:center}
+  .speed-label output{color:var(--cyan)}
+  #playback-speed{width:100%;margin:4px 0 0;accent-color:var(--cyan);cursor:pointer}
+  #playback-speed:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+  button{border:1px solid var(--border);border-radius:8px;background:#25364f;color:inherit;font:inherit;padding:8px 5px;cursor:pointer}
+  button:hover:enabled{background:#354a68}
+  button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+  button:disabled{opacity:.5;cursor:default}
+  button[aria-pressed=true]{background:#2155ac;border-color:#3b82f6}
+  .transport button{background:var(--button-bg);border-color:var(--button-border)}
+  .transport button:hover:enabled{background:var(--button-hover)}
+  #start{--button-bg:#137047;--button-border:#30bd81;--button-hover:#177e50}
+  #pause{--button-bg:#2458ad;--button-border:#5798f4;--button-hover:#2b67c4}
+  #reset{--button-bg:#ad2059;--button-border:#f472a9;--button-hover:#bf2868}
+  .group-label{display:block;margin-bottom:5px;font-size:12px;color:var(--dim)}
+  .state{padding:9px 11px;border-radius:8px;background:#172640;border:1px solid var(--border)}
+  .state strong{color:var(--cyan)}
+  .state p,.note{margin:3px 0 0;font-size:13px;color:var(--dim)}
+  .formula{border-left:3px solid var(--rose);border-radius:8px;background:#060c17;padding:9px 11px;display:grid;gap:5px}
+  .math{font:16px/1.45 "Cambria Math","Times New Roman",serif}
+  .caption{font-size:12px;color:var(--dim)}
+  .polarity{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px}
+  output{color:var(--orange);font-variant-numeric:tabular-nums}
+  .meter{display:grid;grid-template-columns:1fr 1fr;gap:5px 10px;font-size:12px;color:var(--dim)}
+  .meter label{display:flex;justify-content:space-between;gap:4px}
+  progress{width:100%;height:8px;accent-color:var(--orange)}
+  #electric-level{accent-color:var(--cyan)}
+  .note{border-top:1px solid var(--border);padding-top:9px}
+  @media(max-width:900px){main{grid-template-columns:minmax(0,1fr) 300px;padding:12px;gap:10px}.controls{padding:12px}.scene-tools span{display:none}}
+  @media(max-width:720px){main{grid-template-columns:1fr}.scene{min-height:420px}}
+  @media(max-width:430px){.scene-tools{top:62px}.scene canvas{top:85px;height:calc(100% - 142px)}}
+</style>
+</head>
+<body>
+<main>
+  <section class="scene" aria-label="霍尔效应动态示意图">
+    <header class="header"><h1>霍尔效应 · 载流子与横向平衡</h1><small>Hall Effect</small></header>
+    <canvas id="scene-canvas" tabindex="0" aria-label="霍尔效应三维模型。拖动或使用方向键旋转，滚轮缩放。"></canvas>
+    <div class="scene-tools">
+      <span>拖动旋转 · 滚轮缩放</span>
+      <button type="button" id="front-view" aria-pressed="false">正视图</button>
+      <button type="button" id="reset-view">重置视角</button>
+    </div>
+    <div class="legend" aria-label="颜色图例">
+      <span><i style="--key:var(--rose)"></i>正电荷</span><span><i style="--key:var(--cyan)"></i>负电荷</span>
+      <span><i style="--key:var(--green)"></i>磁场 <em>B</em></span><span><i style="--key:var(--orange)"></i>磁场力 <em>F</em><sub>m</sub></span>
+      <span><i style="--key:var(--cyan)"></i>霍尔电场 <em>E</em> 和电场力 <em>F</em><sub>e</sub></span>
+    </div>
+  </section>
+
+  <aside class="panel" aria-labelledby="panel-title">
+    <h2 id="panel-title">演示控制</h2>
+    <div class="controls">
+      <div><span class="group-label">运动的载流子</span>
+        <div class="row" role="group" aria-label="载流子符号">
+          <button id="negative" type="button" aria-pressed="true">负电荷（电子）</button>
+          <button id="positive" type="button" aria-pressed="false">正电荷</button>
+        </div>
+      </div>
+      <div class="row transport">
+        <button id="start" type="button">开始运动</button>
+        <button id="pause" type="button" disabled>暂停</button>
+        <button id="reset" type="button">重置</button>
+      </div>
+      <div>
+        <label class="group-label speed-label" for="playback-speed"><span>播放速度</span><output id="playback-rate" for="playback-speed">1.00×</output></label>
+        <input type="range" id="playback-speed" min=".10" max="1" step=".01" value="1" aria-valuetext="1.00 倍">
+      </div>
+      <div class="state" role="status">
+        <strong id="stage"></strong>
+        <p id="stage-description"></p>
+      </div>
+      <div class="polarity"><span>霍尔电压 <i>U</i><sub>ab</sub> = <i>V</i><sub>a</sub> − <i>V</i><sub>b</sub></span><output id="voltage"></output></div>
+      <div class="meter">
+        <label for="magnetic-level">磁场力 <span id="magnetic-number">0%</span></label>
+        <label for="electric-level">电场力 <span id="electric-number">0%</span></label>
+        <progress id="magnetic-level" max="100" value="0"></progress>
+        <progress id="electric-level" max="100" value="0"></progress>
+      </div>
+      <div class="formula">
+        <div class="caption">载流子的横向受力</div>
+        <div class="math"><b><i>F</i></b><sub>m</sub> = <i>q</i><b><i>v</i></b> × <b><i>B</i></b></div>
+        <div class="math"><b><i>F</i></b><sub>e</sub> = <i>q</i><b><i>E</i></b></div>
+        <div class="caption">横向平衡</div>
+        <div class="math"><b><i>F</i></b><sub>e</sub> = −<b><i>F</i></b><sub>m</sub></div>
+        <div class="math"><i>U</i><sub>ab</sub> = <i>E</i><sub>y</sub>ℓ = <i>v</i><sub>x</sub><i>B</i>ℓ = <i>IB</i>/(<i>nqd</i>)</div>
+        <div class="caption"><i>I</i> 沿 +<i>x</i>，<i>B</i> 沿 +<i>z</i>。ℓ 是上下表面间距，<i>d</i> 是沿 <i>z</i> 方向的厚度。</div>
+      </div>
+      <p class="note"><i>a</i> 在下，<i>b</i> 在上。发光粒子示意迁移到下表面的载流子。上表面的异号标记表示载流子缺失。电压和力条按平衡值归一化，动画时间为示意。</p>
+    </div>
+  </aside>
+</main>
+<script>
+"use strict";
+const byId = id => document.getElementById(id);
+const start = byId("start"), pause = byId("pause");
+const positive = byId("positive"), negative = byId("negative");
+const speedSlider = byId("playback-speed");
+const speedReadout = byId("playback-rate");
+const palette = {positive:"#fb7185",negative:"#38bdf8"};
+const balanceTime = 7;
+const timeConstant = 1.45;
+let sign = -1;
+let speed = Number(speedSlider.value);
+let time = 0, started = false, running = false, frame = null, lastTime = null;
+let lastStage = "";
+
+const canvas = byId("scene-canvas");
+const ctx = canvas.getContext("2d");
+const initialView = {yaw:.47,pitch:.30,distance:8.4,front:false};
+const camera = {...initialView};
+const frontViewButton = byId("front-view");
+const X=2.30,Y=.91,Z=.73;
+const ink={edge:"#91a9c9",white:"#f0f6ff",green:"#4ade80",orange:"#fb923c",blue:"#38bdf8",violet:"#c4b5fd"};
+const corners=[[-X,-Y,-Z],[X,-Y,-Z],[X,Y,-Z],[-X,Y,-Z],[-X,-Y,Z],[X,-Y,Z],[X,Y,Z],[-X,Y,Z]];
+const faces=[[0,1,2,3],[4,5,6,7],[0,4,7,3],[1,5,6,2],[3,2,6,7],[0,1,5,4]];
+const packets=Array.from({length:9},(_,i)=>({
+  x:-1.66+(i<5 ? i*.78 : (i-5)*.78+.39),y:.52-(i%3)*.23,z:i<5?.30:-.36,
+  release:.018+i*.055,arrival:.34+i*.071
+}));
+let width=0,height=0,dpr=1;
+
+function packetPoint(p,u) {
+  return [p.x-sign*(1-u)*.65,p.y+(-Y-p.y)*u*(.72+.28*u),p.z];
+}
+
+function drawScene(s) {
+  if (!width||!height) return;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,width,height);
+  const sx=Math.sin(camera.yaw),cx=Math.cos(camera.yaw),sy=Math.sin(camera.pitch),cy=Math.cos(camera.pitch);
+  const focal=Math.min(width*1.22,height*1.76);
+  const project=([x,y,z])=>{
+    const depth=camera.distance-(sx*cy*x+sy*y+cx*cy*z);
+    const scale=focal/(camera.front ? camera.distance : depth);
+    return {x:width*.47+(cx*x-sx*z)*scale,
+      y:height*.49-(-sx*sy*x+cy*y-cx*sy*z)*scale,depth};
+  };
+  const carrier=sign>0?palette.positive:palette.negative;
+  const deficit=sign>0?palette.negative:palette.positive;
+  const symbol=sign>0?"+":"−", opposite=sign>0?"−":"+";
+  const small=width<500;
+
+  function path(points) {
+    ctx.beginPath();
+    points.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
+  }
+  function line(points,color,weight=1,alpha=1,dash=[]) {
+    ctx.globalAlpha=alpha;
+    ctx.strokeStyle=color;
+    ctx.lineWidth=weight;
+    ctx.setLineDash(dash);
+    path(points);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha=1;
+  }
+  function label(p,text,color=ink.white,dx=0,dy=0,math=true) {
+    ctx.font=math
+      ? `italic ${small?17:21}px "Cambria Math","STIX Two Text","Times New Roman",serif`
+      : `${small?11:13}px -apple-system,"PingFang SC",sans-serif`;
+    ctx.textAlign="center";
+    ctx.textBaseline="middle";
+    ctx.strokeStyle="#0b1120";
+    ctx.lineWidth=3.5;
+    ctx.strokeText(text,p.x+dx,p.y+dy);
+    ctx.fillStyle=color;
+    ctx.fillText(text,p.x+dx,p.y+dy);
+  }
+  function arrow(from,to,color,text,dx=0,dy=0,alpha=1) {
+    const a=project(from),b=project(to);
+    const size=Math.hypot(b.x-a.x,b.y-a.y);
+    if (size<3) return;
+    const ux=(b.x-a.x)/size,uy=(b.y-a.y)/size,h=Math.min(12,size*.4);
+    const k={x:b.x-ux*h,y:b.y-uy*h};
+    line([a,k],color,2.7,alpha);
+    ctx.globalAlpha=alpha;
+    ctx.fillStyle=color;
+    path([b,{x:k.x-uy*h*.46,y:k.y+ux*h*.46},{x:k.x+uy*h*.46,y:k.y-ux*h*.46}]);
+    ctx.closePath();
+    ctx.fill();
+    label(b,text,color,dx,dy);
+    ctx.globalAlpha=1;
+  }
+  function charge(point,color,mark,r,alpha=1,glow=0) {
+    const p=project(point);
+    ctx.globalAlpha=alpha;
+    ctx.shadowColor=color;
+    ctx.shadowBlur=glow;
+    ctx.fillStyle="#13233b";
+    ctx.strokeStyle=color;
+    ctx.lineWidth=1.3;
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,r,0,2*Math.PI);
+    ctx.fill();
+    ctx.stroke();
+    ctx.shadowBlur=0;
+    ctx.fillStyle=color;
+    ctx.font=`600 ${r*1.65}px system-ui,sans-serif`;
+    ctx.textAlign="center";
+    ctx.textBaseline="middle";
+    ctx.fillText(mark,p.x,p.y);
+    ctx.globalAlpha=1;
+  }
+  function dimension(a,b,text,dx,dy) {
+    const p=project(a),q=project(b);
+    line([p,q],ink.edge,1.2,.8);
+    for (const k of [p,q]) line([{x:k.x-4,y:k.y-2},{x:k.x+4,y:k.y+2}],ink.edge,1.2,.8);
+    label({x:(p.x+q.x)/2,y:(p.y+q.y)/2},text,ink.white,dx,dy);
+  }
+
+  const points=corners.map(project);
+  const ordered=faces.map((indices,index)=>({
+    index,points:indices.map(i=>points[i]),
+    depth:indices.reduce((sum,i)=>sum+points[i].depth,0)/4
+  })).sort((a,b)=>b.depth-a.depth);
+  for (const face of ordered) {
+    ctx.fillStyle=face.index===4?deficit:face.index===5?carrier:"#477bac";
+    ctx.globalAlpha=face.index>=4?.10+.18*s:.11;
+    path(face.points);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.globalAlpha=1;
+  for (const indices of faces) line([...indices,indices[0]].map(i=>points[i]),ink.edge,1,.43);
+  const origin=[-X,-Y,-Z];
+  arrow(origin,[X+.72,-Y,-Z],ink.edge,"x",9,3,.63);
+  arrow(origin,[-X,Y+.59,-Z],ink.edge,"y",9,-8,.63);
+  arrow(origin,[-X,-Y,Z+.59],ink.edge,"z",-9,7,.63);
+  arrow([X+.09,.08,0],[X+.83,.08,0],ink.violet,"I",0,-16,started?1:.45);
+  if (camera.front) {
+    const fieldMarker=project([-.55,-Y-.43,0]);
+    label(fieldMarker,"⊙ B",ink.green);
+    label(fieldMarker,"出纸面",ink.green,32,1,false);
+  } else {
+    arrow([-.55,-Y-.23,-.15],[-.55,-Y-.23,Z+.57],ink.green,"B",-11,13);
+  }
+  label(project([X-.12,-Y,Z+.05]),"a",ink.white,13,8);
+  label(project([X-.12,Y,Z+.05]),"b",ink.white,13,-8);
+  dimension([-X-.26,-Y,Z],[-X-.26,Y,Z],"ℓ",-13,0);
+  if (!camera.front) dimension([-.95,Y+.17,-Z],[-.95,Y+.17,Z],"d",0,-13);
+
+  for (let row=0;row<3;row++) for (let col=0;col<7;col++) {
+    const offset=col*.61+row*.27+sign*1.12*time;
+    const x=-2.17+((offset%4.34)+4.34)%4.34;
+    charge([x,.55-row*.43-.28*s,-.44+row*.40],carrier,symbol,small?3.7:5,.44);
+  }
+  let active=null;
+  for (const packet of packets) {
+    const u=Math.max(0,Math.min(1,(s-packet.release)/(packet.arrival-packet.release)));
+    if (!u) continue;
+    const p=packetPoint(packet,u);
+    if (u===1) {
+      charge(p,carrier,symbol,small?6:8,1,9);
+      charge([packet.x,Y,packet.z],deficit,opposite,small?6:8,.95,5);
+    } else {
+      line(Array.from({length:13},(_,i)=>project(packetPoint(packet,u*i/12))),carrier,1.6,.7,[4,3]);
+      charge(p,carrier,symbol,small?5.7:7.5,1,8);
+      if (!active) active=project(p);
+    }
+  }
+  if (active) label(active,"向下偏转",carrier,0,-18,false);
+
+  if (started) {
+    const sample=[1.18,.03,.52],force=.68;
+    arrow(sample,[sample[0],sample[1]-force,sample[2]],ink.orange,"Fₘ",13,4);
+    arrow(sample,[sample[0],sample[1]+force*s,sample[2]],ink.blue,"Fₑ",14,-7);
+    arrow(sample,[sample[0]+sign*.70,sample[1],sample[2]],ink.white,"v",sign*8,-10);
+    charge(sample,carrier,symbol,small?7:9,1,6);
+    const fy=.61*s;
+    arrow([-.05,-sign*fy,-.12],[-.05,sign*fy,-.12],ink.blue,"E",-13,0);
+  }
+}
+
+function resizeScene() {
+  const rect=canvas.getBoundingClientRect();
+  width=rect.width;
+  height=rect.height;
+  dpr=Math.min(devicePixelRatio||1,2);
+  canvas.width=Math.round(width*dpr);
+  canvas.height=Math.round(height*dpr);
+  paint();
+}
+
+function setView(view) {
+  Object.assign(camera,view);
+  frontViewButton.setAttribute("aria-pressed",String(camera.front));
+}
+
+let drag=null;
+canvas.addEventListener("pointerdown",event=>{
+  if (drag||event.button!==0) return;
+  drag={id:event.pointerId,x:event.clientX,y:event.clientY};
+  canvas.setPointerCapture(event.pointerId);
+});
+canvas.addEventListener("pointermove",event=>{
+  if (drag?.id!==event.pointerId) return;
+  const dx=event.clientX-drag.x,dy=event.clientY-drag.y;
+  if (!dx && !dy) return;
+  setView({yaw:camera.yaw-dx*.009,pitch:camera.pitch+dy*.009,front:false});
+  drag.x=event.clientX;
+  drag.y=event.clientY;
+  paint();
+});
+canvas.addEventListener("lostpointercapture",()=>{drag=null;});
+canvas.addEventListener("wheel",event=>{
+  event.preventDefault();
+  camera.distance=Math.max(5.2,Math.min(17,camera.distance*Math.exp(event.deltaY*.001)));
+  paint();
+},{passive:false});
+canvas.addEventListener("keydown",event=>{
+  const delta={ArrowLeft:[.12,0],ArrowRight:[-.12,0],ArrowUp:[0,.12],ArrowDown:[0,-.12]}[event.key];
+  if (!delta) return;
+  event.preventDefault();
+  setView({yaw:camera.yaw+delta[0],pitch:camera.pitch+delta[1],front:false});
+  paint();
+});
+frontViewButton.addEventListener("click",()=>{setView({yaw:0,pitch:0,distance:initialView.distance,front:true});paint();});
+byId("reset-view").addEventListener("click",()=>{setView(initialView);paint();});
+new ResizeObserver(resizeScene).observe(canvas);
+
+function hallFraction() {
+  const elapsed = Math.min(time,balanceTime);
+  return -Math.expm1(-elapsed/timeConstant) / -Math.expm1(-balanceTime/timeConstant);
+}
+
+function paint() {
+  const buildup = hallFraction();
+  const level = Math.round(buildup*100);
+  const symbol = sign > 0 ? "+" : "−";
+  drawScene(buildup);
+
+  byId("magnetic-level").value = started ? 100 : 0;
+  byId("magnetic-number").textContent = started ? "100%" : "0%";
+  byId("electric-level").value = level;
+  byId("electric-number").textContent = level + "%";
+  byId("voltage").textContent = level === 0 ? "0%" : `${symbol}${level}% · ${sign > 0 ? "Vₐ > Vᵦ" : "Vₐ < Vᵦ"}`;
+
+  const phase = !started ? "ready" : time < .28 ? "drift" : time < balanceTime ? "build" : "balanced";
+  const status = phase + (running || !started ? "" : "-paused");
+  if (status !== lastStage) {
+    lastStage = status;
+    const [title,description] = {
+      ready:["准备就绪","上下表面尚无净电荷。点击「开始运动」施加纵向电流。"],
+      drift:["载流子开始偏转","磁场力向下，载流子开始向 a 面偏移。"],
+      build:["霍尔电压建立中","上下表面逐渐带上异号电荷。霍尔电场增强，向上的电场力逐渐抵消磁场力。"],
+      balanced:["达到横向平衡","两力等大反向，载流子停止横向漂移，纵向电流继续。"]
+    }[phase];
+    byId("stage").textContent = title + (status.endsWith("-paused") ? "（已暂停）" : "");
+    byId("stage-description").textContent = description;
+  }
+}
+
+function syncControls() {
+  start.disabled = running;
+  pause.disabled = !running;
+  start.textContent = started && !running ? "继续运动" : "开始运动";
+  positive.setAttribute("aria-pressed",String(sign > 0));
+  negative.setAttribute("aria-pressed",String(sign < 0));
+}
+
+function halt() {
+  running = false;
+  lastTime = null;
+  if (frame !== null) cancelAnimationFrame(frame);
+  frame = null;
+}
+
+function tick(now) {
+  if (!running) return;
+  if (lastTime !== null) time += speed*Math.min(now-lastTime,45)/1000;
+  lastTime = now;
+  paint();
+  frame = requestAnimationFrame(tick);
+}
+
+function reset() {
+  halt();
+  time = 0;
+  started = false;
+  syncControls();
+  paint();
+}
+
+start.addEventListener("click",() => {
+  if (running) return;
+  started = running = true;
+  syncControls();
+  paint();
+  frame = requestAnimationFrame(tick);
+});
+pause.addEventListener("click",() => { halt(); syncControls(); paint(); });
+speedSlider.addEventListener("input",() => {
+  speed = Number(speedSlider.value);
+  const rate = speed.toFixed(2);
+  speedReadout.textContent = rate + "×";
+  speedSlider.setAttribute("aria-valuetext",rate + " 倍");
+});
+byId("reset").addEventListener("click",reset);
+positive.addEventListener("click",() => { if (sign !== 1) { sign = 1; reset(); } });
+negative.addEventListener("click",() => { if (sign !== -1) { sign = -1; reset(); } });
+reset();
+</script>
+</body>
+</html>
