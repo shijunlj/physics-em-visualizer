@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>无限长圆柱壳 · 磁场叠加</title>
+<style>
+  :root{color-scheme:dark;--bg:#0b1120;--panel:#10192b;--border:#94a3b83a;--text:#edf5ff;--muted:#a5b5cb;--cyan:#38bdf8;--orange:#ffad66;--pink:#fb7185;--green:#5ee2a0}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif}
+  main{display:grid;grid-template-columns:minmax(0,1fr) 355px;gap:16px;padding:16px 20px;min-height:100svh}
+  .scene{position:relative;container-type:inline-size;min-height:510px;min-width:0;overflow:hidden;border-radius:12px;background:radial-gradient(ellipse at 48% 46%,#182945,#0b1120 78%)}
+  #scene{position:absolute;top:65px;left:0;width:100%;height:calc(100% - 118px);touch-action:none;cursor:grab}
+  #scene:active{cursor:grabbing}
+  .box,.panel{background:var(--panel);border:1px solid var(--border);border-radius:10px}
+  header.box{position:absolute;top:0;left:0;padding:9px 14px;pointer-events:none}
+  h1{margin:0;font-size:16px;font-weight:650}
+  .hint{color:var(--muted);font-size:12px}
+  .view-tools{position:absolute;right:0;top:0;display:flex;gap:6px}
+  .legend{position:absolute;bottom:3px;left:0;padding:7px 10px;display:flex;flex-wrap:wrap;gap:5px 13px;font-size:12px;pointer-events:none}
+  .legend span{display:inline-flex;align-items:center;gap:5px}
+  .legend i{width:8px;height:8px;background:var(--key);border-radius:2px}
+  .panel{overflow:hidden;align-self:start;min-width:0}
+  .panel h2{margin:0;padding:11px 14px;border-bottom:1px solid var(--border);font-size:15px}
+  .controls{display:grid;gap:10px;padding:12px 14px}
+  .row,.readout{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .row label,.readout{font-size:13px}
+  .value,output{color:var(--cyan);font-variant-numeric:tabular-nums;white-space:nowrap}
+  input[type=range]{width:100%;margin:3px 0 0;accent-color:var(--cyan)}
+  button,select{font:inherit;color:var(--text);background:#243650;border:1px solid var(--border);border-radius:7px;padding:6px 9px}
+  button{cursor:pointer}
+  button:hover{background:#354c6c}
+  button[aria-pressed=true]{background:#234663;border-color:#38bdf8}
+  button:focus-visible,input:focus-visible,select:focus-visible,canvas:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+  .primary{background:#195b48;border-color:#379b78}
+  .actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+  figure{margin:0;border:1px solid var(--border);border-radius:8px;background:#0b1424;padding:7px 9px 3px}
+  figcaption{font-size:12px;color:var(--muted)}
+  #section{display:block;width:100%;height:220px}
+  #components{display:block;width:100%;height:105px;border-top:1px solid var(--border)}
+  #components[hidden]{display:none}
+  .pair-detail{margin:2px 0 4px;color:var(--text);font-size:12px;font-variant-numeric:tabular-nums}
+  .formula{display:grid;gap:4px;background:#070e1b;border-left:3px solid var(--green);border-radius:7px;padding:7px 9px}
+  .math{font:15px/1.45 "Cambria Math","Times New Roman",serif}
+  .readout output{color:var(--pink)}
+  .readout.ideal output{color:var(--green)}
+  .status{margin:0;color:var(--muted);font-size:12px;min-height:2.8em}
+  @media(max-width:850px){main{grid-template-columns:minmax(0,1fr) 300px;padding:10px;gap:10px}}
+  @media(max-width:690px){main{grid-template-columns:1fr}.scene{min-height:430px}}
+  @container(max-width:390px){.view-tools{top:61px}#scene{top:86px;height:calc(100% - 149px)}}
+</style>
+</head>
+<body>
+<main>
+  <section class="scene" aria-label="圆柱电流壳与磁场的三维视图">
+    <header class="box"><h1>无限长圆柱壳 · 磁场叠加</h1><span class="hint">拖动旋转 · 滚轮缩放</span></header>
+    <canvas id="scene" tabindex="0" aria-label="拖动或用方向键旋转三维圆柱。轴向电流沿正 z 方向。"></canvas>
+    <div class="view-tools">
+      <button id="top-view" type="button" aria-pressed="false">俯视图</button>
+      <button id="view" type="button">重置视角</button>
+    </div>
+    <div class="box legend">
+      <span><i style="--key:var(--cyan)"></i>轴向电流</span>
+      <span><i style="--key:var(--orange)"></i>选中导线及其磁场</span>
+      <span><i style="--key:#c4b5fd"></i>镜像导线及其磁场</span>
+      <span><i style="--key:var(--pink)"></i>叠加磁场</span>
+      <span><i style="--key:var(--green)"></i>理想圆柱壳的磁感线</span>
+    </div>
+  </section>
+  <aside class="panel" aria-labelledby="panel-title">
+    <h2 id="panel-title">横截面与矢量叠加</h2>
+    <div class="controls">
+      <figure>
+        <figcaption>从 +<i>z</i> 端俯视 · ⊙ 电流出纸面，磁感线逆时针</figcaption>
+        <canvas id="section" role="img" aria-label="横截面显示各导线位置、观察点和磁场矢量。"></canvas>
+        <canvas id="components" role="img" aria-label="P 点的磁场分量：两条径向箭头等长反向，两条切向箭头等长同向。"></canvas>
+        <p id="pair-detail" class="pair-detail"></p>
+      </figure>
+      <div class="row"><label for="count">等间隔导线数 <i>N</i></label>
+        <select id="count"><option>4</option><option selected>8</option><option>16</option><option>32</option><option>64</option></select>
+      </div>
+      <div><div class="row"><label for="radius">观察点 <i>P</i> 的距离 <i>r</i>/<i>R</i></label><output id="radius-value" for="radius"></output></div>
+        <input type="range" id="radius" min="0" max="2.30" step=".01" value="1.45">
+      </div>
+      <div><div class="row"><label for="wire">镜像导线编号</label><output id="wire-value" for="wire"></output></div>
+        <input type="range" id="wire" min="1" max="4" step="1" value="2">
+      </div>
+      <div class="actions">
+        <button id="sum" class="primary" type="button">逐对叠加（半圈）</button>
+        <button id="all" type="button" aria-pressed="false">显示完整叠加</button>
+      </div>
+      <div class="actions">
+        <button id="pair" type="button" aria-pressed="true">显示镜像配对</button>
+        <button id="reset-defaults" type="button" lang="en">Reset Defaults</button>
+      </div>
+      <div class="readout"><span id="sum-label">离散叠加 |<i>B</i>| / <i>B</i><sub>0</sub></span><output id="sum-value"></output></div>
+      <div class="readout ideal"><span>理想圆柱壳 |<i>B</i>| / <i>B</i><sub>0</sub></span><output id="ideal-value"></output></div>
+      <p id="status" class="status" role="status"></p>
+      <div class="formula">
+        <div class="math"><i>I</i><sub>i</sub> = <i>I</i>/<i>N</i>， <i>B</i><sub>i</sub> = μ₀<i>I</i>/(2π<i>Ns</i><sub>i</sub>)</div>
+        <div class="math"><b><i>B</i></b> = Σ<b><i>B</i></b><sub>i</sub>， <i>B</i><sub>₀</sub> = μ₀<i>I</i>/(2π<i>R</i>)</div>
+        <div class="math">连续壳：<i>r</i> &lt; <i>R</i> 时 <i>B</i> = 0；<i>r</i> &gt; <i>R</i> 时 <i>B</i> = μ₀<i>I</i>/(2π<i>r</i>)</div>
+      </div>
+      <div class="hint"><i>s</i><sub>i</sub> 为观察点到第 <i>i</i> 根导线的距离。图中只画出导线的一段，计算按无限长处理。改变导线数时，总电流 <i>I</i> 保持不变。</div>
+    </div>
+  </aside>
+</main>
+<script>
+"use strict";
+const byId=id=>document.getElementById(id);
+const scene=byId("scene"), section=byId("section"), components=byId("components");
+const countInput=byId("count"), radiusInput=byId("radius"), wireInput=byId("wire"), sumButton=byId("sum");
+const pairButton=byId("pair"), allButton=byId("all"), topButton=byId("top-view");
+const color={wire:"#38bdf8",selected:"#ffad66",mirror:"#c4b5fd",sum:"#fb7185",ideal:"#5ee2a0",text:"#edf5ff",muted:"#9fb2cd",shell:"#718cad"};
+const turn=2*Math.PI;
+const initialView={yaw:-.43,pitch:.29,distance:8,top:false};
+const camera={...initialView};
+let wires=[],probe=0,selected=1,shown=0,timer=null;
+let showPair=true;
+
+function contribution(wire,r,n) {
+  const dx=r-wire.x,dy=-wire.y;
+  const distanceSquared=dx*dx+dy*dy;
+  return [-dy/(n*distanceSquared),dx/(n*distanceSquared)];
+}
+function pairCount() {return wires.length/2;}
+function totalField(limit) {
+  let x=0,y=0;
+  for (let i=0;i<limit;i++) {
+    const a=wires[i].field,b=wires[mirrorIndex(i)].field;
+    x+=a[0]+b[0];y+=a[1]+b[1];
+  }
+  return [x,y];
+}
+function idealField(r) {
+  if (Math.abs(r-1)<1e-10) return null;
+  return r<1 ? 0 : 1/r;
+}
+function magnitude(v) {return Math.hypot(...v);}
+function mirrorIndex(index=selected) {return wires.length-1-index;}
+function setPair(active) {
+  showPair=active;
+  pairButton.setAttribute("aria-pressed",String(active));
+  allButton.setAttribute("aria-pressed",String(!active));
+  wireInput.disabled=!active;
+  components.hidden=!active;
+}
+
+function resetSum() {
+  if (timer!==null) clearTimeout(timer);
+  timer=null;
+  shown=pairCount();
+  sumButton.textContent="逐对叠加（半圈）";
+}
+function updateModel() {
+  const n=Number(countInput.value);
+  probe=Number(radiusInput.value);
+  wires=Array.from({length:n},(_,i)=>{
+    const phi=turn*(i+.5)/n;
+    const wire={x:Math.cos(phi),y:Math.sin(phi)};
+    return {...wire,field:contribution(wire,probe,n)};
+  });
+  wireInput.max=pairCount();
+  selected=Math.min(pairCount()-1,Number(wireInput.value)-1);
+  wireInput.value=selected+1;
+  resetSum();
+  render();
+}
+
+function sizedCanvas(canvas) {
+  const {width,height}=canvas.getBoundingClientRect();
+  const ratio=Math.min(devicePixelRatio||1,2);
+  const w=Math.round(width*ratio),h=Math.round(height*ratio);
+  if (canvas.width!==w) canvas.width=w;
+  if (canvas.height!==h) canvas.height=h;
+  const ctx=canvas.getContext("2d");
+  ctx.setTransform(ratio,0,0,ratio,0,0);
+  ctx.clearRect(0,0,width,height);
+  return {ctx,width,height};
+}
+function pen(ctx) {
+  function path(points,stroke,width=1,alpha=1,dash=[]) {
+    ctx.globalAlpha=alpha;
+    ctx.strokeStyle=stroke;
+    ctx.lineWidth=width;
+    ctx.setLineDash(dash);
+    ctx.beginPath();
+    points.forEach(([x,y],i)=>i ? ctx.lineTo(x,y) : ctx.moveTo(x,y));
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha=1;
+  }
+  function dot([x,y],r,fill) {
+    ctx.fillStyle=fill;ctx.beginPath();ctx.arc(x,y,r,0,turn);ctx.fill();
+  }
+  function text([x,y],value,fill=color.text,align="left") {
+    ctx.font='12px -apple-system, "PingFang SC", sans-serif';
+    ctx.textBaseline="middle";ctx.textAlign=align;
+    ctx.strokeStyle="#0b1120";ctx.lineWidth=3.5;ctx.strokeText(value,x,y);
+    ctx.fillStyle=fill;ctx.fillText(value,x,y);
+  }
+  function arrow(a,b,stroke,width=2,dash=[]) {
+    const d=Math.hypot(b[0]-a[0],b[1]-a[1]);
+    if (d<2) return;
+    const ux=(b[0]-a[0])/d,uy=(b[1]-a[1])/d,h=Math.min(10,d*.38);
+    const tip=[b[0]-ux*h,b[1]-uy*h];
+    path([a,b],stroke,width,1,dash);
+    ctx.fillStyle=stroke;ctx.beginPath();ctx.moveTo(...b);
+    ctx.lineTo(tip[0]-uy*h*.48,tip[1]+ux*h*.48);
+    ctx.lineTo(tip[0]+uy*h*.48,tip[1]-ux*h*.48);
+    ctx.closePath();ctx.fill();
+  }
+  return {path,dot,text,arrow};
+}
+function circlePoints(x,y,r,z=0) {
+  return Array.from({length:81},(_,i)=>{
+    const t=turn*i/80;
+    return [x+r*Math.cos(t),y+r*Math.sin(t),z];
+  });
+}
+
+function drawWireFieldLine(wire,stroke,project,path,arrow,alpha) {
+  const radius=Math.hypot(probe-wire.x,wire.y);
+  path(circlePoints(wire.x,wire.y,radius).map(project),stroke,1.2,alpha,[4,4]);
+  const angle=Math.atan2(-wire.y,probe-wire.x)-1.05;
+  const point=t=>project([wire.x+radius*Math.cos(t),wire.y+radius*Math.sin(t),0]);
+  // Positive current along +z gives increasing polar angle.
+  arrow(point(angle-.16),point(angle),stroke,1.3);
+}
+
+function drawComponents(first,second) {
+  const {ctx,width,height}=sizedCanvas(components);
+  if (!width||!height) return;
+  const {path,dot,text,arrow}=pen(ctx);
+  const radialX=width*.25,tangentX=width*.75;
+  const scale=Math.min(width*.12,25)/Math.max(...first.map(Math.abs),...second.map(Math.abs),1e-12);
+  const r1=[radialX,40],r2=[radialX,65];
+  const t1=[tangentX-16,54],t2=[tangentX+16,54];
+  text([radialX,14],"P 点径向分量",color.text,"center");
+  text([tangentX,14],"P 点切向分量",color.text,"center");
+  path([[width*.5,8],[width*.5,height-7]],color.shell,1,.4);
+  path([[radialX,28],[radialX,75]],color.muted,1,.5,[3,3]);
+  path([[tangentX-30,54],[tangentX+30,54]],color.muted,1,.5,[3,3]);
+  for (const [v,r,t,c] of [[first,r1,t1,color.selected],[second,r2,t2,color.mirror]]) {
+    dot(r,2,c);dot(t,2,c);
+    arrow(r,[r[0]+scale*v[0],r[1]],c,2);
+    arrow(t,[t[0],t[1]-scale*v[1]],c,2);
+  }
+  text([radialX,91],"等长反向 → 抵消",color.text,"center");
+  text([tangentX,91],Math.abs(first[1])<1e-10?"两者均为零":"等长同向 → 相加",color.text,"center");
+}
+
+function drawSection(sum) {
+  const {ctx,width,height}=sizedCanvas(section);
+  if (!width||!height) return;
+  const {path,dot,text,arrow}=pen(ctx);
+  const k=Math.min(width/5.6,height/4.8);
+  const map=([x,y])=>[width*.37+x*k,height*.52-y*k];
+  path(circlePoints(0,0,1).map(map),color.shell,1.4);
+  const w=wires[selected], mirror=wires[mirrorIndex()], p=map([probe,0]);
+  if (showPair) {
+    drawWireFieldLine(w,color.selected,map,path,arrow,.55);
+    drawWireFieldLine(mirror,color.mirror,map,path,arrow,.55);
+    path([[10,p[1]],[width-10,p[1]]],color.muted,1,.32,[5,4]);
+    path([[p[0],15],[p[0],height-17]],color.muted,1,.54,[5,4]);
+    text([width-8,p[1]+26],probe===0?"参考径向":"径向 OP",color.muted,"right");
+    text([p[0],14],probe===0?"垂直方向":"切向",color.muted,"center");
+    path([map([mirror.x,mirror.y]),p],color.mirror,1,.42,[3,4]);
+    path([map([w.x,w.y]),p],color.selected,1,.74,[3,4]);
+  }
+  for (const [i,wire] of wires.entries()) {
+    const highlighted=showPair&&(i===selected||i===mirrorIndex());
+    const pos=map([wire.x,wire.y]), c=highlighted?(i===selected?color.selected:color.mirror):color.wire;
+    dot(pos,highlighted?5:wires.length>32?2:3.1,c);
+    if (highlighted||wires.length<=16) dot(pos,1.2,"#0b1120");
+  }
+  if (probe>0) path([map([0,0]),p],color.text,1.5,.9,[6,4]);
+  dot(map([0,0]),2.2,color.muted);
+  text(map([-.27,-.17]),"O",color.muted,"center");
+  const pair=[w.field[0]+mirror.field[0],w.field[1]+mirror.field[1]];
+  const result=showPair?pair:sum;
+  const biggest=Math.max(showPair?magnitude(w.field):0,magnitude(result),showPair?1e-8:.50);
+  const unit=Math.min(66,width-p[0]-17)/biggest;
+  const endpoint=v=>[p[0]+v[0]*unit,p[1]-v[1]*unit];
+  if (showPair) {
+    for (const [vector,c] of [[w.field,color.selected],[mirror.field,color.mirror]]) {
+      const radial=endpoint([vector[0],0]), tip=endpoint(vector);
+      path([radial,tip],c,1,.52,[3,3]);
+      path([endpoint([0,vector[1]]),tip],c,1,.48,[3,3]);
+      arrow(p,radial,c,1.3);
+    }
+    arrow(p,endpoint(mirror.field),color.mirror,2.2,[4,3]);
+    arrow(p,endpoint(w.field),color.selected,2.2,[4,3]);
+  }
+  arrow(p,endpoint(result),color.sum,2.6);
+  dot(p,3,color.text);
+  text([p[0]+8,p[1]+13],"P");
+  const sel=endpoint(w.field), net=endpoint(result);
+  if (showPair) {
+    if (magnitude(w.field)*unit>9) text([sel[0],sel[1]-10],"B₁",color.selected,"center");
+    const other=endpoint(mirror.field);
+    text([other[0],other[1]-10],"B₂",color.mirror,"center");
+  }
+  if (magnitude(result)*unit>9) text([net[0]+8,net[1]-10],showPair?"B₁+B₂":"ΣBᵢ",color.sum);
+  if (!showPair&&magnitude(sum)<1e-10) text([p[0],p[1]-17],"总场为零",color.sum,"center");
+}
+
+function drawScene(sum) {
+  const {ctx,width,height}=sizedCanvas(scene);
+  if (!width||!height) return;
+  const {path,dot,text,arrow}=pen(ctx);
+  const cy=Math.cos(camera.yaw),sy=Math.sin(camera.yaw);
+  const cp=Math.cos(camera.pitch),sp=Math.sin(camera.pitch);
+  const focal=Math.min(width*1.25,height*1.43);
+  // Looking from -y at zero yaw, +x points right and +z points up.
+  const project=([x,y,z])=>{
+    const lateral=cy*x-sy*y, towards=-(sy*x+cy*y);
+    const depth=camera.distance-(towards*cp+z*sp);
+    const scale=focal/(camera.top?camera.distance:depth);
+    return [width*.5+lateral*scale,height*.51-(z*cp-towards*sp)*scale,depth];
+  };
+  function ring(x,y,r,z,stroke,alpha=1,dash=[]) {
+    path(circlePoints(x,y,r,z).map(project),stroke,1.2,alpha,dash);
+  }
+  const h=1.63;
+  if (!camera.top) {
+    ring(0,0,1,-h,color.shell,.8);
+    ring(0,0,1,h,color.shell,.9);
+  }
+  ring(0,0,1,0,color.shell,.85,camera.top?[]:[4,4]);
+  for (const r of [1.27,1.65,2.03]) {
+    ring(0,0,r,0,color.ideal,.34);
+    const t=-.78,dt=.15;
+    arrow(project([r*Math.cos(t),r*Math.sin(t),0]),project([r*Math.cos(t+dt),r*Math.sin(t+dt),0]),color.ideal,1.25);
+  }
+  const ordered=wires.map((w,i)=>({w,i,depth:project([w.x,w.y,0])[2]})).sort((a,b)=>b.depth-a.depth);
+  for (const {w,i} of ordered) {
+    const chosen=showPair&&(i===selected||i===mirrorIndex());
+    const c=chosen?(i===selected?color.selected:color.mirror):color.wire;
+    const included=Math.min(i,mirrorIndex(i))<shown;
+    if (camera.top) {
+      const p=project([w.x,w.y,0]);
+      dot(p,chosen?5.6:3.2,included||chosen?c:color.shell);
+      dot(p,chosen?3.9:2.2,"#0b1120");
+      dot(p,chosen?1.7:1.1,included||chosen?c:color.shell);
+      continue;
+    }
+    const ends=[project([w.x,w.y,-h]),project([w.x,w.y,h])];
+    path(ends,c,chosen?3:1.4,chosen?1:included?.68:.24);
+    if (chosen||wires.length<=16||i%4===0) {
+      arrow(project([w.x,w.y,.51]),project([w.x,w.y,.91]),c,chosen?2.7:1.1);
+    }
+  }
+  if (camera.top) {
+    text([16,17],"从 +z 端俯视 · ⊙ 电流出纸面",color.muted);
+  } else {
+    arrow(project([0,0,-h-.23]),project([0,0,h+.36]),color.muted,1.3);
+    const z=project([0,0,h+.36]);
+    text([z[0]+9,z[1]],"+z",color.muted);
+  }
+  const w=wires[selected],mirror=wires[mirrorIndex()],p=project([probe,0,0]);
+  if (showPair) {
+    drawWireFieldLine(w,color.selected,project,path,arrow,.68);
+    path([project([w.x,w.y,0]),p],color.selected,1,.67,[4,4]);
+    drawWireFieldLine(mirror,color.mirror,project,path,arrow,.68);
+    path([project([mirror.x,mirror.y,0]),p],color.mirror,1,.52,[4,4]);
+  }
+  const center=project([0,0,0]);
+  if (probe>0) {
+    path([center,p],color.text,1.7,.95,[6,4]);
+    dot(center,3,color.text);
+    text([center[0]-8,center[1]+12],"O",color.text,"right");
+  }
+  const tip=(v,scale)=>project([probe+scale*v[0],scale*v[1],0]);
+  arrow(p,tip(sum,.72/Math.max(magnitude(sum),.55)),color.sum,3);
+  if (showPair) {
+    const scale=.87/Math.max(magnitude(w.field),magnitude(mirror.field),1e-12);
+    const pair=[[w.field,color.selected,"₁",-1],[mirror.field,color.mirror,"₂",1]];
+    for (const [v,c] of pair) arrow(p,tip(v,scale),c,1.4,[7,5]);
+    function component(v,c,name,side=0) {
+      const end=tip(v,scale);
+      const dx=end[0]-p[0],dy=end[1]-p[1],length=Math.hypot(dx,dy);
+      if (length<3) return;
+      const ux=dx/length,uy=dy/length,nx=-uy,ny=ux;
+      const offset=side*7;
+      const tail=[p[0]+nx*offset,p[1]+ny*offset];
+      const head=[end[0]+nx*offset,end[1]+ny*offset];
+      if (side) path([p,tail],c,1,.5,[2,3]);
+      arrow(tail,head,c,2.25,[4,3]);
+      if (length>=12) {
+        const tx=head[0]+7*ux+side*10*nx,ty=head[1]+7*uy+side*10*ny;
+        text([Math.max(20,Math.min(width-20,tx)),Math.max(12,Math.min(height-12,ty))],name,c,"center");
+      }
+    }
+    for (const [[radial,tangential],c,i,side] of pair) {
+      component([radial,0],c,"B"+i+"ᵣ");
+      component([0,tangential],c,"B"+i+"φ",side);
+    }
+  }
+  dot(p,4,color.text);
+  text([p[0]+9,p[1]+11],"P");
+}
+
+function render() {
+  if (!wires.length) return;
+  const sum=totalField(shown), ideal=idealField(probe);
+  byId("radius-value").textContent=probe.toFixed(2);
+  byId("wire-value").textContent=showPair?(selected+1)+" ↔ "+(mirrorIndex()+1):"全部";
+  byId("sum-label").textContent=(shown<pairCount() ? "部分叠加" : "完整叠加")+" |B| / B₀";
+  byId("sum-value").textContent=magnitude(sum).toFixed(4);
+  byId("ideal-value").textContent=ideal===null?"内侧 0 / 外侧 1":ideal.toFixed(4);
+  const [radial,tangential]=wires[selected].field;
+  const signed=value=>(value<0?"−":"+")+Math.abs(value).toFixed(3);
+  const pairDetail=byId("pair-detail");
+  pairDetail.hidden=!showPair;
+  pairDetail.textContent="分量（单位 B₀） · 径向 "+signed(radial)+" 与 "+signed(-radial)
+    +" 抵消；切向均为 "+signed(tangential)+"。主图粉色总场箭头单独缩放。";
+  byId("status").textContent=shown<pairCount()
+    ? "已叠加 "+shown+" / "+pairCount()+" 对（"+(2*shown)+" 根）。横截面显示当前这一对，主图显示累计总场。"
+    : !showPair ? "完整叠加 · 已计入全部 "+wires.length+" 根导线。两图的粉色箭头均为总场。"
+    : ideal===null ? "P 位于理想电流面上。比较壳内侧与外侧的极限。"
+    : probe<1 ? "P 在壳内。每对的径向分量抵消，不同对的切向分量可相反，连续壳的总场为零。"
+    : showPair ? "镜像导线到 P 等距。横截面的粉色箭头是这一对的合场，3D 图中的粉色箭头是总场。"
+    : "P 在壳外。每对导线的径向分量抵消，所有切向分量同向相加。";
+  drawSection(sum);
+  if (showPair) drawComponents(wires[selected].field,wires[mirrorIndex()].field);
+  drawScene(sum);
+}
+
+countInput.addEventListener("change",updateModel);
+radiusInput.addEventListener("input",updateModel);
+wireInput.addEventListener("input",()=>{selected=Number(wireInput.value)-1;render();});
+allButton.addEventListener("click",()=>{resetSum();setPair(false);render();});
+pairButton.addEventListener("click",()=>{resetSum();setPair(true);render();});
+sumButton.addEventListener("click",()=>{
+  if (timer!==null) {
+    clearTimeout(timer);timer=null;sumButton.textContent="继续叠加";return;
+  }
+  if (shown>=pairCount()) shown=0;
+  setPair(true);
+  function step() {
+    selected=shown;
+    wireInput.value=selected+1;
+    shown++;
+    if (shown===pairCount()) {timer=null;sumButton.textContent="逐对叠加（半圈）";}
+    else timer=setTimeout(step,pairCount()<=8?680:280);
+    render();
+  }
+  sumButton.textContent="暂停叠加";
+  step();
+});
+
+function setView(view,redraw=true) {
+  Object.assign(camera,view);
+  topButton.setAttribute("aria-pressed",String(camera.top));
+  if (redraw) drawScene(totalField(shown));
+}
+let drag=null;
+scene.addEventListener("pointerdown",event=>{
+  if (drag||event.button!==0) return;
+  drag={id:event.pointerId,x:event.clientX,y:event.clientY};scene.setPointerCapture(event.pointerId);
+});
+scene.addEventListener("pointermove",event=>{
+  if (drag?.id!==event.pointerId) return;
+  const dx=event.clientX-drag.x,dy=event.clientY-drag.y;
+  if (!dx&&!dy) return;
+  setView({yaw:camera.yaw-dx*.009,pitch:camera.pitch+dy*.009,top:false});
+  drag.x=event.clientX;drag.y=event.clientY;
+});
+scene.addEventListener("lostpointercapture",()=>{drag=null;});
+scene.addEventListener("wheel",event=>{
+  event.preventDefault();camera.distance=Math.max(4.7,Math.min(16,camera.distance*Math.exp(event.deltaY*.001)));
+  drawScene(totalField(shown));
+},{passive:false});
+scene.addEventListener("keydown",event=>{
+  const move={ArrowLeft:[.12,0],ArrowRight:[-.12,0],ArrowUp:[0,.12],ArrowDown:[0,-.12]}[event.key];
+  if (!move) return;
+  event.preventDefault();setView({yaw:camera.yaw+move[0],pitch:camera.pitch+move[1],top:false});
+});
+topButton.addEventListener("click",()=>setView({yaw:0,pitch:Math.PI/2,distance:initialView.distance,top:true}));
+byId("view").addEventListener("click",()=>setView(initialView));
+byId("reset-defaults").addEventListener("click",()=>{
+  countInput.value=countInput.querySelector("option[selected]").value;
+  radiusInput.value=radiusInput.defaultValue;
+  wireInput.value=wireInput.defaultValue;
+  setPair(true);
+  setView(initialView,false);
+  updateModel();
+});
+updateModel();
+const resizeObserver=new ResizeObserver(render);
+resizeObserver.observe(scene);
+resizeObserver.observe(section);
+</script>
+</body>
+</html>
