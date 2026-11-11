@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>圆柱壳上的两种表面电流</title>
+<style>
+  :root{color-scheme:dark;--bg:#0b1120;--panel:#101a2c;--border:#8da3bf42;--text:#eef5ff;--muted:#aabacf;--cyan:#38bdf8;--green:#5ee2a0;--pink:#fb7185}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif}
+  main{max-width:1450px;margin:auto;padding:18px clamp(12px,3vw,36px) 20px}
+  h1{font-size:21px;margin:0 0 3px} h2{font-size:16px;margin:0}
+  .intro,.caption,.hint{color:var(--muted);margin:0;font-size:13px}
+  .toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:10px 13px;border-bottom:1px solid var(--border)}
+  .radius{display:grid;gap:3px;min-width:155px;flex:1;max-width:440px}
+  .radius label{display:flex;justify-content:space-between;gap:9px}
+  output{font-variant-numeric:tabular-nums;color:var(--pink)}
+  input[type=range]{width:100%;accent-color:var(--pink);margin:0}
+  button{border:1px solid var(--border);border-radius:7px;padding:6px 10px;background:#21344e;color:var(--text);font:inherit;cursor:pointer}
+  button:hover{background:#324b6d}
+  button:focus-visible,input:focus-visible,canvas:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+  .compare{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:12px}
+  article{min-width:0;overflow:hidden;background:var(--panel);border:1px solid var(--border);border-radius:12px}
+  article header{padding:10px 13px;border-bottom:1px solid var(--border)}
+  canvas{display:block;width:100%;height:clamp(300px,48vh,455px);touch-action:none;cursor:grab;background:radial-gradient(ellipse at center,#172a47,#0b1424 82%)}
+  canvas:active{cursor:grabbing}
+  .card-footer{display:grid;gap:5px;padding:10px 13px 12px}
+  .math{font:16px/1.45 "Cambria Math","Times New Roman",serif}
+  .probe{min-height:1.5em;font-size:13px;color:var(--pink)}
+  .legend{display:flex;gap:7px 16px;flex-wrap:wrap;margin:9px 0;color:var(--muted);font-size:12px}
+  .legend span{display:inline-flex;gap:6px;align-items:center}
+  .legend i{background:var(--key);width:8px;height:8px;border-radius:50%}
+  @media(max-width:690px){.compare{grid-template-columns:1fr} canvas{height:330px}}
+</style>
+</head>
+<body>
+<main>
+  <h1>圆柱壳的表面电流与磁场</h1>
+  <p class="intro">两种理想无限长圆柱薄壳。每幅图可独立拖动旋转、滚轮缩放和移动观察点。</p>
+  <div class="compare">
+    <article>
+      <header><h2>竖直圆柱 · 轴向电流</h2><p class="caption">表面电流密度 <i>j</i>，沿轴向向上</p></header>
+      <div class="toolbar">
+        <div class="radius">
+          <label for="axial-radius"><span>观察点 <i>P</i> · <i>r</i>/<i>R</i></span><output id="axial-radius-value" for="axial-radius"></output></label>
+          <input id="axial-radius" type="range" min="0" max="2.40" step=".01" value="1.45">
+        </div>
+        <button id="axial-inside" type="button">移到壳内</button>
+        <button id="axial-outside" type="button">移到壳外</button>
+        <button id="axial-reset" type="button" lang="en">Reset View</button>
+      </div>
+      <canvas id="axial" tabindex="0" aria-label="竖直圆柱。青色电流沿轴向向上，绿色磁感线在壳外绕轴成圆。"></canvas>
+      <div class="card-footer">
+        <div class="math"><i>r</i> &lt; <i>R</i>：<i>B</i> = 0</div>
+        <div class="math"><i>r</i> &gt; <i>R</i>：<i>B</i> = μ₀<i>I</i>/(2π<i>r</i>) = μ₀<i>jR</i>/<i>r</i></div>
+        <p class="caption"><i>j</i> 是沿圆周每米宽度通过的轴向电流，单位 A/m。均匀分布时，<i>j</i> = <i>I</i>/(2π<i>R</i>)，其中 <i>I</i> 是总电流。</p>
+        <div id="axial-probe" class="probe" aria-live="polite"></div>
+      </div>
+    </article>
+    <article>
+      <header><h2>水平圆柱 · 环向电流</h2><p class="caption">沿轴线单位长度的环向电流为 <i>j</i>′，单位 A/m</p></header>
+      <div class="toolbar">
+        <div class="radius">
+          <label for="azimuthal-radius"><span>观察点 <i>P</i> · <i>r</i>/<i>R</i></span><output id="azimuthal-radius-value" for="azimuthal-radius"></output></label>
+          <input id="azimuthal-radius" type="range" min="0" max="2.40" step=".01" value="1.45">
+        </div>
+        <button id="azimuthal-inside" type="button">移到壳内</button>
+        <button id="azimuthal-outside" type="button">移到壳外</button>
+        <button id="azimuthal-reset" type="button" lang="en">Reset View</button>
+      </div>
+      <canvas id="azimuthal" tabindex="0" aria-label="水平圆柱。青色电流绕圆周流动，绿色磁感线只在壳内沿轴线向右。"></canvas>
+      <div class="card-footer">
+        <div class="math"><i>r</i> &lt; <i>R</i>：<i>B</i> = μ₀<i>j</i>′　　<i>r</i> &gt; <i>R</i>：<i>B</i> = 0</div>
+        <div id="azimuthal-probe" class="probe" aria-live="polite"></div>
+      </div>
+    </article>
+  </div>
+  <div class="legend">
+    <span><i style="--key:var(--cyan)"></i>表面电流方向</span>
+    <span><i style="--key:var(--green)"></i>磁场方向</span>
+    <span><i style="--key:var(--pink)"></i>观察点 P 与该点磁场</span>
+  </div>
+  <p class="hint">图中只截取圆柱的一段。绿色线条表示磁场的方向与所在区域。两图各自归一化，箭头长度不用于跨图比较场强。</p>
+</main>
+<script>
+"use strict";
+const byId=id=>document.getElementById(id);
+const ink={current:"#38bdf8",currentLabel:"#ffc052",field:"#5ee2a0",probe:"#fb7185",edge:"#8fa6c4",text:"#edf5ff",muted:"#aabacf"};
+const initialView={yaw:-.37,pitch:.37,zoom:1};
+const turn=2*Math.PI;
+const halfLength=1.71;
+
+function fieldAt(r,horizontal) {
+  if (Math.abs(r-1)<1e-9) return null;
+  return horizontal ? (r<1?1:0) : (r<1?0:1/r);
+}
+
+function sceneProject(width,height,horizontal,camera) {
+  const cy=Math.cos(camera.yaw),sy=Math.sin(camera.yaw);
+  const cp=Math.cos(camera.pitch),sp=Math.sin(camera.pitch);
+  const scale=Math.min(width/5.45,height/4.72)*camera.zoom;
+  return ([a,b,c])=>{
+    // Rotate the second cylinder so its local +z axis points along world +x.
+    const [x,y,z]=horizontal?[c,b,-a]:[a,b,c];
+    const right=cy*x-sy*y,towards=-(sy*x+cy*y);
+    return [width*.48+right*scale,height*.51-(z*cp-towards*sp)*scale,towards*cp+z*sp];
+  };
+}
+
+function draw({canvas,horizontal,camera,probe}) {
+  const {width,height}=canvas.getBoundingClientRect();
+  if (!width||!height) return;
+  const ratio=Math.min(devicePixelRatio||1,2);
+  const bufferWidth=Math.round(width*ratio),bufferHeight=Math.round(height*ratio);
+  if(canvas.width!==bufferWidth)canvas.width=bufferWidth;
+  if(canvas.height!==bufferHeight)canvas.height=bufferHeight;
+  const ctx=canvas.getContext("2d");
+  ctx.setTransform(ratio,0,0,ratio,0,0);
+  ctx.clearRect(0,0,width,height);
+  const project=sceneProject(width,height,horizontal,camera);
+
+  function stroke(points,color,weight=1,opacity=1,dash=[]) {
+    ctx.strokeStyle=color;ctx.globalAlpha=opacity;ctx.lineWidth=weight;ctx.setLineDash(dash);
+    ctx.beginPath();
+    points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));
+    ctx.stroke();ctx.globalAlpha=1;ctx.setLineDash([]);
+  }
+  function segment(a,b,color,weight,opacity,dash) {stroke([project(a),project(b)],color,weight,opacity,dash);}
+  function arrow(a,b,color,weight=2,maxHead=10) {
+    const p=project(a),q=project(b),d=Math.hypot(q[0]-p[0],q[1]-p[1]);
+    if(d<2)return;
+    stroke([p,q],color,weight);
+    const ux=(q[0]-p[0])/d,uy=(q[1]-p[1])/d,h=Math.min(maxHead,d*.43),bx=q[0]-ux*h,by=q[1]-uy*h;
+    ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(q[0],q[1]);
+    ctx.lineTo(bx-uy*h*.48,by+ux*h*.48);ctx.lineTo(bx+uy*h*.48,by-ux*h*.48);
+    ctx.closePath();ctx.fill();
+  }
+  function label(point,text,color,dx=0,dy=0,size=14) {
+    const [x,y]=project(point);
+    ctx.font=`italic ${size}px "Cambria Math","Times New Roman",serif`;
+    ctx.strokeStyle="#0b1120";ctx.lineWidth=3.5;ctx.strokeText(text,x+dx,y+dy);
+    ctx.fillStyle=color;ctx.fillText(text,x+dx,y+dy);
+  }
+  function point(r,t,z) {return [r*Math.cos(t),r*Math.sin(t),z];}
+  function currentLabel(t,z,text) {
+    const anchor=point(1,t,z);
+    const [x,y]=project(anchor),[ox,oy]=project([0,0,z]);
+    const length=Math.hypot(x-ox,y-oy);
+    const ux=length>1?(x-ox)/length:0,uy=length>1?(y-oy)/length:-1;
+    const lx=Math.max(12,Math.min(width-25,x+31*ux));
+    const ly=Math.max(24,Math.min(height-12,y+31*uy));
+    stroke([[x,y],[x+.68*(lx-x),y+.68*(ly-y)]],ink.currentLabel,1,.75);
+    label(anchor,text,ink.currentLabel,lx-x,ly-y,24);
+  }
+  function ring(r,z,color,opacity=1,weight=1.2) {
+    stroke(Array.from({length:89},(_,i)=>project(point(r,turn*i/88,z))),color,weight,opacity);
+  }
+  function ringArrow(r,z,t,color,large=false) {
+    arrow(point(r,t-(large ? .34 : .16),z),point(r,t+.04,z),color,large ? 3.2 : 2,large ? 16 : 10);
+  }
+
+  // The two end rims delimit the visible segment, not physical ends.
+  ring(1,-halfLength,ink.edge,.59);
+  ring(1,halfLength,ink.edge,.66);
+  segment([0,0,-halfLength-.28],[0,0,halfLength+.35],ink.edge,1,.55,[5,5]);
+  for (const t of [0,Math.PI/2,Math.PI,3*Math.PI/2]) {
+    segment(point(1,t,-halfLength),point(1,t,halfLength),ink.edge,1,.28);
+  }
+  if(horizontal) {
+    for (let i=0;i<7;i++) {
+      const z=-1.50+i*.50;
+      ring(1,z,ink.current,.64,1.4);
+      ringArrow(1,z,-1.12,ink.current,true);
+    }
+    for (const [x,y] of [[0,0],[.54,0],[-.54,0],[0,.54],[0,-.54]]) {
+      segment([x,y,-halfLength],[x,y,halfLength],ink.field,1.5,.75);
+      arrow([x,y,.15],[x,y,.78],ink.field,2.05);
+    }
+    currentLabel(-1.12,1.0,"j′");
+    label([.54,0,1.56],"B",ink.field,7,-5);
+  } else {
+    for (let i=0;i<12;i++) {
+      const t=turn*i/12;
+      segment(point(1,t,-halfLength),point(1,t,halfLength),ink.current,1.25,.63);
+      arrow(point(1,t,.46),point(1,t,.98),ink.current,1.65);
+    }
+    for (const [r,z,opacity] of [[1.25,0,.75],[1.62,0,.69],[2.03,0,.6],[1.5,-1.07,.39],[1.5,1.07,.39]]) {
+      ring(r,z,ink.field,opacity);
+      ringArrow(r,z,-.60,ink.field);
+    }
+    currentLabel(-.3,1.14,"j");
+    label(point(2.03,-.55,0),"B",ink.field,8,-6);
+  }
+
+  const p=[probe,0,0],field=fieldAt(probe,horizontal);
+  if(probe>0)segment([0,0,0],p,ink.probe,1,.65,[4,4]);
+  if(field>0) {
+    arrow(p,horizontal?[probe,0,.74]:[probe,.94*field,0],ink.probe,2.65);
+  }
+  const [px,py]=project(p);
+  ctx.fillStyle=ink.probe;ctx.beginPath();ctx.arc(px,py,4,0,turn);ctx.fill();
+  label(p,"P",ink.probe,8,13);
+}
+
+function render(model) {
+  const {id,probe,horizontal}=model;
+  byId(id+"-radius-value").textContent=probe.toFixed(2);
+  const field=fieldAt(probe,horizontal);
+  const unit=horizontal?"μ₀j′":"μ₀j";
+  const where=probe<1?"壳内":"壳外";
+  const direction=horizontal?"沿轴向":"沿环向";
+  byId(id+"-probe").textContent=field===null
+    ? "P 在壳面。内侧极限 "+(horizontal?unit:"0")+"，外侧极限 "+(horizontal?"0":unit)+"。"
+    : "P 在"+where+" · "+(field===0?"B = 0":"B = "+field.toFixed(3)+" "+unit+"，"+direction);
+  draw(model);
+}
+
+function bindModel(id,horizontal) {
+  const canvas=byId(id), radial=byId(id+"-radius"), camera={...initialView};
+  const model={id,horizontal,canvas,camera,probe:Number(radial.value)};
+  function moveProbe(value) {model.probe=value;radial.value=value;render(model);}
+  radial.addEventListener("input",()=>moveProbe(Number(radial.value)));
+  byId(id+"-inside").addEventListener("click",()=>moveProbe(.60));
+  byId(id+"-outside").addEventListener("click",()=>moveProbe(1.45));
+  byId(id+"-reset").addEventListener("click",()=>{Object.assign(camera,initialView);draw(model);});
+  let drag=null;
+  canvas.addEventListener("pointerdown",event=>{
+    if(drag||event.button!==0)return;
+    drag={id:event.pointerId,x:event.clientX,y:event.clientY};
+    canvas.setPointerCapture(event.pointerId);
+  });
+  canvas.addEventListener("pointermove",event=>{
+    if(drag?.id!==event.pointerId)return;
+    camera.yaw-=(event.clientX-drag.x)*.009;
+    camera.pitch+=(event.clientY-drag.y)*.009;
+    drag.x=event.clientX;drag.y=event.clientY;draw(model);
+  });
+  canvas.addEventListener("lostpointercapture",()=>{drag=null;});
+  canvas.addEventListener("wheel",event=>{
+    event.preventDefault();
+    camera.zoom=Math.max(.56,Math.min(1.9,camera.zoom*Math.exp(-event.deltaY*.001)));
+    draw(model);
+  },{passive:false});
+  canvas.addEventListener("keydown",event=>{
+    const movement={ArrowLeft:[.12,0],ArrowRight:[-.12,0],ArrowUp:[0,.12],ArrowDown:[0,-.12]}[event.key];
+    if(!movement)return;
+    event.preventDefault();
+    camera.yaw+=movement[0];camera.pitch+=movement[1];draw(model);
+  });
+  const resizeObserver=new ResizeObserver(()=>draw(model));
+  resizeObserver.observe(canvas);
+  render(model);
+}
+bindModel("axial",false);
+bindModel("azimuthal",true);
+</script>
+</body>
+</html>
