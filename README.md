@@ -2,7 +2,7 @@
 
 🌐 **在线演示网站（GitHub Pages）**：[**https://shijunlj.github.io/physics-em-visualizer/**](https://shijunlj.github.io/physics-em-visualizer/)
 
-本项目包含 16 个基于 **Three.js 或 HTML5 Canvas** 的独立单文件 HTML 交互式物理演示页面（及 `index.html` 导航主页），涵盖稳恒磁场、空间拓扑和波动等主题。各演示均可直接在浏览器中打开，交互方式包括三维视角旋转、缩放、动画播放和参数调节。
+本项目包含 17 个基于 **Three.js 或 HTML5 Canvas** 的独立单文件 HTML 交互式物理演示页面（及 `index.html` 导航主页），涵盖稳恒磁场、空间拓扑和波动等主题。各演示均可直接在浏览器中打开，交互方式包括三维视角旋转、缩放、动画播放和参数调节。
 
 ---
 
@@ -26,6 +26,7 @@
 | 14 | [`wave_reflection_refraction.html`](./wave_reflection_refraction.html) | **电磁波在介质界面的反射与折射** | 调节入射角和相对折射率，观察反射与折射角、s／p 偏振方向、布儒斯特角和半波损。全反射模式展示相位滞后、倏逝场和古斯–汉欣位移示意，s 偏振时域模式展示电场与磁场的变化。 |
 | 15 | [`wave_phase_group_velocity.html`](./wave_phase_group_velocity.html) | **波的相速与群速** | 播放两列正弦波的叠加动画，对比固定相位和包络峰顶的移动。波数固定时，调节平均频率改变相速，调节频率差改变群速。 |
 | 16 | [`barber_pole_phase_group_velocity.html`](./barber_pole_phase_group_velocity.html) | **理发灯与相速** | 自动播放或手动旋转灯筒，观察红色螺旋条纹与固定观察线的交点沿灯轴移动，类比波的相速。 |
+| 17 | [`electromagnetic_wave_propagation.html`](./electromagnetic_wave_propagation.html) | **电磁波传播** | 三维展示真空中的线偏振平面波。跟踪同相的电场与磁场波峰沿波矢方向移动，并在可调位置的观察点读取两场的瞬时值。 |
 
 ---
 
