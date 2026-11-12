@@ -16,11 +16,15 @@
 
   <style>
     :root {
-      --bg: #0b1120;
-      --panel-bg: rgba(15, 23, 42, 0.88);
-      --panel-border: rgba(148, 163, 184, 0.20);
+      color-scheme: dark;
+      --bg: #16243b;
+      --panel-bg: rgba(34, 48, 73, 0.92);
+      --panel-border: rgba(143, 167, 205, 0.34);
+      --control-bg: #293b58;
+      --control-hover: #344c66;
+      --accent: #76e8cf;
       --text: #f8fafc;
-      --text-muted: #94a3b8;
+      --text-muted: #bbcce4;
       --cyan: #38bdf8;
       --amber: #fbbf24;
       --rose: #f43f5e;
@@ -36,7 +40,7 @@
     }
 
     body {
-      background: var(--bg);
+      background: radial-gradient(ellipse 620px 340px at 0% 0%, #302c55, transparent 75%), var(--bg);
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", sans-serif;
       overflow: hidden;
@@ -91,7 +95,7 @@
       box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 10px;
     }
 
     .control-panel::-webkit-scrollbar {
@@ -105,20 +109,18 @@
     .section-title {
       font-size: 12px;
       font-weight: 600;
-      text-transform: uppercase;
       letter-spacing: 0.6px;
-      color: #7dd3fc;
-      border-bottom: 1px solid rgba(148, 163, 184, 0.15);
-      padding-bottom: 5px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      color: var(--accent);
     }
 
     .control-group {
       display: flex;
       flex-direction: column;
-      gap: 5px;
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid rgba(143, 167, 205, 0.19);
+      border-radius: 9px;
+      background: rgba(18, 30, 50, 0.26);
     }
 
     .slider-header {
@@ -130,7 +132,7 @@
 
     .slider-val {
       font-weight: 600;
-      color: #38bdf8;
+      color: var(--accent);
       font-variant-numeric: tabular-nums;
     }
 
@@ -140,44 +142,64 @@
       border-radius: 3px;
       background: rgba(148, 163, 184, 0.25);
       outline: none;
-      accent-color: #38bdf8;
+      accent-color: var(--accent);
       cursor: pointer;
     }
 
-    .btn-row {
+    .mode-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 6px;
     }
+
+    .mode-wide {
+      grid-column: 1 / -1;
+    }
+
+    .mode-note {
+      font-size: 11px;
+      line-height: 1.55;
+      color: var(--text-muted);
+      padding: 6px 8px;
+      background: rgba(118, 232, 207, 0.07);
+      border-left: 2px solid var(--accent);
+    }
+
     .btn {
-      padding: 7px 6px;
+      min-height: 32px;
+      padding: 6px 8px;
       font-size: 12px;
       border-radius: 6px;
       border: 1px solid rgba(148, 163, 184, 0.24);
-      background: rgba(30, 41, 59, 0.85);
+      background: var(--control-bg);
       color: var(--text);
       cursor: pointer;
       text-align: center;
-      transition: all 0.18s ease;
+      transition: background-color 0.18s ease, border-color 0.18s ease;
       font-weight: 500;
     }
 
     .btn:hover {
-      background: rgba(51, 65, 85, 0.95);
-      border-color: rgba(56, 189, 248, 0.45);
+      background: var(--control-hover);
+      border-color: var(--accent);
     }
 
     .btn.active {
-      background: #0284c7;
-      border-color: #38bdf8;
-      color: #ffffff;
-      box-shadow: 0 0 10px rgba(56, 189, 248, 0.35);
+      background: #234b52;
+      border-color: var(--accent);
+      color: #ddfff6;
+      box-shadow: 0 0 12px rgba(118, 232, 207, 0.22);
+    }
+
+    .control-panel :focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
     }
 
     .select-dropdown {
       width: 100%;
       padding: 6px 9px;
-      background: rgba(30, 41, 59, 0.85);
+      background: var(--control-bg);
       border: 1px solid rgba(148, 163, 184, 0.24);
       border-radius: 6px;
       color: var(--text);
@@ -188,10 +210,6 @@
 
     /* 数据读数卡片 */
     .data-card {
-      background: rgba(11, 17, 32, 0.65);
-      border: 1px solid rgba(148, 163, 184, 0.15);
-      border-radius: 8px;
-      padding: 9px 11px;
       display: flex;
       flex-direction: column;
       gap: 6px;
@@ -202,6 +220,9 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 8px;
+      padding-block: 3px;
+      border-bottom: 1px solid rgba(143, 167, 205, 0.13);
     }
 
     .data-label {
@@ -231,7 +252,7 @@
       bottom: 12px;
       left: 18px;
       z-index: 10;
-      background: rgba(15, 23, 42, 0.85);
+      background: var(--panel-bg);
       backdrop-filter: blur(8px);
       border: 1px solid var(--panel-border);
       border-radius: 8px;
@@ -271,11 +292,9 @@
   <div class="control-panel">
     <!-- 1. 介质与折射率设置 -->
     <div class="control-group">
-      <div class="section-title">
-        <span>介质与折射率</span>
-      </div>
-      <div style="margin-top:2px;">
-        <select id="preset-media" class="select-dropdown">
+      <h2 class="section-title">介质与入射参数</h2>
+      <div>
+        <select id="preset-media" class="select-dropdown" aria-label="介质预设">
           <option value="1.50">空气 → 玻璃 (n₁=1.00, n₂=1.50)</option>
           <option value="1.33">空气 → 水 (n₁=1.00, n₂=1.33)</option>
           <option value="0.6666666666666666" selected>玻璃 → 空气 (n₁=1.50, n₂=1.00，含全反射)</option>
@@ -284,43 +303,42 @@
         </select>
       </div>
 
-      <div style="margin-top:6px;">
+      <div>
         <div class="slider-header">
-          <span>相对折射率 $n_{21} = n_2 / n_1$</span>
+          <label for="slider-n21">相对折射率 $n_{21} = n_2 / n_1$</label>
           <span class="slider-val" id="val-n21">0.6667</span>
         </div>
         <input type="range" id="slider-n21" min="0.40" max="2.60" step="any" value="0.6666666666666666">
       </div>
-    </div>
-
-    <!-- 2. 入射角设置 -->
-    <div class="control-group">
-      <div class="section-title">
-        <span>入射光波角度控制</span>
-      </div>
       <div>
         <div class="slider-header">
-          <span>入射角 $\theta$</span>
+          <label for="slider-theta">入射角 $\theta$</label>
           <span class="slider-val" id="val-theta">38.0°</span>
         </div>
         <input type="range" id="slider-theta" min="0.0" max="85.0" step="any" value="38.0">
       </div>
-
-      <button type="button" id="btn-angle-relations" class="btn active" aria-pressed="true">角度关系演示</button>
-      <button type="button" id="btn-s-polarization" class="btn" aria-pressed="false">s 偏振方向演示（电场垂直入射平面）</button>
-      <button type="button" id="btn-p-polarization" class="btn" aria-pressed="false">p 偏振方向演示（磁场垂直入射平面）</button>
-      <button type="button" id="btn-view-brewster" class="btn" aria-pressed="false">布儒斯特角演示</button>
-      <button type="button" id="btn-view-phase" class="btn" aria-pressed="false">半波损演示</button>
-      <div id="reflection-phase" hidden></div>
-      <button type="button" id="btn-view-tir" class="btn" aria-pressed="false">全反射演示（s 偏振）</button>
-      <div id="tir-description" hidden></div>
-      <button type="button" id="btn-view-time" class="btn" aria-pressed="false">s偏振动态演示</button>
-      <div id="time-description" hidden>紫色为电场 E，绿色为磁场 B。磁场以入射磁场振幅为单位。</div>
     </div>
 
-    <!-- 4. 实时物理读数 -->
+    <!-- 2. 演示模式 -->
     <div class="control-group">
-      <div class="section-title">实时物理量监测</div>
+      <h2 class="section-title">演示模式</h2>
+      <div class="mode-grid">
+        <button type="button" id="btn-angle-relations" class="btn mode-wide active" aria-pressed="true">角度关系演示</button>
+        <button type="button" id="btn-s-polarization" class="btn mode-wide" aria-pressed="false">s 偏振方向演示（电场垂直入射平面）</button>
+        <button type="button" id="btn-p-polarization" class="btn mode-wide" aria-pressed="false">p 偏振方向演示（磁场垂直入射平面）</button>
+        <button type="button" id="btn-view-brewster" class="btn" aria-pressed="false">布儒斯特角演示</button>
+        <button type="button" id="btn-view-phase" class="btn" aria-pressed="false">半波损演示</button>
+        <button type="button" id="btn-view-tir" class="btn" aria-pressed="false">全反射演示（s 偏振）</button>
+        <button type="button" id="btn-view-time" class="btn" aria-pressed="false">s偏振动态演示</button>
+      </div>
+      <div id="reflection-phase" class="mode-note" hidden></div>
+      <div id="tir-description" class="mode-note" hidden></div>
+      <div id="time-description" class="mode-note" hidden>紫色为电场 E，绿色为磁场 B。磁场以入射磁场振幅为单位。</div>
+    </div>
+
+    <!-- 3. 实时物理读数 -->
+    <div class="control-group">
+      <h2 class="section-title">实时物理量监测</h2>
       <div class="data-card">
         <div class="data-row">
           <span class="data-label">入射角 $\theta$</span>
@@ -386,7 +404,6 @@
        ============================================================== */
     const container = document.getElementById('webgl-container');
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0b1120);
 
     const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 100);
     // 关键：以 z 轴为法向上方向！
@@ -394,6 +411,7 @@
     camera.position.set(4.2, -7.5, 3.8);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setClearAlpha(0);
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     container.appendChild(renderer.domElement);
@@ -505,10 +523,6 @@
         this.shaftMesh.scale.set(1, sLen, 1);
         this.headMesh.scale.set(hLen / this.headLength, hLen / this.headLength, hLen / this.headLength);
         this.headMesh.position.set(0, sLen, 0);
-      }
-
-      setVisible(v) {
-        this.group.visible = v;
       }
     }
 
@@ -718,19 +732,19 @@
     dynamicGroup.add(beamRefrMesh);
 
     // 5.2 波矢箭头与标注 (k, k', k'')
-    const arrowK = new VectorArrow3D(0xfbbf24, 0.025, 0.09, 0.32);
-    const arrowKPrime = new VectorArrow3D(0xf97316, 0.025, 0.09, 0.32);
-    const arrowKDoublePrime = new VectorArrow3D(0x38bdf8, 0.025, 0.09, 0.32);
-    dynamicGroup.add(arrowK.group);
-    dynamicGroup.add(arrowKPrime.group);
-    dynamicGroup.add(arrowKDoublePrime.group);
-
-    const labelK = makeTextSprite('k', '#fbbf24', 46);
-    const labelKPrime = makeTextSprite("k'", '#f97316', 46);
-    const labelKDoublePrime = makeTextSprite('k"', '#38bdf8', 46);
-    dynamicGroup.add(labelK);
-    dynamicGroup.add(labelKPrime);
-    dynamicGroup.add(labelKDoublePrime);
+    const waveArrowGeometry = new THREE.CylinderGeometry(0.022, 0.022, 1, 8);
+    const waveArrows = ['k', 'k′', 'k″'].map((text, index) => {
+      const color = [0xfbbf24, 0xf97316, 0x38bdf8][index];
+      const material = new THREE.MeshBasicMaterial({ color });
+      const group = new THREE.Group();
+      const shaft = new THREE.Mesh(waveArrowGeometry, material);
+      const leftWing = new THREE.Mesh(waveArrowGeometry, material);
+      const rightWing = new THREE.Mesh(waveArrowGeometry, material);
+      const label = makeTextSprite(text, '#' + color.toString(16), 46);
+      group.add(shaft, leftWing, rightWing, label);
+      dynamicGroup.add(group);
+      return { group, shaft, leftWing, rightWing, label };
+    });
 
     const polarizationGroup = new THREE.Group();
     polarizationGroup.visible = false;
@@ -834,6 +848,20 @@
       mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
     }
 
+    function positionWaveArrow(arrow, beamPoint, direction, sideSign = 1) {
+      const length = 0.52;
+      const side = new THREE.Vector3(-direction.z, 0, direction.x).multiplyScalar(sideSign);
+      const start = beamPoint.clone().addScaledVector(side, 0.24);
+      const tip = start.clone().addScaledVector(direction, length);
+      const wingBase = tip.clone().addScaledVector(direction, -Math.min(0.17, length * 0.36));
+      const leftEnd = wingBase.clone().addScaledVector(side, 0.08);
+      const rightEnd = wingBase.clone().addScaledVector(side, -0.08);
+      positionCylinderBetweenPoints(arrow.shaft, start, tip, 0.014);
+      positionCylinderBetweenPoints(arrow.leftWing, leftEnd, tip, 0.017);
+      positionCylinderBetweenPoints(arrow.rightWing, rightEnd, tip, 0.017);
+      arrow.label.position.copy(start).addScaledVector(direction, length * 0.35).addScaledVector(side, 0.22);
+    }
+
     /* ==============================================================
        6. 物理核心计算与三维几何实时重构
        ============================================================== */
@@ -873,12 +901,10 @@
         positionCylinderBetweenPoints(beamRefrMesh, pO, pRefr, 0.022);
       }
 
-      // 4. 更新波矢箭头 (对齐课件图 16 中的箭头布局)
-      // k 沿入射光线，放置在靠近中间位置
+      // 4. 用等长箭头标示波矢方向，箭头与对应光线平行。
       const dirK = pO.clone().sub(pIn).normalize();
       const posK = pIn.clone().add(dirK.clone().multiplyScalar(1.2));
-      arrowK.set(posK, dirK, 1.35);
-      labelK.position.copy(posK).add(new THREE.Vector3(-0.25, 0, 0.15));
+      positionWaveArrow(waveArrows[0], posK, dirK);
 
       // k' 沿反射光线
       const dirKPrime = pRefl.clone().sub(pO).normalize();
@@ -919,23 +945,15 @@
         updateTirFields();
       }
       positionCylinderBetweenPoints(beamReflMesh, reflectedStart, reflectedStart.clone().add(pRefl), 0.022);
-      const posKPrime = reflectedStart.clone().addScaledVector(dirKPrime, 0.9);
-      arrowKPrime.set(posKPrime, dirKPrime, 1.35);
-      labelKPrime.position.copy(posKPrime).add(new THREE.Vector3(0.25, 0, 0.15));
+      const posKPrime = reflectedStart.clone().addScaledVector(dirKPrime, 1.30);
+      positionWaveArrow(waveArrows[1], posKPrime, dirKPrime, -1);
 
       // k'' 沿折射光线
       const dirKDoublePrime = pRefr.clone().sub(pO).normalize();
-      const posKDoublePrime = pO.clone().add(dirKDoublePrime.clone().multiplyScalar(0.9));
+      const posKDoublePrime = pO.clone().addScaledVector(dirKDoublePrime, 1.30);
+      waveArrows[2].group.visible = !isTotalInternalReflection;
       if (!isTotalInternalReflection) {
-        arrowKDoublePrime.setVisible(true);
-        labelKDoublePrime.visible = true;
-        // k'' 的相对长度等于 k * n21
-        const lenKDoublePrime = 1.35 * n21;
-        arrowKDoublePrime.set(posKDoublePrime, dirKDoublePrime, lenKDoublePrime);
-        labelKDoublePrime.position.copy(posKDoublePrime).add(new THREE.Vector3(0.28, 0, -0.15));
-      } else {
-        arrowKDoublePrime.setVisible(false);
-        labelKDoublePrime.visible = false;
+        positionWaveArrow(waveArrows[2], posKDoublePrime, dirKDoublePrime);
       }
 
       if (polarizationGroup.visible) {
