@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>电磁波的反射与折射 · 三维矢量演示 (图16对齐)</title>
+  <title>电磁波的反射与折射 · 三维矢量演示</title>
 
   <!-- Three.js 与 OrbitControls -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -72,13 +72,6 @@
       align-items: center;
       gap: 8px;
       text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
-    }
-
-    .top-header .subtitle {
-      font-size: 12.5px;
-      color: var(--text-muted);
-      margin-top: 3px;
-      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
     }
 
     /* 右侧控制面板 */
@@ -157,12 +150,6 @@
       grid-template-columns: repeat(3, 1fr);
       gap: 6px;
     }
-    .btn-row-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6px;
-    }
-
     .btn {
       padding: 7px 6px;
       font-size: 12px;
@@ -197,25 +184,6 @@
       color: var(--text);
       font-size: 12.5px;
       outline: none;
-      cursor: pointer;
-    }
-
-    .checkbox-row {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      font-size: 12px;
-    }
-
-    .checkbox-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-      color: #cbd5e1;
-    }
-    .checkbox-item input {
-      accent-color: #38bdf8;
       cursor: pointer;
     }
 
@@ -258,19 +226,6 @@
       text-align: center;
     }
 
-    /* 公式卡片 */
-    .formula-box {
-      background: rgba(15, 23, 42, 0.6);
-      border-left: 3px solid #38bdf8;
-      border-radius: 4px;
-      padding: 8px 10px;
-      font-size: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      color: #e2e8f0;
-    }
-
     /* 底部图例 */
     .bottom-legend {
       position: absolute;
@@ -310,10 +265,7 @@
 
   <!-- 顶部标题 -->
   <div class="top-header">
-    <h1>
-      <span>电磁波在界面上的反射与折射 (3D)</span>
-    </h1>
-    <div class="subtitle">法向为 $z$ · 分界面为 $x\text{-}y$ 平面 · 入射面为 $x\text{-}z$ 平面 · 严格对齐课件图 16</div>
+    <h1>电磁波在介质界面的反射与折射</h1>
   </div>
 
   <!-- 右侧交互控制面板 -->
@@ -325,20 +277,20 @@
       </div>
       <div style="margin-top:2px;">
         <select id="preset-media" class="select-dropdown">
-          <option value="1.50">空气 $\to$ 玻璃 ($n_1=1.00, n_2=1.50$)</option>
-          <option value="1.33">空气 $\to$ 水 ($n_1=1.00, n_2=1.33$)</option>
-          <option value="0.67" selected>玻璃 $\to$ 空气 ($n_1=1.50, n_2=1.00$，含全反射)</option>
-          <option value="0.75">水 $\to$ 空气 ($n_1=1.33, n_2=1.00$，含全反射)</option>
-          <option value="custom">自定义相对折射率 $n_{21}$</option>
+          <option value="1.50">空气 → 玻璃 (n₁=1.00, n₂=1.50)</option>
+          <option value="1.33">空气 → 水 (n₁=1.00, n₂=1.33)</option>
+          <option value="0.6666666666666666" selected>玻璃 → 空气 (n₁=1.50, n₂=1.00，含全反射)</option>
+          <option value="0.7518796992481203">水 → 空气 (n₁=1.33, n₂=1.00，含全反射)</option>
+          <option value="custom">自定义相对折射率 n₂₁</option>
         </select>
       </div>
 
       <div style="margin-top:6px;">
         <div class="slider-header">
           <span>相对折射率 $n_{21} = n_2 / n_1$</span>
-          <span class="slider-val" id="val-n21">0.67</span>
+          <span class="slider-val" id="val-n21">0.6667</span>
         </div>
-        <input type="range" id="slider-n21" min="0.40" max="2.60" step="0.01" value="0.67">
+        <input type="range" id="slider-n21" min="0.40" max="2.60" step="any" value="0.6666666666666666">
       </div>
     </div>
 
@@ -352,24 +304,19 @@
           <span>入射角 $\theta$</span>
           <span class="slider-val" id="val-theta">38.0°</span>
         </div>
-        <input type="range" id="slider-theta" min="0.0" max="85.0" step="0.5" value="38.0">
+        <input type="range" id="slider-theta" min="0.0" max="85.0" step="any" value="38.0">
       </div>
 
-      <div class="btn-row-2" style="margin-top:4px;">
-        <button id="btn-set-brewster" class="btn">⚡ 设为布儒斯特角 $\theta_B$</button>
-        <button id="btn-set-critical" class="btn">★ 设为临界角 $\theta_c$</button>
-      </div>
-    </div>
-
-    <!-- 3. 观察视角切换 -->
-    <div class="control-group">
-      <div class="section-title">观察视角预设</div>
-      <div class="btn-row">
-        <button id="btn-view-3d" class="btn active">3D 透视</button>
-        <button id="btn-view-p16" class="btn" title="严格对齐课件图16的经典2D剖面">正视(对齐图16)</button>
-        <button id="btn-view-top" class="btn">俯视(x-y)</button>
-      </div>
-      <button id="btn-view-reset" class="btn" style="margin-top:4px;">🔄 视角重置 (Reset View)</button>
+      <button type="button" id="btn-angle-relations" class="btn active" aria-pressed="true">仅看角度关系</button>
+      <button type="button" id="btn-s-polarization" class="btn" aria-pressed="false">电场垂直入射面（s 偏振方向示意）</button>
+      <button type="button" id="btn-p-polarization" class="btn" aria-pressed="false">磁场垂直入射面（p 偏振方向示意）</button>
+      <button type="button" id="btn-view-brewster" class="btn" aria-pressed="false">看布儒斯特角</button>
+      <button type="button" id="btn-view-phase" class="btn" aria-pressed="false">半波损</button>
+      <div id="reflection-phase" hidden></div>
+      <button type="button" id="btn-view-tir" class="btn" aria-pressed="false">看全反射（s 偏振）</button>
+      <div id="tir-description" hidden></div>
+      <button type="button" id="btn-view-time" class="btn" aria-pressed="false">s 偏振时域演示</button>
+      <div id="time-description" hidden>紫色为电场 E，绿色为磁场 B。磁场以入射磁场振幅为单位。</div>
     </div>
 
     <!-- 4. 实时物理读数 -->
@@ -406,39 +353,7 @@
       </div>
     </div>
 
-    <!-- 5. 可视化元素图层开关 -->
-    <div class="control-group">
-      <div class="section-title">显示图层开关</div>
-      <div class="checkbox-row">
-        <label class="checkbox-item">
-          <input type="checkbox" id="chk-interface" checked>
-          <span>显示 $x\text{-}y$ 分界面 ($z=0$ 半透明层)</span>
-        </label>
-        <label class="checkbox-item">
-          <input type="checkbox" id="chk-plane" checked>
-          <span>显示 $x\text{-}z$ 入射面 ($y=0$ 三线共面)</span>
-        </label>
-        <label class="checkbox-item">
-          <input type="checkbox" id="chk-normal" checked>
-          <span>显示法线 ($z$ 轴虚线)</span>
-        </label>
-        <label class="checkbox-item">
-          <input type="checkbox" id="chk-kx-proj" checked>
-          <span>显示切向波矢连续投影线 ($k_x = k_x' = k_x''$)</span>
-        </label>
-        <label class="checkbox-item">
-          <input type="checkbox" id="chk-wavefronts" checked>
-          <span>显示平面波波阵面推进动画 (Wavefronts)</span>
-        </label>
-      </div>
-    </div>
-
-    <!-- 6. 物理核心原理公式 -->
-    <div class="formula-box">
-      <div><strong>波矢匹配与斯涅尔定律</strong>：</div>
-      <div>$$k_x = k_x' = k_x'' \implies k\sin\theta = k'\sin\theta' = k''\sin\theta''$$</div>
-      <div>$$\frac{\sin\theta}{\sin\theta''} = \frac{k''}{k} = \frac{v_1}{v_2} = \frac{n_2}{n_1} = n_{21}$$</div>
-    </div>
+    <button type="button" id="btn-reset-view" class="btn">重置视角</button>
   </div>
 
   <!-- 底部图例 -->
@@ -467,12 +382,7 @@
        ============================================================== */
     const STATE = {
       thetaDeg: 38.0,       // 入射角 (度)
-      n21: 0.67,            // 相对折射率 n2 / n1 (玻璃 -> 空气)
-      showInterface: true,
-      showPlane: true,
-      showNormal: true,
-      showKxProj: true,
-      showWavefronts: true
+      n21: Number(document.getElementById('preset-media').value),
     };
 
     /* ==============================================================
@@ -497,6 +407,19 @@
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
     controls.target.set(0, 0, 0);
+    controls.update();
+    controls.saveState();
+
+    document.getElementById('btn-reset-view').addEventListener('click', () => {
+      controls.enableDamping = false;
+      controls.update();
+      controls.reset();
+      const distance = camera.position.distanceTo(controls.target);
+      camera.position.copy(controls.target);
+      camera.position.y -= distance;
+      controls.update();
+      controls.enableDamping = true;
+    });
 
     // 考虑右侧面板宽度，调整视口偏置使得几何原点居中于左侧开阔视区（正向偏移将画面向左推）
     function updateCameraViewOffset() {
@@ -521,23 +444,24 @@
        ============================================================== */
     function makeTextSprite(text, color = '#ffffff', fontSize = 48) {
       const canvas = document.createElement('canvas');
-      canvas.width = 300;
       canvas.height = 130;
       const ctx = canvas.getContext('2d');
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+      const font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+      ctx.font = font;
+      canvas.width = Math.max(300, Math.ceil(ctx.measureText(text).width) + 32);
+      ctx.font = font;
       ctx.fillStyle = color;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.shadowColor = 'rgba(0,0,0,0.85)';
       ctx.shadowBlur = 8;
-      ctx.fillText(text, 150, 65);
+      ctx.fillText(text, canvas.width / 2, canvas.height / 2);
 
       const texture = new THREE.CanvasTexture(canvas);
       texture.minFilter = THREE.LinearFilter;
       const mat = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
       const sprite = new THREE.Sprite(mat);
-      sprite.scale.set(0.95, 0.42, 1);
+      sprite.scale.set(0.42 * canvas.width / canvas.height, 0.42, 1);
       return sprite;
     }
 
@@ -648,6 +572,7 @@
       color: 0x1e293b,
       transparent: true,
       opacity: 0.45,
+      depthWrite: false,
       roughness: 0.2,
       metalness: 0.1,
       side: THREE.DoubleSide
@@ -661,11 +586,11 @@
     interfaceGroup.add(gridHelper);
 
     // 介质标注文字
-    const labelMed1 = makeTextSprite('介质 1 (Medium 1, n₁)', '#93c5fd', 38);
+    const labelMed1 = makeTextSprite('介质 1 (n₁)', '#93c5fd', 38);
     labelMed1.position.set(-2.2, -2.6, 1.8);
     interfaceGroup.add(labelMed1);
 
-    const labelMed2 = makeTextSprite('介质 2 (Medium 2, n₂)', '#67e8f9', 38);
+    const labelMed2 = makeTextSprite('介质 2 (n₂)', '#67e8f9', 38);
     labelMed2.position.set(-2.2, -2.6, -1.8);
     interfaceGroup.add(labelMed2);
 
@@ -683,6 +608,7 @@
       color: 0x3b82f6,
       transparent: true,
       opacity: 0.08,
+      depthWrite: false,
       side: THREE.DoubleSide
     });
     const incPlaneMesh = new THREE.Mesh(incPlaneGeo, incPlaneMat);
@@ -722,12 +648,65 @@
     normalGroup.add(normalLine);
 
     /* ==============================================================
-       5. 动态光束矢量、波矢、角度弧线与切向投影
+       5. 动态光束矢量、波矢、角度弧线
        ============================================================== */
     const dynamicGroup = new THREE.Group();
     scene.add(dynamicGroup);
 
     const RAY_LEN = 3.6; // 光线主干长度
+    const tirGroup = new THREE.Group();
+    tirGroup.visible = false;
+    dynamicGroup.add(tirGroup);
+    const fieldSamples = Array.from({ length: 40 }, (_, index) => {
+      const origin = new THREE.Vector3(((index % 10) - 4.5) * 0.16, 0, -0.10 - Math.floor(index / 10) * 0.18);
+      const arrow = new VectorArrow3D(0xf0abfc, 0.012, 0.045, 0.13);
+      tirGroup.add(arrow.group);
+      return { origin, arrow };
+    });
+    const tirRayFields = ['Eₛ', 'Eₛ′'].map(text => {
+      const arrow = new VectorArrow3D(0xf0abfc);
+      const label = makeTextSprite(text, '#f0abfc', 38);
+      const origin = new THREE.Vector3();
+      tirGroup.add(arrow.group, label);
+      return { arrow, label, origin };
+    });
+    const ghShift = new THREE.Vector3(0.65, 0, 0);
+    const ghRay = new THREE.Line(
+      new THREE.BufferGeometry(),
+      new THREE.LineDashedMaterial({ color: 0xf97316, dashSize: 0.12, gapSize: 0.08 })
+    );
+    const ghMarker = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), ghShift]),
+      new THREE.LineBasicMaterial({ color: 0xffffff, depthTest: false })
+    );
+    const ghLabel = makeTextSprite('ΔGH（示意）', '#ffffff', 36);
+    ghLabel.position.set(ghShift.x / 2, 0, -0.15);
+    const ghGroup = new THREE.Group();
+    ghGroup.add(ghRay, ghMarker, ghLabel);
+    dynamicGroup.add(ghGroup);
+    let evanescentWave = null;
+    const timeGroup = new THREE.Group();
+    timeGroup.visible = false;
+    dynamicGroup.add(timeGroup);
+
+    function makeTimeField(origin, suffix) {
+      const group = new THREE.Group();
+      const electric = new VectorArrow3D(0xf0abfc, 0.014, 0.05, 0.15);
+      const magnetic = new VectorArrow3D(0x86efac, 0.014, 0.05, 0.15);
+      group.add(electric.group, magnetic.group);
+      if (suffix !== null) {
+        const label = makeTextSprite('E' + suffix + ' / B' + suffix, '#ffffff', 32);
+        label.position.z = 0.27;
+        group.add(label);
+      }
+      group.position.copy(origin);
+      timeGroup.add(group);
+      return { group, electric, magnetic };
+    }
+
+    const timeRayFields = ['', '′', '″'].map(suffix => makeTimeField(new THREE.Vector3(), suffix));
+    const timeEvanescentFields = fieldSamples.map(({ origin }) => makeTimeField(origin, null));
+    let timeWave = null;
 
     // 5.1 光束管状圆柱网格 (入射、反射、折射)
     const matBeamInc = new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.9 });
@@ -737,6 +716,8 @@
     const beamIncMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 1, 16), matBeamInc);
     const beamReflMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 1, 16), matBeamRefl);
     const beamRefrMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 1, 16), matBeamRefr);
+    // 在半透明参考平面之后绘制折射线，保持线段可见。
+    beamRefrMesh.renderOrder = 1;
     dynamicGroup.add(beamIncMesh);
     dynamicGroup.add(beamReflMesh);
     dynamicGroup.add(beamRefrMesh);
@@ -755,6 +736,79 @@
     dynamicGroup.add(labelK);
     dynamicGroup.add(labelKPrime);
     dynamicGroup.add(labelKDoublePrime);
+
+    const polarizationGroup = new THREE.Group();
+    polarizationGroup.visible = false;
+    dynamicGroup.add(polarizationGroup);
+
+    const outward = new THREE.Vector3(0, -1, 0);
+    const inward = new THREE.Vector3(0, 1, 0);
+    let polarization = null;
+    const brewsterGroup = new THREE.Group();
+    brewsterGroup.visible = false;
+    dynamicGroup.add(brewsterGroup);
+    const brewsterFields = ['', '′', '″'].flatMap(prime => ['ₛ', 'ₚ'].map(subscript => {
+      const arrow = new VectorArrow3D(0xf0abfc);
+      const label = makeTextSprite('E' + subscript + prime, '#f0abfc', 38);
+      brewsterGroup.add(arrow.group, label);
+      return { arrow, label };
+    }));
+
+    function setBrewsterField(field, origin, direction, amplitude) {
+      field.arrow.set(origin, direction, amplitude);
+      field.label.visible = field.arrow.group.visible;
+      field.label.position.copy(origin).addScaledVector(direction, amplitude + 0.22);
+    }
+    const polarizationFields = ['', '′', '″'].map(prime => {
+      const group = new THREE.Group();
+      const electricArrow = new VectorArrow3D(0xf0abfc);
+      const magneticArrow = new VectorArrow3D(0x86efac);
+      const electricLabel = makeTextSprite('E' + prime, '#f0abfc', 38);
+      const magneticLabel = makeTextSprite('B' + prime, '#86efac', 38);
+      const angleLabel = makeTextSprite('θ' + prime, '#ffffff', 32);
+      const angleArc = new THREE.Line(
+        new THREE.BufferGeometry(),
+        new THREE.LineBasicMaterial({ color: 0x86efac })
+      );
+      const tangent = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(0.72, 0, 0)]),
+        angleArc.material
+      );
+      group.add(electricArrow.group, magneticArrow.group, electricLabel, magneticLabel, angleArc, tangent, angleLabel);
+      polarizationGroup.add(group);
+      return { group, electricArrow, magneticArrow, electricLabel, magneticLabel, angleArc, tangent, angleLabel };
+    });
+
+    function setPolarizationDirections(fields, origin, waveDirection) {
+      const isS = polarization === 's';
+      const electricDirection = isS ? outward : new THREE.Vector3().crossVectors(inward, waveDirection).normalize();
+      const magneticDirection = isS ? new THREE.Vector3().crossVectors(waveDirection, outward).normalize() : inward;
+      fields.electricArrow.set(origin, electricDirection, 0.85);
+      fields.magneticArrow.set(origin, magneticDirection, 0.85);
+      fields.electricLabel.position.copy(origin).addScaledVector(electricDirection, 1.05);
+      fields.magneticLabel.position.copy(origin).addScaledVector(magneticDirection, 1.05);
+      const inPlaneDirection = isS ? magneticDirection : electricDirection;
+      const angleColor = isS ? 0x86efac : 0xf0abfc;
+      fields.angleArc.material.color.setHex(angleColor);
+      fields.angleLabel.material.color.setHex(angleColor);
+
+      // 用与入射面内场矢量同侧的界面切线量取夹角。
+      const tangentSign = inPlaneDirection.x < 0 ? -1 : 1;
+      const angle = Math.atan2(inPlaneDirection.z, Math.abs(inPlaneDirection.x));
+      const points = [];
+      for (let i = 0; i <= 24; i++) {
+        const a = angle * i / 24;
+        points.push(new THREE.Vector3(0.48 * tangentSign * Math.cos(a), 0, 0.48 * Math.sin(a)));
+      }
+      fields.angleArc.geometry.setFromPoints(points);
+      fields.angleArc.geometry.computeBoundingSphere();
+      fields.angleArc.position.copy(origin);
+      fields.tangent.position.copy(origin);
+      fields.tangent.scale.x = tangentSign;
+      fields.angleLabel.position.copy(origin).add(
+        new THREE.Vector3(0.66 * tangentSign * Math.cos(angle / 2), 0, 0.66 * Math.sin(angle / 2))
+      );
+    }
 
     // 5.3 角度指示弧线与标签 (theta, theta', theta'')
     const arcGeoInc = new THREE.BufferGeometry();
@@ -776,44 +830,6 @@
     dynamicGroup.add(labelThetaPrime);
     dynamicGroup.add(labelThetaDoublePrime);
 
-    // 5.4 切向波矢匹配虚线投影 (kx = kx' = kx'')
-    const kxProjGroup = new THREE.Group();
-    dynamicGroup.add(kxProjGroup);
-
-    const kxProjGeo = new THREE.BufferGeometry();
-    const kxProjMat = new THREE.LineDashedMaterial({
-      color: 0x34d399,
-      dashSize: 0.08,
-      gapSize: 0.06,
-      transparent: true,
-      opacity: 0.85
-    });
-    const kxProjLine = new THREE.LineSegments(kxProjGeo, kxProjMat);
-    kxProjGroup.add(kxProjLine);
-
-    const labelKx = makeTextSprite('kx = k sinθ', '#34d399', 36);
-    kxProjGroup.add(labelKx);
-
-    // 5.5 动态波阵面波纹组 (Wavefronts)
-    const wavefrontGroup = new THREE.Group();
-    dynamicGroup.add(wavefrontGroup);
-
-    const NUM_WAVEFRONTS = 8;
-    const wavefrontMeshes = [];
-    for (let i = 0; i < NUM_WAVEFRONTS * 3; i++) {
-      const geo = new THREE.PlaneGeometry(0.7, 0.7);
-      const mat = new THREE.MeshBasicMaterial({
-        color: 0xffffff,
-        transparent: true,
-        opacity: 0.22,
-        side: THREE.DoubleSide,
-        depthWrite: false
-      });
-      const mesh = new THREE.Mesh(geo, mat);
-      wavefrontGroup.add(mesh);
-      wavefrontMeshes.push(mesh);
-    }
-
     // 辅助函数：根据两点定位圆柱体
     function positionCylinderBetweenPoints(mesh, p1, p2, radius = 0.02) {
       const dir = p2.clone().sub(p1);
@@ -833,15 +849,13 @@
       // 1. 计算斯涅尔折射定律与临界状态
       const sinTheta = Math.sin(theta);
       const cosTheta = Math.cos(theta);
-      const sinThetaDoublePrime = sinTheta / n21;
-
-      const isTotalInternalReflection = (n21 < 1.0) && (sinThetaDoublePrime >= 1.0);
-      let thetaDoublePrime = 0;
-      let cosThetaDoublePrime = 0;
-      if (!isTotalInternalReflection) {
-        thetaDoublePrime = Math.asin(Math.min(1.0, Math.max(-1.0, sinThetaDoublePrime)));
-        cosThetaDoublePrime = Math.cos(thetaDoublePrime);
-      }
+      // 容差只用于吸收临界点的浮点误差。
+      const criticalDifference = sinTheta - n21;
+      const atCriticalAngle = Math.abs(criticalDifference) <= 1e-12;
+      const isTotalInternalReflection = criticalDifference > 1e-12;
+      const sinThetaDoublePrime = atCriticalAngle ? 1 : Math.min(1, sinTheta / n21);
+      const thetaDoublePrime = Math.asin(sinThetaDoublePrime);
+      const cosThetaDoublePrime = Math.sqrt(Math.max(0, 1 - sinThetaDoublePrime ** 2));
 
       // 2. 光线三维端点
       // 入射光来自 x < 0, z > 0 向原点汇聚
@@ -857,15 +871,11 @@
       }
 
       // 3. 更新主光束圆柱
+      beamRefrMesh.visible = !isTotalInternalReflection;
       positionCylinderBetweenPoints(beamIncMesh, pIn, pO, 0.022);
-      positionCylinderBetweenPoints(beamReflMesh, pO, pRefl, 0.022);
 
       if (!isTotalInternalReflection) {
-        beamRefrMesh.visible = true;
         positionCylinderBetweenPoints(beamRefrMesh, pO, pRefr, 0.022);
-      } else {
-        // 全反射时折射光线不沿体介质传播，以贴界面衰减呈现
-        beamRefrMesh.visible = false;
       }
 
       // 4. 更新波矢箭头 (对齐课件图 16 中的箭头布局)
@@ -877,16 +887,53 @@
 
       // k' 沿反射光线
       const dirKPrime = pRefl.clone().sub(pO).normalize();
-      const posKPrime = pO.clone().add(dirKPrime.clone().multiplyScalar(0.9));
+      const decay = isTotalInternalReflection ? Math.sqrt(criticalDifference * (sinTheta + n21)) : 0;
+      if (polarization === 'tir') {
+        // 采用 exp[i(kₓx − ωt)]，介质 2 内的深度为 −z。
+        tirGroup.visible = isTotalInternalReflection;
+        tirDescription.textContent = tirGroup.visible
+          ? '紫色箭头长度表示瞬时电场的绝对值。橙色实线表示侧移后的反射路径，虚线为几何反射参考。位移未按比例绘制。'
+          : '请选择 n₂ < n₁，并把入射角调到临界角以上。';
+        if (tirGroup.visible) {
+          const phase = -Math.atan2(decay, cosTheta);
+          const reflectionLag = -2 * phase * 180 / Math.PI;
+          tirDescription.textContent += ` 反射相位滞后 ${reflectionLag.toFixed(1)}°。`;
+          evanescentWave = {
+            kx: 3.6 * sinTheta,
+            kz: 3.6 * cosTheta,
+            decay: 3.6 * decay,
+            phase,
+            amplitude: 2 * cosTheta / Math.hypot(cosTheta, decay)
+          };
+        }
+      }
+      ghGroup.visible = tirGroup.visible || (timeGroup.visible && decay > 0);
+      if (ghGroup.visible) {
+        ghRay.geometry.setFromPoints([pO, pRefl]);
+        ghRay.geometry.computeBoundingSphere();
+        ghRay.computeLineDistances();
+      }
+      const reflectedStart = ghGroup.visible ? ghShift : pO;
+      if (tirGroup.visible) {
+        tirRayFields[0].origin.copy(posK);
+        tirRayFields[1].origin.copy(reflectedStart).addScaledVector(dirKPrime, posK.distanceTo(pO));
+        for (const { origin, label } of tirRayFields) {
+          label.position.copy(origin);
+          label.position.z += 0.30;
+        }
+        updateTirFields();
+      }
+      positionCylinderBetweenPoints(beamReflMesh, reflectedStart, reflectedStart.clone().add(pRefl), 0.022);
+      const posKPrime = reflectedStart.clone().addScaledVector(dirKPrime, 0.9);
       arrowKPrime.set(posKPrime, dirKPrime, 1.35);
       labelKPrime.position.copy(posKPrime).add(new THREE.Vector3(0.25, 0, 0.15));
 
       // k'' 沿折射光线
+      const dirKDoublePrime = pRefr.clone().sub(pO).normalize();
+      const posKDoublePrime = pO.clone().add(dirKDoublePrime.clone().multiplyScalar(0.9));
       if (!isTotalInternalReflection) {
         arrowKDoublePrime.setVisible(true);
         labelKDoublePrime.visible = true;
-        const dirKDoublePrime = pRefr.clone().sub(pO).normalize();
-        const posKDoublePrime = pO.clone().add(dirKDoublePrime.clone().multiplyScalar(0.9));
         // k'' 的相对长度等于 k * n21
         const lenKDoublePrime = 1.35 * n21;
         arrowKDoublePrime.set(posKDoublePrime, dirKDoublePrime, lenKDoublePrime);
@@ -894,6 +941,69 @@
       } else {
         arrowKDoublePrime.setVisible(false);
         labelKDoublePrime.visible = false;
+      }
+
+      if (polarizationGroup.visible) {
+        const fieldDistance = posK.distanceTo(pO);
+        setPolarizationDirections(polarizationFields[0], posK, dirK);
+        const reflectedFieldOrigin = pO.clone().addScaledVector(dirKPrime, fieldDistance);
+        setPolarizationDirections(polarizationFields[1], reflectedFieldOrigin, dirKPrime);
+        polarizationFields[2].group.visible = !isTotalInternalReflection;
+        if (!isTotalInternalReflection) {
+          const refractedFieldOrigin = pO.clone().addScaledVector(dirKDoublePrime, fieldDistance);
+          setPolarizationDirections(polarizationFields[2], refractedFieldOrigin, dirKDoublePrime);
+        }
+      }
+
+      if (brewsterGroup.visible) {
+        const showPhase = polarization === 'phase';
+        // 非磁性介质的菲涅耳电场反射系数。全反射时两者模长均为 1。
+        const transmittedCos = n21 * cosThetaDoublePrime;
+        const incidentCos = n21 * cosTheta;
+        const rs = isTotalInternalReflection ? 1 : (cosTheta - transmittedCos) / (cosTheta + transmittedCos);
+        const rp = isTotalInternalReflection ? 1 : (incidentCos - cosThetaDoublePrime) / (incidentCos + cosThetaDoublePrime);
+        const ts = isTotalInternalReflection ? 0 : 2 * cosTheta / (cosTheta + transmittedCos);
+        const tp = isTotalInternalReflection ? 0 : 2 * cosTheta / (incidentCos + cosThetaDoublePrime);
+        const fieldDistance = posK.distanceTo(pO);
+        const reflectedOrigin = pO.clone().addScaledVector(dirKPrime, fieldDistance);
+        const refractedOrigin = pO.clone().addScaledVector(dirKDoublePrime, fieldDistance);
+        setBrewsterField(brewsterFields[0], posK, outward, 1);
+        setBrewsterField(brewsterFields[1], posK, new THREE.Vector3().crossVectors(inward, dirK), showPhase ? 0 : 1);
+        const reflectedDirection = showPhase && rs < 0 ? inward : outward;
+        setBrewsterField(brewsterFields[2], reflectedOrigin, reflectedDirection, Math.abs(rs));
+        setBrewsterField(brewsterFields[3], reflectedOrigin, new THREE.Vector3().crossVectors(inward, dirKPrime), showPhase ? 0 : Math.abs(rp));
+        setBrewsterField(brewsterFields[4], refractedOrigin, outward, ts);
+        setBrewsterField(brewsterFields[5], refractedOrigin, new THREE.Vector3().crossVectors(inward, dirKDoublePrime), showPhase ? 0 : tp);
+        if (showPhase) {
+          let phaseText = rs < 0 ? '半波损（反射电场反相，180°）' : '无半波损';
+          if (n21 === 1) {
+            phaseText = '无反射电场';
+          }
+          reflectionPhase.textContent = phaseText;
+        }
+      }
+
+      if (timeGroup.visible) {
+        const phase = -Math.atan2(decay, cosTheta);
+        const transmittedCos = n21 * cosThetaDoublePrime;
+        const rs = (cosTheta - transmittedCos) / (cosTheta + transmittedCos);
+        const ts = 2 * cosTheta / Math.hypot(cosTheta + transmittedCos, decay);
+        const transmittedDirection = new THREE.Vector3(Math.min(1, sinThetaDoublePrime), 0, -cosThetaDoublePrime);
+        const fieldDistance = posK.distanceTo(pO);
+        timeRayFields[0].group.position.copy(posK);
+        timeRayFields[1].group.position.copy(reflectedStart).addScaledVector(dirKPrime, fieldDistance);
+        timeRayFields[2].group.position.copy(pO).addScaledVector(transmittedDirection, fieldDistance);
+        timeRayFields[2].group.visible = decay === 0;
+        for (const { group } of timeEvanescentFields) group.visible = decay > 0;
+        timeWave = {
+          decay,
+          phase,
+          ts,
+          kx: 3.6 * sinTheta,
+          directions: [dirK, dirKPrime, transmittedDirection],
+          amplitudes: [1, rs, ts],
+          waveNumbers: [1, 1, n21]
+        };
       }
 
       // 5. 更新角度弧线 (theta, theta', theta'')
@@ -938,34 +1048,7 @@
         labelThetaDoublePrime.visible = false;
       }
 
-      // 6. 切向分量匹配投影 (kx = kx' = kx'')
-      if (STATE.showKxProj) {
-        kxProjGroup.visible = true;
-        const tipK = posK.clone().add(dirK.clone().multiplyScalar(1.35));
-        const tipKPrime = posKPrime.clone().add(dirKPrime.clone().multiplyScalar(1.35));
-
-        const projPts = [];
-        // 从波矢箭头顶点向界面垂下虚线
-        projPts.push(tipK, new THREE.Vector3(tipK.x, 0, 0));
-        projPts.push(tipKPrime, new THREE.Vector3(tipKPrime.x, 0, 0));
-
-        if (!isTotalInternalReflection) {
-          const tipKDoublePrime = posKDoublePrime.clone().add(dirKDoublePrime.clone().multiplyScalar(1.35 * n21));
-          projPts.push(tipKDoublePrime, new THREE.Vector3(tipKDoublePrime.x, 0, 0));
-        }
-
-        // x 轴上标示 kx 区段
-        const kxVal = 1.35 * sinTheta;
-        projPts.push(new THREE.Vector3(0, 0, 0), new THREE.Vector3(kxVal, 0, 0));
-
-        kxProjGeo.setFromPoints(projPts);
-        kxProjLine.computeLineDistances();
-        labelKx.position.set(kxVal * 0.5, -0.25, 0.05);
-      } else {
-        kxProjGroup.visible = false;
-      }
-
-      // 7. 更新 UI 文本读数
+      // 6. 更新 UI 文本读数
       document.getElementById('txt-theta').innerText = STATE.thetaDeg.toFixed(1) + '°';
       document.getElementById('txt-theta-refl').innerText = STATE.thetaDeg.toFixed(1) + '°';
       document.getElementById('txt-kx').innerText = sinTheta.toFixed(4);
@@ -996,11 +1079,11 @@
 
       // 布儒斯特角
       const brewsterDeg = (Math.atan(n21) * 180.0) / Math.PI;
-      document.getElementById('txt-brewster').innerText = brewsterDeg.toFixed(1) + '°';
+      document.getElementById('txt-brewster').innerText = n21 === 1 ? '—' : brewsterDeg.toFixed(1) + '°';
     }
 
     /* ==============================================================
-       7. UI 事件监听与视角切换
+       7. UI 事件监听
        ============================================================== */
     const sliderTheta = document.getElementById('slider-theta');
     const valTheta = document.getElementById('val-theta');
@@ -1009,14 +1092,23 @@
     const presetMedia = document.getElementById('preset-media');
 
     sliderTheta.addEventListener('input', e => {
-      STATE.thetaDeg = parseFloat(e.target.value);
+      const draggedAngle = Number(e.target.value);
+      const specialAngles = [];
+      if (STATE.n21 !== 1) specialAngles.push(Math.atan(STATE.n21) * 180 / Math.PI);
+      if (STATE.n21 < 1) specialAngles.push(Math.asin(STATE.n21) * 180 / Math.PI);
+      const snapAngle = specialAngles.find(angle =>
+        angle <= Number(sliderTheta.max) && Math.abs(draggedAngle - angle) <= 0.15
+      );
+      STATE.thetaDeg = snapAngle ?? draggedAngle;
+      sliderTheta.value = STATE.thetaDeg;
       valTheta.innerText = STATE.thetaDeg.toFixed(1) + '°';
       updatePhysicsVisuals();
     });
 
     sliderN21.addEventListener('input', e => {
-      STATE.n21 = parseFloat(e.target.value);
-      valN21.innerText = STATE.n21.toFixed(2);
+      STATE.n21 = Math.round(Number(e.target.value) * 100) / 100;
+      sliderN21.value = STATE.n21;
+      valN21.innerText = String(Number(STATE.n21.toFixed(4)));
       presetMedia.value = 'custom';
       updatePhysicsVisuals();
     });
@@ -1025,94 +1117,52 @@
       if (e.target.value === 'custom') return;
       STATE.n21 = parseFloat(e.target.value);
       sliderN21.value = STATE.n21;
-      valN21.innerText = STATE.n21.toFixed(2);
+      valN21.innerText = String(Number(STATE.n21.toFixed(4)));
       updatePhysicsVisuals();
     });
 
-    document.getElementById('btn-set-brewster').addEventListener('click', () => {
-      const bDeg = (Math.atan(STATE.n21) * 180.0) / Math.PI;
-      STATE.thetaDeg = parseFloat(bDeg.toFixed(1));
-      sliderTheta.value = STATE.thetaDeg;
-      valTheta.innerText = STATE.thetaDeg.toFixed(1) + '°';
-      updatePhysicsVisuals();
-    });
+    const angleRelationsButton = document.getElementById('btn-angle-relations');
+    const sPolarizationButton = document.getElementById('btn-s-polarization');
+    const pPolarizationButton = document.getElementById('btn-p-polarization');
+    const brewsterViewButton = document.getElementById('btn-view-brewster');
+    const phaseViewButton = document.getElementById('btn-view-phase');
+    const reflectionPhase = document.getElementById('reflection-phase');
+    const tirViewButton = document.getElementById('btn-view-tir');
+    const tirDescription = document.getElementById('tir-description');
+    const timeViewButton = document.getElementById('btn-view-time');
+    const timeDescription = document.getElementById('time-description');
 
-    document.getElementById('btn-set-critical').addEventListener('click', () => {
-      if (STATE.n21 >= 1.0) {
-        // 若当前为光疏向光密，自动切换为光密向光疏
-        STATE.n21 = 0.67;
-        sliderN21.value = 0.67;
-        valN21.innerText = '0.67';
-        presetMedia.value = '0.67';
+    function selectPolarization(mode) {
+      polarization = mode;
+      polarizationGroup.visible = mode === 's' || mode === 'p';
+      brewsterGroup.visible = mode === 'brewster' || mode === 'phase';
+      reflectionPhase.hidden = mode !== 'phase';
+      tirDescription.hidden = mode !== 'tir';
+      tirGroup.visible = false;
+      timeGroup.visible = mode === 'time';
+      timeDescription.hidden = !timeGroup.visible;
+      for (const [button, selected] of [
+        [angleRelationsButton, mode === null],
+        [sPolarizationButton, mode === 's'],
+        [pPolarizationButton, mode === 'p'],
+        [brewsterViewButton, mode === 'brewster'],
+        [phaseViewButton, mode === 'phase'],
+        [tirViewButton, mode === 'tir'],
+        [timeViewButton, mode === 'time']
+      ]) {
+        button.setAttribute('aria-pressed', String(selected));
+        button.classList.toggle('active', selected);
       }
-      const cDeg = (Math.asin(STATE.n21) * 180.0) / Math.PI;
-      STATE.thetaDeg = parseFloat(cDeg.toFixed(1));
-      sliderTheta.value = STATE.thetaDeg;
-      valTheta.innerText = STATE.thetaDeg.toFixed(1) + '°';
       updatePhysicsVisuals();
-    });
-
-    // 图层开关
-    document.getElementById('chk-interface').addEventListener('change', e => {
-      STATE.showInterface = e.target.checked;
-      interfaceGroup.visible = STATE.showInterface;
-    });
-    document.getElementById('chk-plane').addEventListener('change', e => {
-      STATE.showPlane = e.target.checked;
-      incPlaneGroup.visible = STATE.showPlane;
-    });
-    document.getElementById('chk-normal').addEventListener('change', e => {
-      STATE.showNormal = e.target.checked;
-      normalGroup.visible = STATE.showNormal;
-    });
-    document.getElementById('chk-kx-proj').addEventListener('change', e => {
-      STATE.showKxProj = e.target.checked;
-      updatePhysicsVisuals();
-    });
-    document.getElementById('chk-wavefronts').addEventListener('change', e => {
-      STATE.showWavefronts = e.target.checked;
-      wavefrontGroup.visible = STATE.showWavefronts;
-    });
-
-    // 视角预设按钮
-    const btn3D = document.getElementById('btn-view-3d');
-    const btnP16 = document.getElementById('btn-view-p16');
-    const btnTop = document.getElementById('btn-view-top');
-
-    function setActiveViewBtn(btn) {
-      [btn3D, btnP16, btnTop].forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
     }
 
-    btn3D.addEventListener('click', () => {
-      setActiveViewBtn(btn3D);
-      camera.position.set(4.2, -7.5, 3.8);
-      controls.target.set(0, 0, 0);
-      controls.update();
-    });
-
-    // 正视对齐课件图 16：位于 -y 轴朝 +y 原点正视，此时水平横轴是 x，竖直法向是 z！
-    btnP16.addEventListener('click', () => {
-      setActiveViewBtn(btnP16);
-      camera.position.set(0, -9.2, 0);
-      controls.target.set(0, 0, 0);
-      controls.update();
-    });
-
-    // 俯视 x-y 平面
-    btnTop.addEventListener('click', () => {
-      setActiveViewBtn(btnTop);
-      camera.position.set(0, -0.01, 9.2);
-      controls.target.set(0, 0, 0);
-      controls.update();
-    });
-
-    document.getElementById('btn-view-reset').addEventListener('click', () => {
-      setActiveViewBtn(btn3D);
-      camera.position.set(4.2, -7.5, 3.8);
-      controls.target.set(0, 0, 0);
-      controls.update();
-    });
+    angleRelationsButton.addEventListener('click', () => selectPolarization(null));
+    sPolarizationButton.addEventListener('click', () => selectPolarization(polarization === 's' ? null : 's'));
+    pPolarizationButton.addEventListener('click', () => selectPolarization(polarization === 'p' ? null : 'p'));
+    brewsterViewButton.addEventListener('click', () => selectPolarization('brewster'));
+    phaseViewButton.addEventListener('click', () => selectPolarization('phase'));
+    tirViewButton.addEventListener('click', () => selectPolarization('tir'));
+    timeViewButton.addEventListener('click', () => selectPolarization('time'));
 
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
@@ -1122,75 +1172,55 @@
     });
 
     /* ==============================================================
-       8. 主动画循环 (推进波阵面动画)
+       8. 主渲染循环
        ============================================================== */
-    let animPhase = 0;
-    const clock = new THREE.Clock();
-
-    function animate() {
-      requestAnimationFrame(animate);
-
-      const dt = clock.getDelta();
-      if (STATE.showWavefronts) {
-        animPhase += dt * 1.8;
-
-        const theta = (STATE.thetaDeg * Math.PI) / 180.0;
-        const n21 = STATE.n21;
-        const sinTheta = Math.sin(theta);
-        const cosTheta = Math.cos(theta);
-        const sinThetaDoublePrime = sinTheta / n21;
-        const isTir = (n21 < 1.0) && (sinThetaDoublePrime >= 1.0);
-        const thetaDoublePrime = !isTir ? Math.asin(Math.min(1.0, Math.max(-1.0, sinThetaDoublePrime))) : 0;
-
-        const dirInc = new THREE.Vector3(sinTheta, 0, -cosTheta).normalize();
-        const dirRefl = new THREE.Vector3(sinTheta, 0, cosTheta).normalize();
-        const dirRefr = !isTir ? new THREE.Vector3(sinThetaDoublePrime, 0, -Math.cos(thetaDoublePrime)).normalize() : new THREE.Vector3(1, 0, 0);
-
-        const planeSpacing = 0.42;
-
-        // 1. 入射波波阵面
-        for (let i = 0; i < NUM_WAVEFRONTS; i++) {
-          const m = wavefrontMeshes[i];
-          const distFromOrigin = ((i * planeSpacing - animPhase) % (NUM_WAVEFRONTS * planeSpacing) + (NUM_WAVEFRONTS * planeSpacing)) % (NUM_WAVEFRONTS * planeSpacing);
-          m.position.copy(dirInc.clone().multiplyScalar(-distFromOrigin));
-          m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dirInc);
-          m.material.color.setHex(0xfbbf24);
-          m.visible = STATE.showWavefronts && distFromOrigin > 0.1 && distFromOrigin < RAY_LEN;
-        }
-
-        // 2. 反射波波阵面
-        for (let i = 0; i < NUM_WAVEFRONTS; i++) {
-          const m = wavefrontMeshes[NUM_WAVEFRONTS + i];
-          const distFromOrigin = ((i * planeSpacing + animPhase) % (NUM_WAVEFRONTS * planeSpacing));
-          m.position.copy(dirRefl.clone().multiplyScalar(distFromOrigin));
-          m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dirRefl);
-          m.material.color.setHex(0xf97316);
-          m.visible = STATE.showWavefronts && distFromOrigin > 0.1 && distFromOrigin < RAY_LEN;
-        }
-
-        // 3. 折射波波阵面
-        for (let i = 0; i < NUM_WAVEFRONTS; i++) {
-          const m = wavefrontMeshes[NUM_WAVEFRONTS * 2 + i];
-          if (!isTir) {
-            const refrSpacing = planeSpacing / n21;
-            const distFromOrigin = ((i * refrSpacing + animPhase / n21) % (NUM_WAVEFRONTS * refrSpacing));
-            m.position.copy(dirRefr.clone().multiplyScalar(distFromOrigin));
-            m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dirRefr);
-            m.material.color.setHex(0x38bdf8);
-            m.visible = STATE.showWavefronts && distFromOrigin > 0.1 && distFromOrigin < RAY_LEN;
-          } else {
-            // 全反射时倏逝波：沿 x 轴推进，沿 z 衰减
-            const xDist = (i * planeSpacing + animPhase) % (NUM_WAVEFRONTS * planeSpacing);
-            const zDecay = -i * 0.14 - 0.08;
-            m.position.set(xDist, 0, zDecay);
-            m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), new THREE.Vector3(1, 0, 0));
-            m.material.color.setHex(0x38bdf8);
-            m.material.opacity = Math.max(0.02, 0.25 * Math.exp(-i * 0.45));
-            m.visible = STATE.showWavefronts && xDist < RAY_LEN;
-          }
-        }
+    function updateTirFields() {
+      // 入射点的入射电场取相位零，绘制 t = 0 的瞬时场。
+      const { kx, kz, decay, phase, amplitude } = evanescentWave;
+      const [incident, reflected] = tirRayFields;
+      const incidentField = Math.cos(kx * incident.origin.x - kz * incident.origin.z);
+      const reflectedField = Math.cos(kx * reflected.origin.x + kz * reflected.origin.z + 2 * phase);
+      incident.arrow.set(incident.origin, outward, 0.48 * Math.abs(incidentField));
+      reflected.arrow.set(reflected.origin, outward, 0.48 * Math.abs(reflectedField));
+      for (const { origin, arrow } of fieldSamples) {
+        const field = amplitude * Math.exp(decay * origin.z) * Math.cos(kx * origin.x + phase);
+        arrow.set(origin, outward, 0.48 * Math.abs(field));
       }
+    }
 
+    const fieldOrigin = new THREE.Vector3();
+    const timeMagneticVector = new THREE.Vector3();
+
+    function drawTimeFields(timePhase) {
+      const { decay, phase, ts, kx, directions, amplitudes, waveNumbers } = timeWave;
+      for (const [index, field] of timeRayFields.entries()) {
+        if (!field.group.visible) continue;
+        const direction = directions[index];
+        const relativeK = waveNumbers[index];
+        const phaseOffset = index === 1 ? 2 * phase : 0;
+        const angle = 3.6 * relativeK * direction.dot(field.group.position) - timePhase + phaseOffset;
+        const electric = amplitudes[index] * Math.cos(angle);
+        timeMagneticVector.crossVectors(direction, outward).multiplyScalar(relativeK * electric);
+        field.electric.set(fieldOrigin, electric >= 0 ? outward : inward, 0.48 * Math.abs(electric));
+        field.magnetic.set(fieldOrigin, timeMagneticVector, 0.48 * timeMagneticVector.length());
+      }
+      if (decay === 0) return;
+
+      for (const field of timeEvanescentFields) {
+        const { x, z } = field.group.position;
+        const angle = kx * x - timePhase + phase;
+        const envelope = ts * Math.exp(3.6 * decay * z);
+        const electric = envelope * Math.cos(angle);
+        // k₂z = −iκ。B 的切向分量与 E 相差四分之一周期。
+        timeMagneticVector.set(decay * envelope * Math.sin(angle), 0, -kx / 3.6 * electric);
+        field.electric.set(fieldOrigin, electric >= 0 ? outward : inward, 0.48 * Math.abs(electric));
+        field.magnetic.set(fieldOrigin, timeMagneticVector, 0.48 * timeMagneticVector.length());
+      }
+    }
+
+    function animate(time = 0) {
+      requestAnimationFrame(animate);
+      if (timeGroup.visible) drawTimeFields(time * 0.003);
       controls.update();
       renderer.render(scene, camera);
     }
@@ -1198,7 +1228,9 @@
     // 初始化运行与渲染
     updatePhysicsVisuals();
     animate();
+  </script>
 
+  <script>
     // 加载完成后初始化公式
     document.addEventListener("DOMContentLoaded", () => {
       if (typeof renderMathInElement !== 'undefined') {
