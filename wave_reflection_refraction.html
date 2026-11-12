@@ -66,6 +66,26 @@
       pointer-events: none;
     }
 
+    .home-link {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      margin-bottom: 5px;
+      color: var(--accent);
+      font-size: 13px;
+      text-decoration: none;
+      pointer-events: auto;
+    }
+
+    .home-link:hover {
+      text-decoration: underline;
+    }
+
+    .home-link:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
     .top-header h1 {
       font-size: 19px;
       font-weight: 700;
@@ -96,6 +116,14 @@
       display: flex;
       flex-direction: column;
       gap: 10px;
+    }
+
+    @media (max-width: 680px) {
+      .control-panel {
+        top: 84px;
+        width: min(350px, calc(100vw - 36px));
+        max-height: calc(100vh - 98px);
+      }
     }
 
     .control-panel::-webkit-scrollbar {
@@ -285,6 +313,7 @@
 
   <!-- 顶部标题 -->
   <div class="top-header">
+    <a class="home-link" href="./index.html">← 返回主页</a>
     <h1>电磁波在介质界面的反射与折射</h1>
   </div>
 
