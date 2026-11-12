@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>理发灯与相速</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --text: #f2f6ff;
+      --muted: #b9cbe3;
+      --phase: #79bbff;
+      --accent: #76e8cf;
+      --border: rgba(151, 178, 218, 0.28);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background: radial-gradient(ellipse 680px 440px at 12% 0%, #302c55, transparent 80%), #16243b;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+    }
+
+    main {
+      width: min(760px, calc(100% - 32px));
+      margin: auto;
+      padding: clamp(24px, 6vh, 68px) 0 28px;
+    }
+
+    .home-link {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      margin-bottom: 6px;
+      color: var(--accent);
+      font-size: 13px;
+      text-decoration: none;
+    }
+
+    .home-link:hover { text-decoration: underline; }
+    .home-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    h1 { margin: 0 0 8px; font-size: clamp(26px, 5vw, 39px); }
+    header p { margin: 0 0 18px; color: var(--muted); line-height: 1.6; }
+
+    .demo {
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: #192942;
+      box-shadow: 0 20px 56px rgba(7, 14, 29, 0.35);
+    }
+
+    .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 12px 14px; }
+    .mode-switch { display: flex; gap: 4px; }
+    button {
+      min-width: 64px;
+      min-height: 36px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #263b58;
+      color: var(--text);
+      font: inherit;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    button:hover { background: #334e70; }
+    button:focus-visible { outline: 2px solid var(--phase); outline-offset: 2px; }
+    .mode-switch button { padding: 0 10px; }
+    .mode-switch button[aria-pressed="true"] { border-color: var(--phase); background: #304969; }
+    #play { background: var(--accent); color: #102b2b; font-weight: 650; }
+    #play:hover { background: #a0f1df; }
+    .time { margin-left: auto; color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: clamp(300px, 52vh, 460px);
+      border-top: 1px solid var(--border);
+      background: radial-gradient(ellipse at center, #233854, #101c31 72%);
+      cursor: grab;
+      touch-action: none;
+    }
+
+    canvas:active { cursor: grabbing; }
+    canvas:focus-visible { outline: 2px solid var(--phase); outline-offset: -3px; }
+
+    .phase-details {
+      margin-top: 12px;
+      padding: 10px 13px;
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      background: rgba(34, 48, 73, 0.72);
+    }
+
+    .phase-details h2 { margin: 0 0 4px; color: var(--phase); font-size: 15px; }
+    .phase-details p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.55; }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <a class="home-link" href="./index.html">← 返回主页</a>
+      <h1>理发灯与相速</h1>
+      <p id="mode-hint">点击播放，观察红纹交点沿轴上移。拖动可调整视角。</p>
+    </header>
+
+    <section class="demo" aria-label="理发灯动画">
+      <div class="toolbar">
+        <div class="mode-switch" role="group" aria-label="演示模式">
+          <button id="auto-mode" type="button" aria-pressed="true">自动演示</button>
+          <button id="manual-mode" type="button" aria-pressed="false">手动转灯</button>
+        </div>
+        <button id="play" type="button">播放</button>
+        <button id="reset" type="button">重置</button>
+        <span class="time" id="time-readout"><var>t</var> = <span id="time">0.00</span> s</span>
+      </div>
+      <canvas id="lamp" tabindex="0" aria-label="三维理发灯，支持方向键操作" aria-describedby="mode-hint"></canvas>
+    </section>
+
+    <section class="phase-details">
+      <h2 id="phase-title">相速 · 6 cm/s</h2>
+      <p>蓝点标出红纹与固定观察线的交点。</p>
+    </section>
+  </main>
+
+  <script>
+    const canvas = document.getElementById('lamp');
+    const ctx = canvas.getContext('2d');
+    const playButton = document.getElementById('play');
+    const timeDisplay = document.getElementById('time');
+    const autoModeButton = document.getElementById('auto-mode');
+    const manualModeButton = document.getElementById('manual-mode');
+    const styles = getComputedStyle(document.documentElement);
+    const phaseColor = styles.getPropertyValue('--phase').trim();
+
+    // Each revolution advances the apparent stripe position by one pitch.
+    const pitch = 12;
+    const turnsPerSecond = 0.5;
+    const phaseSpeed = pitch * turnsPerSecond;
+    const lampLength = 42;
+    const initialPhaseHeight = 4;
+    const trackedLength = 3 * pitch;
+    const lowestTrackedHeight = (lampLength - trackedLength) / 2;
+    const lampRadius = 7.5;
+    const collarRadius = 8.35;
+    const duration = 5;
+    const defaultElevation = 0.24;
+    const frontAngles = Array.from({ length: 65 }, (_, i) => (i / 64 - 0.5) * Math.PI);
+    let time = 0;
+    let frame = null;
+    let previousTimestamp = null;
+    let width = 0;
+    let height = 0;
+    let pixelRatio = 1;
+    const autoView = { yaw: 0, elevation: defaultElevation };
+    const manualView = { yaw: 0, elevation: defaultElevation };
+    let manualMode = false;
+    let manualPhaseHeight = initialPhaseHeight;
+    let drag = null;
+
+    function draw() {
+      if (!width || !height) return;
+      ctx.clearRect(0, 0, width, height);
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const scale = Math.min((height - 58) / (lampLength + 8), width / 38);
+      const { yaw: viewYaw, elevation: viewElevation } = manualMode ? manualView : autoView;
+      const sinElevation = Math.sin(viewElevation);
+      const cosElevation = Math.cos(viewElevation);
+      const phaseHeight = manualMode ? manualPhaseHeight : initialPhaseHeight + phaseSpeed * time;
+
+      // Angles are measured from the camera-facing meridian in this projection.
+      function project(angle, z, radius) {
+        const axial = (z - lampLength / 2) * cosElevation;
+        const depth = radius * Math.cos(angle) * sinElevation;
+        return [centerX + radius * Math.sin(angle) * scale, centerY - (axial - depth) * scale];
+      }
+
+      function surfacePath(radius, upper, lower) {
+        ctx.beginPath();
+        for (const angle of frontAngles) {
+          ctx.lineTo(...project(angle, upper(angle), radius));
+        }
+        for (let i = frontAngles.length - 1; i >= 0; i--) {
+          const angle = frontAngles[i];
+          ctx.lineTo(...project(angle, lower(angle), radius));
+        }
+        ctx.closePath();
+      }
+
+      function sideGradient(radius, stops) {
+        const gradient = ctx.createLinearGradient(centerX - radius * scale, 0, centerX + radius * scale, 0);
+        for (const [offset, color] of stops) gradient.addColorStop(offset, color);
+        return gradient;
+      }
+
+      surfacePath(lampRadius, () => lampLength, () => 0);
+      ctx.save();
+      ctx.fillStyle = '#fdf6ef';
+      ctx.shadowColor = 'rgba(104, 156, 255, 0.75)';
+      ctx.shadowBlur = 42 * pixelRatio;
+      ctx.fill();
+      ctx.shadowColor = 'rgba(224, 242, 255, 0.8)';
+      ctx.shadowBlur = 15 * pixelRatio;
+      ctx.fill();
+      ctx.restore();
+
+      ctx.save();
+      ctx.clip();
+      const stripeHalfWidth = pitch * 0.125;
+      function paintStripe(z, color) {
+        const centerAt = angle => z + angle * pitch / (2 * Math.PI);
+        surfacePath(lampRadius, angle => centerAt(angle) + stripeHalfWidth, angle => centerAt(angle) - stripeHalfWidth);
+        ctx.fillStyle = color;
+        ctx.fill();
+      }
+
+      const frontStripeHeight = phaseHeight + viewYaw * pitch / (2 * Math.PI);
+      const firstStripe = frontStripeHeight % pitch - pitch;
+      for (let z = firstStripe; z <= lampLength + pitch; z += pitch) {
+        paintStripe(z, '#ff5368');
+        paintStripe(z + pitch / 2, '#477ff6');
+      }
+
+      ctx.fillStyle = sideGradient(lampRadius, [
+        [0, 'rgba(37, 57, 95, 0.65)'],
+        [0.07, 'rgba(171, 210, 255, 0.24)'],
+        [0.18, 'rgba(255, 255, 255, 0.12)'],
+        [0.23, 'rgba(255, 255, 255, 0.58)'],
+        [0.29, 'rgba(255, 255, 255, 0.2)'],
+        [0.58, 'rgba(255, 255, 255, 0.05)'],
+        [0.84, 'rgba(37, 57, 95, 0.26)'],
+        [0.96, 'rgba(159, 200, 255, 0.27)'],
+        [1, 'rgba(37, 57, 95, 0.58)']
+      ]);
+      ctx.fillRect(0, 0, width, height);
+      ctx.restore();
+
+      const metal = sideGradient(collarRadius, [
+        [0, '#394a64'], [0.19, '#adc3dc'], [0.3, '#ebf4ff'],
+        [0.5, '#9aadc6'], [0.79, '#536984'], [1, '#2a3a53']
+      ]);
+      for (const z of [-2.5, lampLength]) {
+        surfacePath(collarRadius, () => z + 2.5, () => z);
+        ctx.fillStyle = metal;
+        ctx.fill();
+        surfacePath(collarRadius, () => z + 0.65, () => z + 0.34);
+        ctx.fillStyle = 'rgba(24, 40, 64, 0.45)';
+        ctx.fill();
+      }
+
+      const capHeight = viewElevation >= 0 ? lampLength + 2.5 : -2.5;
+      const [capX, capY] = project(0, capHeight, 0);
+      const capWidth = collarRadius * scale;
+      ctx.beginPath();
+      ctx.ellipse(capX, capY, capWidth, capWidth * Math.abs(sinElevation), 0, 0, 2 * Math.PI);
+      ctx.fillStyle = metal;
+      ctx.fill();
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(223, 239, 255, 0.65)';
+      ctx.stroke();
+
+      const referenceAngle = -viewYaw;
+      const referenceVisible = Math.cos(referenceAngle) >= 0;
+      const [phaseX, phaseY] = project(referenceAngle, phaseHeight, lampRadius);
+      const labelX = centerX - collarRadius * scale - 18;
+      ctx.save();
+      ctx.globalAlpha = referenceVisible ? 1 : 0.62;
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 5]);
+      ctx.strokeStyle = 'rgba(85, 117, 167, 0.9)';
+      ctx.beginPath();
+      ctx.moveTo(...project(referenceAngle, 0.5, lampRadius));
+      ctx.lineTo(...project(referenceAngle, lampLength - 0.5, lampRadius));
+      ctx.stroke();
+      if (referenceVisible) ctx.setLineDash([]);
+
+      ctx.font = '600 14px system-ui, sans-serif';
+      ctx.textBaseline = 'middle';
+      ctx.strokeStyle = phaseColor;
+      ctx.beginPath();
+      ctx.moveTo(labelX + 5, phaseY);
+      ctx.lineTo(phaseX, phaseY);
+      ctx.stroke();
+      ctx.textAlign = 'right';
+      ctx.fillStyle = phaseColor;
+      ctx.fillText(referenceVisible ? '红纹交点' : '背面交点', labelX, phaseY);
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.arc(phaseX, phaseY, 6, 0, 2 * Math.PI);
+      if (referenceVisible) {
+        ctx.fill();
+        ctx.strokeStyle = '#15243c';
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function render() {
+      timeDisplay.textContent = time.toFixed(2);
+      draw();
+    }
+
+    function stop() {
+      if (frame !== null) cancelAnimationFrame(frame);
+      frame = null;
+      previousTimestamp = null;
+      playButton.textContent = time === duration ? '重播' : '播放';
+    }
+
+    function animate(timestamp) {
+      if (previousTimestamp !== null) {
+        time = Math.min(duration, time + (timestamp - previousTimestamp) / 1000);
+      }
+      previousTimestamp = timestamp;
+      render();
+      if (time === duration) stop();
+      else frame = requestAnimationFrame(animate);
+    }
+
+    playButton.addEventListener('click', () => {
+      if (manualMode) return;
+      if (frame !== null) {
+        stop();
+        return;
+      }
+      if (time === duration) time = 0;
+      playButton.textContent = '暂停';
+      render();
+      frame = requestAnimationFrame(animate);
+    });
+
+    function selectMode(isManual) {
+      if (manualMode === isManual) return;
+      stop();
+      drag = null;
+      manualMode = isManual;
+      autoModeButton.setAttribute('aria-pressed', String(!isManual));
+      manualModeButton.setAttribute('aria-pressed', String(isManual));
+      playButton.hidden = isManual;
+      document.getElementById('time-readout').hidden = isManual;
+      document.getElementById('mode-hint').textContent = isManual
+        ? '左右拖动转灯。按住 Shift 拖动可调整视角。蓝点到达一端后会接到另一端的红纹交点。'
+        : '点击播放，观察红纹交点沿轴上移。拖动可调整视角。';
+      document.getElementById('phase-title').textContent = isManual ? '红纹交点' : '相速 · 6 cm/s';
+      render();
+    }
+
+    autoModeButton.addEventListener('click', () => selectMode(false));
+    manualModeButton.addEventListener('click', () => selectMode(true));
+
+    document.getElementById('reset').addEventListener('click', () => {
+      const view = manualMode ? manualView : autoView;
+      view.yaw = 0;
+      view.elevation = defaultElevation;
+      if (manualMode) {
+        manualPhaseHeight = initialPhaseHeight;
+      } else {
+        time = 0;
+      }
+      stop();
+      render();
+    });
+
+    function rotate(horizontal, vertical, shiftHeld) {
+      if (manualMode && !shiftHeld) {
+        if (horizontal === 0) return;
+        const nextHeight = manualPhaseHeight + horizontal * pitch / (2 * Math.PI);
+        const offset = nextHeight - lowestTrackedHeight;
+        // Track another turn at the opposite end without moving the stripe pattern.
+        manualPhaseHeight = lowestTrackedHeight + offset - trackedLength * Math.floor(offset / trackedLength);
+      } else {
+        const view = manualMode ? manualView : autoView;
+        const angle = view.yaw + horizontal;
+        view.yaw = Math.atan2(Math.sin(angle), Math.cos(angle));
+        view.elevation = Math.max(-1.05, Math.min(1.05, view.elevation + vertical));
+      }
+      draw();
+    }
+
+    canvas.addEventListener('pointerdown', event => {
+      if (drag || event.button !== 0) return;
+      drag = { id: event.pointerId, x: event.clientX, y: event.clientY };
+      canvas.setPointerCapture(event.pointerId);
+    });
+
+    canvas.addEventListener('pointermove', event => {
+      if (drag?.id !== event.pointerId) return;
+      rotate((drag.x - event.clientX) * 0.012, (event.clientY - drag.y) * 0.009, event.shiftKey);
+      drag.x = event.clientX;
+      drag.y = event.clientY;
+    });
+
+    canvas.addEventListener('lostpointercapture', event => {
+      if (drag?.id === event.pointerId) drag = null;
+    });
+
+    canvas.addEventListener('keydown', event => {
+      const directions = {
+        ArrowLeft: [-0.15, 0], ArrowRight: [0.15, 0],
+        ArrowUp: [0, 0.12], ArrowDown: [0, -0.12]
+      };
+      const direction = directions[event.key];
+      if (!Array.isArray(direction)) return;
+      event.preventDefault();
+      rotate(...direction, event.shiftKey);
+    });
+
+    function resize() {
+      width = canvas.clientWidth;
+      height = canvas.clientHeight;
+      pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(width * pixelRatio);
+      canvas.height = Math.round(height * pixelRatio);
+      ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      draw();
+    }
+
+    new ResizeObserver(resize).observe(canvas);
+    resize();
+  </script>
+</body>
+</html>

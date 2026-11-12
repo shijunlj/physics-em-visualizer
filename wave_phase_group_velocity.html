@@ -33,6 +33,19 @@
       padding: clamp(32px, 7vh, 82px) 0 32px;
     }
 
+    .home-link {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      margin-bottom: 6px;
+      color: var(--group);
+      font-size: 13px;
+      text-decoration: none;
+    }
+
+    .home-link:hover { text-decoration: underline; }
+    .home-link:focus-visible { outline: 2px solid var(--group); outline-offset: 2px; }
+
     h1 {
       margin: 0 0 10px;
       font-size: clamp(28px, 5vw, 42px);
@@ -180,6 +193,7 @@
 <body>
   <main>
     <header>
+      <a class="home-link" href="./index.html">← 返回主页</a>
       <h1>波的相速与群速</h1>
       <p>两列等振幅、波数和频率相近的正弦波叠加。</p>
     </header>
