@@ -14,6 +14,8 @@
     onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '\\(', right: '\\)', display: false}]});"></script>
   <style>
     :root {
+      --home-bottom: max(12px, env(safe-area-inset-bottom));
+      --home-height: 36px;
       color-scheme: dark;
       --bg: #16243b;
       --panel-bg: rgba(34, 48, 73, 0.92);
@@ -74,10 +76,17 @@
     }
 
     .home-link {
+      position: fixed;
+      right: max(18px, env(safe-area-inset-right));
+      bottom: var(--home-bottom);
+      z-index: 30;
       display: inline-flex;
       align-items: center;
-      min-height: 24px;
-      margin-bottom: 5px;
+      min-height: var(--home-height);
+      padding: 0 12px;
+      border: 1px solid #526582;
+      border-radius: 8px;
+      background: #22304a;
       color: var(--accent);
       font-size: 13px;
       text-decoration: none;
@@ -204,7 +213,7 @@
       position: absolute;
       top: 62px;
       right: 18px;
-      bottom: 16px;
+      bottom: calc(var(--home-bottom) + var(--home-height) + 10px);
       width: 47vw;
       z-index: 10;
       background: var(--panel-bg);
@@ -258,7 +267,6 @@
 
   <!-- 左上角：题目与线型颜色图例 -->
   <div id="header-card">
-    <a class="home-link" href="./index.html">← 返回主页</a>
     <h1>
       <span>半径为 \(a\) 的环形导线有电流 \(I\). 求矢势和磁感应强度.</span>
     </h1>
@@ -314,6 +322,8 @@
       <canvas id="proj-canvas" width="820" height="820"></canvas>
     </div>
   </div>
+
+  <a class="home-link" href="./index.html">← 返回主页</a>
 
   <script>
     /* ==============================================================
@@ -1093,5 +1103,6 @@
     }
     requestAnimationFrame(animate);
   </script>
+  <script src="./return_home.js"></script>
 </body>
 </html>

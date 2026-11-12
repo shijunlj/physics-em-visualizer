@@ -7,6 +7,12 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
   <style>
+    :root {
+      --home-bottom: max(12px, env(safe-area-inset-bottom));
+      --home-height: 36px;
+      --accent: #76e8cf;
+    }
+
     * {
       box-sizing: border-box;
       margin: 0;
@@ -26,14 +32,18 @@
     }
 
     .home-link {
-      position: absolute;
-      top: 14px;
-      left: 18px;
-      z-index: 1;
+      position: fixed;
+      right: max(18px, env(safe-area-inset-right));
+      bottom: var(--home-bottom);
+      z-index: 30;
       display: inline-flex;
       align-items: center;
-      min-height: 24px;
-      color: #76e8cf;
+      min-height: var(--home-height);
+      padding: 0 12px;
+      border: 1px solid #526582;
+      border-radius: 8px;
+      background: #22304a;
+      color: var(--accent);
       font-size: 13px;
       text-decoration: none;
     }
@@ -43,14 +53,15 @@
     }
 
     .home-link:focus-visible {
-      outline: 2px solid #76e8cf;
+      outline: 2px solid var(--accent);
       outline-offset: 2px;
     }
   </style>
 </head>
 <body>
-  <a class="home-link" href="./index.html">← 返回主页</a>
   <div id="webgl-container"></div>
+
+  <a class="home-link" href="./index.html">← 返回主页</a>
 
   <script>
     // 1. 初始化场景、相机与渲染器
@@ -258,5 +269,6 @@
 
     animate();
   </script>
+  <script src="./return_home.js"></script>
 </body>
 </html>
