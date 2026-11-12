@@ -2,7 +2,7 @@
 
 🌐 **在线演示网站（GitHub Pages）**：[**https://shijunlj.github.io/physics-em-visualizer/**](https://shijunlj.github.io/physics-em-visualizer/)
 
-本项目包含 15 个基于 **Three.js 或 HTML5 Canvas** 的独立单文件 HTML 交互式物理演示页面（及 `index.html` 导航主页），涵盖稳恒磁场、空间拓扑和波动等主题。各演示均可直接在浏览器中打开，交互方式包括三维视角旋转、缩放、动画播放和参数调节。
+本项目包含 16 个基于 **Three.js 或 HTML5 Canvas** 的独立单文件 HTML 交互式物理演示页面（及 `index.html` 导航主页），涵盖稳恒磁场、空间拓扑和波动等主题。各演示均可直接在浏览器中打开，交互方式包括三维视角旋转、缩放、动画播放和参数调节。
 
 ---
 
@@ -25,6 +25,7 @@
 | 13 | [`cylindrical_shell_current_comparison.html`](./cylindrical_shell_current_comparison.html) | **圆柱壳上的两种表面电流与磁场对偶性** | 左右双栏独立 3D 联动对比：直观呈现无限长圆柱薄壳“竖直圆柱·轴向电流 $j$”与“水平圆柱·环向电流 $j'$（理想螺线管）”所激发磁场的完美内外对偶性；直观展现轴向电流在壳内 $B \equiv 0$、壳外 $B \propto 1/r$ 环形分布，与环向电流在壳内 $B \equiv \mu_0 j'$ 匀强直线、壳外 $B \equiv 0$ 的互补规律；支持双栏独立 360° 拖拽缩放、探针 $P$ 在 $r/R \in [0, 2.40]$ 自由探测/一键进出壳，并动态显示壳面内外极限跳变。 |
 | 14 | [`wave_reflection_refraction.html`](./wave_reflection_refraction.html) | **电磁波在介质界面的反射与折射** | 调节入射角和相对折射率，观察反射与折射角、s／p 偏振方向、布儒斯特角和半波损。全反射模式展示相位滞后、倏逝场和古斯–汉欣位移示意，s 偏振时域模式展示电场与磁场的变化。 |
 | 15 | [`wave_phase_group_velocity.html`](./wave_phase_group_velocity.html) | **波的相速与群速** | 播放两列正弦波的叠加动画，对比固定相位和包络峰顶的移动。波数固定时，调节平均频率改变相速，调节频率差改变群速。 |
+| 16 | [`barber_pole_phase_group_velocity.html`](./barber_pole_phase_group_velocity.html) | **理发灯与相速** | 自动播放或手动旋转灯筒，观察红色螺旋条纹与固定观察线的交点沿灯轴移动，类比波的相速。 |
 
 ---
 
