@@ -14,18 +14,22 @@
     onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '\\(', right: '\\)', display: false}]});"></script>
   <style>
     :root {
-      --bg: #080c16;
-      --panel-bg: rgba(15, 23, 42, 0.88);
-      --border: rgba(148, 163, 184, 0.22);
+      color-scheme: dark;
+      --bg: #16243b;
+      --panel-bg: rgba(34, 48, 73, 0.92);
+      --border: rgba(143, 167, 205, 0.34);
+      --control-bg: #293b58;
+      --control-hover: #344c66;
+      --accent: #76e8cf;
       --c-wire: #e2e8f0;     /* 银色环形导线 */
-      --c-a: #10b981;        /* 半径 a：醒目翠绿 */
-      --c-R: #38bdf8;        /* 距离 R：醒目天蓝 */
-      --c-rprime: #f43f5e;   /* 距离 r'：醒目玫红 */
+      --c-a: #10b981;        /* 半径 a：醒目翠绿（虚线） */
+      --c-R: #38bdf8;        /* 距离 R (OP)：醒目天蓝（虚线） */
+      --c-rprime: #f43f5e;   /* 距离 r'：醒目红色（实线） */
       --c-phi: #c084fc;      /* 夹角 φ 与辅助色：亮紫 */
       --c-vecA: #22d3ee;     /* 磁矢势 A：亮青色 */
       --c-rad: #fb7185;      /* 径向抵消分量 dA_r：珊瑚粉红 */
       --text: #f8fafc;
-      --text-dim: #94a3b8;
+      --text-dim: #bbcce4;
     }
 
     * {
@@ -36,7 +40,7 @@
     }
 
     body {
-      background: radial-gradient(circle at 42% 50%, #0f172a 0%, #060911 100%);
+      background: radial-gradient(ellipse 620px 340px at 0% 0%, #302c55, transparent 75%), var(--bg);
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
       width: 100vw;
@@ -44,8 +48,9 @@
       overflow: hidden;
     }
 
+    /* 左侧 3D 视图容器：占据屏幕左半区（50vw），使左图自然靠左并与右图等大 */
     #webgl-container {
-      width: 100vw;
+      width: 50vw;
       height: 100vh;
       position: absolute;
       top: 0;
@@ -53,23 +58,43 @@
       z-index: 1;
     }
 
-    /* 左上角：题目与颜色图例卡片 */
+    /* 左上角：紧凑题干与线型图例卡片 */
     #header-card {
       position: absolute;
-      top: 16px;
+      top: 14px;
       left: 16px;
       z-index: 10;
       background: var(--panel-bg);
-      backdrop-filter: blur(14px);
+      backdrop-filter: blur(12px);
       border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 14px 18px;
-      max-width: 590px;
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+      border-radius: 11px;
+      padding: 10px 14px;
+      max-width: 470px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.40);
+    }
+
+    .home-link {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      margin-bottom: 5px;
+      color: var(--accent);
+      font-size: 13px;
+      text-decoration: none;
+    }
+
+    .home-link:hover {
+      text-decoration: underline;
+    }
+
+    .home-link:focus-visible,
+    .btn:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
     }
 
     #header-card h1 {
-      font-size: 16px;
+      font-size: 14.5px;
       font-weight: 700;
       color: #f8fafc;
       margin-bottom: 6px;
@@ -78,142 +103,88 @@
       gap: 8px;
     }
 
-    #header-card p {
-      font-size: 12.5px;
-      color: #cbd5e1;
-      line-height: 1.55;
-      margin-bottom: 8px;
-    }
-
     .legend-strip {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 13px;
-      font-size: 12px;
-      padding-top: 6px;
-      border-top: 1px solid rgba(148, 163, 184, 0.15);
+      gap: 12px;
+      font-size: 11.5px;
+      color: var(--text-dim);
     }
 
     .legend-item {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
     }
 
     .legend-swatch {
-      width: 16px;
+      width: 18px;
       height: 3.5px;
       border-radius: 2px;
     }
 
-    /* 左下角：对应教材右图的 2D 轴向投影小窗 */
-    #proj-card {
+    .legend-swatch.dashed-a {
+      background: repeating-linear-gradient(90deg, var(--c-a) 0 5px, transparent 5px 9px);
+    }
+
+    .legend-swatch.dashed-R {
+      background: repeating-linear-gradient(90deg, var(--c-R) 0 5px, transparent 5px 9px);
+    }
+
+    /* 右上角：小巧独立按键栏（自适应宽度，无需与右图一样宽） */
+    #ui-panel {
       position: absolute;
-      bottom: 16px;
-      left: 16px;
-      z-index: 10;
+      top: 14px;
+      right: 18px;
+      z-index: 20;
+      width: auto;
       background: var(--panel-bg);
       backdrop-filter: blur(14px);
       border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 12px 14px;
-      width: 292px;
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
-    }
-
-    .proj-title {
-      font-size: 12px;
-      font-weight: 600;
-      color: #cbd5e1;
-      margin-bottom: 8px;
+      border-radius: 10px;
+      padding: 6px 8px;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    #proj-canvas {
-      width: 264px;
-      height: 245px;
-      background: rgba(8, 12, 22, 0.85);
-      border-radius: 8px;
-      border: 1px solid rgba(148, 163, 184, 0.16);
-      display: block;
-    }
-
-    /* 右侧：交互控制面板 */
-    #ui-panel {
-      position: absolute;
-      top: 16px;
-      right: 16px;
-      z-index: 10;
-      width: 385px;
-      max-height: calc(100vh - 32px);
-      overflow-y: auto;
-      background: var(--panel-bg);
-      backdrop-filter: blur(16px);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 16px 18px;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
-      display: flex;
-      flex-direction: column;
-      gap: 11px;
-    }
-
-    .section-title {
-      font-size: 13px;
-      font-weight: 700;
-      color: #38bdf8;
-      display: flex;
+      flex-wrap: wrap;
       align-items: center;
       gap: 6px;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 6px;
-    }
-
-    .btn-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 7px;
     }
 
     .btn {
-      padding: 8px 10px;
-      background: rgba(30, 41, 59, 0.85);
+      padding: 5px 10px;
+      background: var(--control-bg);
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: 7px;
       color: var(--text);
-      font-size: 12px;
+      font-size: 11.5px;
       font-weight: 500;
       cursor: pointer;
-      transition: all 0.2s;
-      display: flex;
+      transition: background-color 0.18s ease, border-color 0.18s ease;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 5px;
-    }
-
-    .btn.full-width {
-      grid-column: 1 / -1;
+      gap: 4px;
+      white-space: nowrap;
     }
 
     .btn:hover {
-      background: rgba(51, 65, 85, 0.92);
-      border-color: rgba(148, 163, 184, 0.45);
+      background: var(--control-hover);
+      border-color: var(--accent);
     }
 
     .btn.active {
-      background: rgba(56, 189, 248, 0.2);
-      border-color: #38bdf8;
-      color: #38bdf8;
+      background: #234b52;
+      border-color: var(--accent);
+      color: #ddfff6;
+      box-shadow: 0 0 12px rgba(118, 232, 207, 0.22);
       font-weight: 600;
     }
 
     .btn.action-random {
       background: rgba(16, 185, 129, 0.18);
       border-color: rgba(16, 185, 129, 0.55);
-      color: #34d399;
+      color: var(--accent);
       font-weight: 600;
     }
 
@@ -221,281 +192,149 @@
       background: rgba(16, 185, 129, 0.30);
     }
 
-    .control-group {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
+    .btn.sym-toggle.active {
+      background: rgba(192, 132, 252, 0.20);
+      border-color: rgba(192, 132, 252, 0.65);
+      color: #d8b4fe;
+      font-weight: 600;
     }
 
-    .control-label {
-      font-size: 12px;
-      color: var(--text-dim);
+    /* 右半区：与左图等大的 2D 线圈平面投影区 */
+    #proj-card {
+      position: absolute;
+      top: 62px;
+      right: 18px;
+      bottom: 16px;
+      width: 47vw;
+      z-index: 10;
+      background: var(--panel-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 12px 16px;
+      box-shadow: 0 16px 42px rgba(0, 0, 0, 0.45);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .proj-title {
+      width: 100%;
+      font-size: 13px;
+      font-weight: 700;
+      color: #e2e8f0;
+      margin-bottom: 4px;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-shrink: 0;
     }
 
-    .control-val {
-      font-weight: 600;
-      color: #f1f5f9;
-      font-family: "SF Mono", "Menlo", monospace;
-    }
-
-    input[type=range] {
-      -webkit-appearance: none;
+    .proj-canvas-wrap {
+      flex: 1;
       width: 100%;
-      background: transparent;
-    }
-
-    input[type=range]::-webkit-slider-runnable-track {
-      width: 100%;
-      height: 5px;
-      cursor: pointer;
-      background: #334155;
-      border-radius: 3px;
-    }
-
-    input[type=range]::-webkit-slider-thumb {
-      height: 15px;
-      width: 15px;
-      border-radius: 50%;
-      background: #38bdf8;
-      cursor: pointer;
-      -webkit-appearance: none;
-      margin-top: -5px;
-      box-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
-    }
-
-    .stat-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 7px;
-      background: rgba(15, 23, 42, 0.65);
-      padding: 9px 10px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-    }
-
-    .stat-item {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-
-    .stat-label {
-      font-size: 11px;
-      color: var(--text-dim);
-    }
-
-    .stat-num {
-      font-size: 13px;
-      font-weight: 700;
-      font-family: "SF Mono", monospace;
-    }
-
-    .check-row {
+      min-height: 0;
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 12px;
-      color: #cbd5e1;
-      cursor: pointer;
+      justify-content: center;
     }
 
-    .check-row input {
-      accent-color: #38bdf8;
-      cursor: pointer;
-    }
-
-    .theory-box {
-      background: rgba(15, 23, 42, 0.65);
-      border-left: 3px solid var(--c-vecA);
-      border-radius: 6px;
-      padding: 9px 11px;
-      font-size: 11.8px;
-      color: #cbd5e1;
-      line-height: 1.55;
+    #proj-canvas {
+      max-width: 100%;
+      max-height: 100%;
+      aspect-ratio: 1 / 1;
+      background: #1a2942;
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      display: block;
     }
   </style>
 </head>
 <body>
 
-  <!-- 全屏 3D 渲染画布 -->
+  <!-- 左半屏 3D 渲染画布（左图） -->
   <div id="webgl-container"></div>
 
-  <!-- 左上角：题目与醒目颜色图例 -->
+  <!-- 左上角：题目与线型颜色图例 -->
   <div id="header-card">
+    <a class="home-link" href="./index.html">← 返回主页</a>
     <h1>
       <span>半径为 \(a\) 的环形导线有电流 \(I\). 求矢势和磁感应强度.</span>
     </h1>
-    <p>
-      过场点 \(P\) 子午面两侧对称位置 \(\pm\varphi\) 各取电流元 \(I\mathrm{d}\vec{l}_1\) 与对称电流元 \(I\mathrm{d}\vec{l}_2\)（半透明浅色）：
-      二者距 \(P\) 均为 \(r'\)，产生的元矢势 \(\mathrm{d}\vec{A}_1\)、\(\mathrm{d}\vec{A}_2\) 的<strong>径向投影 \(\pm\mathrm{d}A_r\) 等大反向相互抵消</strong>，仅剩切向分量 \(2\mathrm{d}A\cos\varphi\,\hat{e}_\varphi\) 叠加成 \(\vec{A}\)。
-    </p>
     <div class="legend-strip">
       <div class="legend-item">
         <span class="legend-swatch" style="background: var(--c-wire);"></span>
         <span>导线 \(I\) (银色)</span>
       </div>
       <div class="legend-item">
-        <span class="legend-swatch" style="background: var(--c-a);"></span>
-        <span style="color: var(--c-a); font-weight: 600;">\(a\) (翠绿 / 浅绿对称元)</span>
+        <span class="legend-swatch dashed-a"></span>
+        <span style="color: var(--c-a); font-weight: 600;">\(a\) (翠绿虚线)</span>
       </div>
       <div class="legend-item">
-        <span class="legend-swatch" style="background: var(--c-R);"></span>
-        <span style="color: var(--c-R); font-weight: 600;">\(R\) (天蓝)</span>
+        <span class="legend-swatch dashed-R"></span>
+        <span style="color: var(--c-R); font-weight: 600;">\(R(OP)\) (天蓝虚线)</span>
       </div>
       <div class="legend-item">
         <span class="legend-swatch" style="background: var(--c-rprime);"></span>
-        <span style="color: var(--c-rprime); font-weight: 600;">\(r'\) (玫红)</span>
-      </div>
-      <div class="legend-item">
-        <span class="legend-swatch" style="background: var(--c-rad);"></span>
-        <span style="color: var(--c-rad); font-weight: 600;">径向抵消 \(\pm\mathrm{d}A_r\)</span>
+        <span style="color: var(--c-rprime); font-weight: 600;">\(r'\) (红色实线)</span>
       </div>
     </div>
   </div>
 
-  <!-- 左下角：对应教材右图的线圈平面 2D 投影图（含对称元与 dA 分解抵消） -->
+  <!-- 右上角：紧凑小按键条（自适应宽度，不与右图等宽） -->
+  <div id="ui-panel">
+    <button class="btn active" id="btn-view-side" onclick="resetAll()">
+      <span>重置</span>
+    </button>
+    <button class="btn" id="btn-view-ring" onclick="setCameraPreset('RING')">
+      <span>对着圆环看</span>
+    </button>
+    <button class="btn action-random" onclick="randomizeCurrentElement()">
+      <span>变换电流元位置</span>
+    </button>
+    <button class="btn" id="btn-sweep-phi" onclick="toggleSweepPhi()">
+      <span>循环电流元 φ</span>
+    </button>
+    <button class="btn sym-toggle active" id="btn-toggle-sym" onclick="toggleSymmetricElement()">
+      <span>隐藏对称电流元 (-φ)</span>
+    </button>
+    <button class="btn action-random" onclick="randomizePointP()">
+      <span>改变 P 点位置</span>
+    </button>
+  </div>
+
+  <!-- 右半屏：与左图等大的 2D 线圈平面投影图 -->
   <div id="proj-card">
     <div class="proj-title">
-      <span>⭕ 线圈平面投影（\(\mathrm{d}\vec{A}\) 径向抵消）</span>
+      <span>在线圈平面的投影（对称电流元与 \(\mathrm{d}\vec{A}\) 径向分量抵消）</span>
       <span style="color: var(--c-phi); font-family: monospace;" id="proj-phi-txt">±φ = ±40°</span>
     </div>
-    <canvas id="proj-canvas" width="528" height="490"></canvas>
-  </div>
-
-  <!-- 右侧控制面板 -->
-  <div id="ui-panel">
-    <div class="section-title">🎥 视角切换与交互操作</div>
-    <div class="btn-grid">
-      <button class="btn" id="btn-view-side" onclick="setCameraPreset('SIDE')">
-        <span>📐 对齐左图 (子午面侧视)</span>
-      </button>
-      <button class="btn" id="btn-view-ring" onclick="setCameraPreset('RING')">
-        <span>👁️ 对着圆环看 (轴向视角)</span>
-      </button>
-      <button class="btn action-random" onclick="randomizePointP()">
-        <span>🎲 随机变换 P 点位置</span>
-      </button>
-      <button class="btn" id="btn-sweep-phi" onclick="toggleSweepPhi()">
-        <span>🔄 循环环上电流元 φ</span>
-      </button>
-    </div>
-
-    <div class="section-title">🎛️ 空间场点 \(P\) 与对称电流元调节</div>
-
-    <!-- 电流元相对夹角 φ -->
-    <div class="control-group">
-      <div class="control-label">
-        <span>电流元相对场点子午面夹角 \(\varphi\)</span>
-        <span class="control-val" style="color: var(--c-phi);" id="val-phi">40°</span>
-      </div>
-      <input type="range" id="slider-phi" min="0" max="360" step="1" value="40">
-    </div>
-
-    <!-- 所求点 P 的空间方位角 θ_P -->
-    <div class="control-group">
-      <div class="control-label">
-        <span>所求点 \(P\) 空间方位角 \(\theta_P\) (任一点方向)</span>
-        <span class="control-val" id="val-thetaP">42°</span>
-      </div>
-      <input type="range" id="slider-thetaP" min="-180" max="180" step="1" value="42">
-    </div>
-
-    <!-- 场点轴向距离 z -->
-    <div class="control-group">
-      <div class="control-label">
-        <span>场点轴向距离 \(z\)</span>
-        <span class="control-val" id="val-z">2.10 m</span>
-      </div>
-      <input type="range" id="slider-z" min="0.6" max="3.2" step="0.05" value="2.10">
-    </div>
-
-    <!-- 场点离轴距离 r -->
-    <div class="control-group">
-      <div class="control-label">
-        <span>场点离轴距离 \(r\)</span>
-        <span class="control-val" id="val-r">1.45 m</span>
-      </div>
-      <input type="range" id="slider-r" min="0.3" max="2.2" step="0.05" value="1.45">
-    </div>
-
-    <!-- 圆环半径 a -->
-    <div class="control-group">
-      <div class="control-label">
-        <span>环形导线半径 \(a\)</span>
-        <span class="control-val" style="color: var(--c-a);" id="val-a">1.20 m</span>
-      </div>
-      <input type="range" id="slider-a" min="0.6" max="1.7" step="0.05" value="1.20">
-    </div>
-
-    <!-- 辅助显示复选框 -->
-    <label class="check-row">
-      <input type="checkbox" id="chk-sym" checked onchange="updateScene()">
-      <span>显示对称电流元 \(-\varphi\)（半透明浅色）</span>
-    </label>
-    <label class="check-row">
-      <input type="checkbox" id="chk-dA-proj" checked onchange="updateScene()">
-      <span>显示 \(\mathrm{d}\vec{A}_1, \mathrm{d}\vec{A}_2\) 投影分解与径向抵消 \(\pm\mathrm{d}A_r\)</span>
-    </label>
-    <label class="check-row">
-      <input type="checkbox" id="chk-meridian" checked onchange="updateScene()">
-      <span>显示空间点 \(P\) 的 \(z\text{-}r\text{-}R\) 子午面与线圈平面投影</span>
-    </label>
-    <label class="check-row">
-      <input type="checkbox" id="chk-vecB" onchange="updateScene()">
-      <span>同时显示磁感应强度矢量 \(\vec{B} = \nabla \times \vec{A}\)</span>
-    </label>
-
-    <!-- 实时物理量统计 -->
-    <div class="stat-grid">
-      <div class="stat-item">
-        <span class="stat-label">圆环半径 \(a\)</span>
-        <span class="stat-num" style="color: var(--c-a);" id="stat-a">1.20 m</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label">距环心 \(R = \sqrt{r^2+z^2}\)</span>
-        <span class="stat-num" style="color: var(--c-R);" id="stat-R">2.55 m</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label">对称元等距 \(r'(\pm\varphi)\)</span>
-        <span class="stat-num" style="color: var(--c-rprime);" id="stat-rprime">2.34 m</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label">环向总矢势 \(A_\varphi(r,z)\)</span>
-        <span class="stat-num" style="color: var(--c-vecA);" id="stat-A">0.138 μ₀I</span>
-      </div>
-    </div>
-
-    <!-- 公式说明 -->
-    <div class="theory-box">
-      <b>📐 对称性与径向分量抵消原理：</b><br>
-      \(\mathrm{d}\vec{A}(\pm\varphi) = \frac{\mu_0 I a\,\mathrm{d}\varphi}{4\pi r'}(\mp\sin\varphi\,\hat{e}_r + \cos\varphi\,\hat{e}_\varphi)\)<br>
-      径向分量 \(\mathrm{d}A_{1r} + \mathrm{d}A_{2r} = 0\) 抵消，故 \(\vec{A}\) 沿 \(\hat{e}_\varphi\) 方向：<br>
-      \(\vec{A}(r,z) = \hat{e}_\varphi \frac{\mu_0 I a}{2\pi}\int_0^\pi \frac{\cos\varphi\,\mathrm{d}\varphi}{\sqrt{R^2 + a^2 - 2ar\cos\varphi}}\)
+    <div class="proj-canvas-wrap">
+      <canvas id="proj-canvas" width="820" height="820"></canvas>
     </div>
   </div>
 
   <script>
     /* ==============================================================
-       1. Three.js 全屏三维场景初始化
+       1. Three.js 左半屏三维场景初始化（让左图靠左、尺寸适中并与右图等大）
        ============================================================== */
     const container = document.getElementById('webgl-container');
     const scene = new THREE.Scene();
 
-    const camera = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const camera = new THREE.PerspectiveCamera(38, container.clientWidth / container.clientHeight, 0.1, 1000);
     const controls = new THREE.OrbitControls(camera, container);
     controls.enableDamping = true;
     controls.dampingFactor = 0.06;
 
-    // 初始 3D 空间视角
-    camera.position.set(3.4, 2.0, 4.6);
-    controls.target.set(1.15, 0.20, -0.25);
+    // 相机距离适度拉远，使左图稍小一些，与右侧大幅投影图视觉尺寸 1:1 匹配
+    camera.position.set(4.5, 2.5, 6.2);
+    controls.target.set(0.95, 0.25, 0.0);
     controls.update();
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setClearAlpha(0);
+    renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     container.appendChild(renderer.domElement);
 
@@ -509,7 +348,10 @@
     scene.add(dirLight2);
 
     /* ==============================================================
-       2. 醒目颜色常量（全图无金色）与无矩形框数学变量标签（支持半透明）
+       2. 醒目颜色常量与统一线宽工具函数
+       - r' 为红色实线 (LINE_RADIUS = 0.018)
+       - a、R (OP) 为与 r' 同样粗的 3D 圆柱虚线 (LINE_RADIUS = 0.018)
+       - OP (R)、r、z 的线粗细均与 r' 完全相同 (LINE_RADIUS = 0.018)
        ============================================================== */
     const COLORS = {
       wire: 0xe2e8f0,
@@ -519,11 +361,12 @@
       zr: 0xe2e8f0,
       phi: 0xc084fc,
       vecA: 0x22d3ee,
-      radCancel: 0xfb7185,
-      vecB: 0xa78bfa
+      radCancel: 0xfb7185
     };
 
-    // 绘制无矩形框的纯净斜体数学符号标签（支持 alpha 透明度控制深浅）
+    const LINE_RADIUS = 0.018; // r'、a、R (OP)、r、z 统一的 3D 线粗细半径
+
+    // 绘制无矩形框的纯净斜体数学符号标签
     function makeLabelSprite(text, color = '#ffffff', fontSize = 36, scaleHeight = 0.28, opacity = 1.0) {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
@@ -539,7 +382,6 @@
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
-      // 不加矩形框，仅加柔和暗色描边/阴影确保在线条上清晰醒目
       ctx.shadowColor = 'rgba(2, 6, 23, 0.95)';
       ctx.shadowBlur = 8;
       ctx.lineWidth = 4;
@@ -562,13 +404,14 @@
       return sprite;
     }
 
-    function createDashedSegment(p1, p2, colorHex, dashSize = 0.08, gapSize = 0.05, opacity = 1.0) {
+    // 细辅助参考虚线（仅用于坐标轴延长线和辅助圆周）
+    function createThinDashedSegment(p1, p2, colorHex, dashSize = 0.08, gapSize = 0.05, opacity = 1.0) {
       const geo = new THREE.BufferGeometry().setFromPoints([p1, p2]);
       const mat = new THREE.LineDashedMaterial({
         color: colorHex,
         dashSize,
         gapSize,
-        linewidth: 2,
+        linewidth: 1,
         transparent: opacity < 1.0,
         opacity: opacity
       });
@@ -577,9 +420,10 @@
       return line;
     }
 
-    function createSolidSegment(p1, p2, colorHex, radius = 0.015, opacity = 1.0) {
+    // 实线 3D 圆柱管（用于 r' 红色实线、r、z 等）
+    function createSolidSegment(p1, p2, colorHex, radius = LINE_RADIUS, opacity = 1.0) {
       const curve = new THREE.LineCurve3(p1, p2);
-      const geo = new THREE.TubeGeometry(curve, 8, radius, 10, false);
+      const geo = new THREE.TubeGeometry(curve, 8, radius, 12, false);
       const mat = new THREE.MeshBasicMaterial({
         color: colorHex,
         transparent: opacity < 1.0,
@@ -589,7 +433,37 @@
       return new THREE.Mesh(geo, mat);
     }
 
-    function createCustomArrow(dir, originPt, length, colorHex, headLen = 0.13, headRadius = 0.045, shaftRadius = 0.012, opacity = 1.0) {
+    // 与 r' 同样粗的 3D 圆柱虚线（用于 a、R(OP) 等，保证在 WebGL 中与实线 r' 粗细完全一致！）
+    function createThickDashedSegment(p1, p2, colorHex, radius = LINE_RADIUS, dashLen = 0.095, gapLen = 0.065, opacity = 1.0) {
+      const group = new THREE.Group();
+      const totalDist = p1.distanceTo(p2);
+      if (totalDist < 1e-4) return group;
+
+      const dir = new THREE.Vector3().subVectors(p2, p1).normalize();
+      const step = dashLen + gapLen;
+      const mat = new THREE.MeshBasicMaterial({
+        color: colorHex,
+        transparent: opacity < 1.0,
+        opacity: opacity,
+        depthWrite: opacity >= 1.0
+      });
+      const upVec = new THREE.Vector3(0, 1, 0);
+      const quat = new THREE.Quaternion().setFromUnitVectors(upVec, dir);
+
+      for (let s = 0; s < totalDist; s += step) {
+        const segLen = Math.min(dashLen, totalDist - s);
+        if (segLen < 0.01) break;
+        const cylGeo = new THREE.CylinderGeometry(radius, radius, segLen, 10);
+        const mesh = new THREE.Mesh(cylGeo, mat);
+        const mid = new THREE.Vector3().copy(p1).addScaledVector(dir, s + segLen * 0.5);
+        mesh.position.copy(mid);
+        mesh.quaternion.copy(quat);
+        group.add(mesh);
+      }
+      return group;
+    }
+
+    function createCustomArrow(dir, originPt, length, colorHex, headLen = 0.14, headRadius = 0.048, shaftRadius = LINE_RADIUS, opacity = 1.0) {
       const group = new THREE.Group();
       const d = dir.clone().normalize();
       const shaftLen = Math.max(0.02, length - headLen);
@@ -613,53 +487,22 @@
     }
 
     /* ==============================================================
-       3. 物理状态与数值积分
-       - thetaQDeg 锚定环上所取电流元 Q1 在世界坐标系中的固定位置，
-         使得随机变换或调节 P 点位置时，圆环与所取电流元 a 完全保持不动！
+       3. 物理状态
        ============================================================== */
     const params = {
       a: 1.20,
       z: 2.10,
       r: 1.45,
-      thetaPDeg: 42, // 空间任一点 P 绕中轴线的空间方位角
-      thetaQDeg: 82, // 环上所取电流元 Q1 在圆环上的世界方位角 (初始 42° + 40° = 82°)
+      thetaPDeg: 20, // 空间任一点 P 偏离圆环纵轴（竖直面）的角度，设为较小的 20°
+      thetaQDeg: 60, // 环上所取电流元 Q1 初始方位角 (20° + 40° = 60°，保持 φ = 40°)
       phiDeg: 40     // 电流元 Q1 相对场点子午面径向 e_r 的夹角 φ = thetaQ - thetaP
     };
 
     let isSweepingPhi = false;
-
-    function computeVectorPotentialA(r, z, a) {
-      const N = 120;
-      const dPhi = Math.PI / N;
-      let sum = 0;
-      for (let i = 0; i < N; i++) {
-        const phi = (i + 0.5) * dPhi;
-        const dist = Math.sqrt(a * a + r * r + z * z - 2 * a * r * Math.cos(phi));
-        sum += (Math.cos(phi) / Math.max(0.05, dist)) * dPhi;
-      }
-      return (a / (2 * Math.PI)) * sum;
-    }
-
-    function computeMagneticFieldB(r, z, a) {
-      const eps = 1e-3;
-      const AzPlus = computeVectorPotentialA(r, z + eps, a);
-      const AzMinus = computeVectorPotentialA(r, z - eps, a);
-      const Br = -(AzPlus - AzMinus) / (2 * eps);
-
-      if (r < 1e-3) {
-        const Bz = (a * a) / (2 * Math.pow(a * a + z * z, 1.5));
-        return { Br: 0, Bz };
-      }
-      const rPlus = r + eps;
-      const rMinus = Math.max(1e-4, r - eps);
-      const ArPlus = rPlus * computeVectorPotentialA(rPlus, z, a);
-      const ArMinus = rMinus * computeVectorPotentialA(rMinus, z, a);
-      const Bz = (ArPlus - ArMinus) / (r * (rPlus - rMinus));
-      return { Br, Bz };
-    }
+    let showSymInProjection = true; // 对称电流元开关（仅在右侧 2D 投影图中显示，左图 3D 视图不增加）
 
     /* ==============================================================
-       4. 构建 3D 场景与左下角 2D 线圈平面投影
+       4. 构建左图 3D 场景与右图等大 2D 线圈平面投影
        ============================================================== */
     const rootGroup = new THREE.Group();
     scene.add(rootGroup);
@@ -675,28 +518,21 @@
       const phiDegNorm = Math.round(((thetaQDeg - thetaPDeg) % 360 + 360) % 360);
       params.phiDeg = phiDegNorm;
 
-      const showSym = document.getElementById('chk-sym').checked;
-      const showDAProj = document.getElementById('chk-dA-proj').checked;
-      const showMeridian = document.getElementById('chk-meridian').checked;
-      const showVecB = document.getElementById('chk-vecB').checked;
-
       // 单位基矢：
-      // e_z = (1, 0, 0) 中心轴线
-      // e_r = (0, cos θ_P, -sin θ_P) 空间点 P 的径向单位矢
-      // e_φ = (0, -sin θ_P, -cos θ_P) 空间点 P 的顺时针切向单位矢
-      const ez = new THREE.Vector3(1, 0, 0);
       const er = new THREE.Vector3(0, Math.cos(thetaP), -Math.sin(thetaP));
       const ephi = new THREE.Vector3(0, -Math.sin(thetaP), -Math.cos(thetaP));
       const origin = new THREE.Vector3(0, 0, 0);
 
-      // 1. 中心轴线 z 与环平面十字参考线
-      rootGroup.add(createDashedSegment(new THREE.Vector3(-0.95, 0, 0), origin, 0x94a3b8, 0.07, 0.05));
-      rootGroup.add(createSolidSegment(origin, new THREE.Vector3(Math.max(3.3, z + 0.55), 0, 0), 0x94a3b8, 0.011));
-      rootGroup.add(createDashedSegment(new THREE.Vector3(0, -1.9, 0), new THREE.Vector3(0, 1.9, 0), 0x334155, 0.05, 0.05));
-      rootGroup.add(createDashedSegment(new THREE.Vector3(0, 0, -1.9), new THREE.Vector3(0, 0, 1.9), 0x334155, 0.05, 0.05));
+      // 1. 中心轴线 z（带右侧 z 轴正向箭头）与环平面十字参考线（细致虚线，带半透明，不抢视觉重心）
+      const zAxisLen = Math.max(3.35, z + 0.65);
+      const crossRadius = LINE_RADIUS * 0.38; // 细虚线半径约为 0.007，比 r 明显纤细
+      rootGroup.add(createThickDashedSegment(new THREE.Vector3(-0.95, 0, 0), origin, 0x94a3b8, crossRadius, 0.08, 0.06, 0.65));
+      rootGroup.add(createCustomArrow(new THREE.Vector3(1, 0, 0), origin, zAxisLen, 0x94a3b8, 0.16, 0.052, LINE_RADIUS, 1.0));
+      rootGroup.add(createThickDashedSegment(new THREE.Vector3(0, -1.9, 0), new THREE.Vector3(0, 1.9, 0), 0x94a3b8, crossRadius, 0.07, 0.05, 0.60));
+      rootGroup.add(createThickDashedSegment(new THREE.Vector3(0, 0, -1.9), new THREE.Vector3(0, 0, 1.9), 0x94a3b8, crossRadius, 0.07, 0.05, 0.60));
 
       // 2. 银色环形导线 (半径 a)
-      const torusGeo = new THREE.TorusGeometry(a, 0.025, 24, 100);
+      const torusGeo = new THREE.TorusGeometry(a, 0.026, 24, 100);
       torusGeo.rotateY(Math.PI / 2);
       const torusMat = new THREE.MeshStandardMaterial({
         color: COLORS.wire,
@@ -707,12 +543,33 @@
       });
       rootGroup.add(new THREE.Mesh(torusGeo, torusMat));
 
-      // 严格复刻教材左图的电流方向箭头：圆环前侧 (0, 0, +a) 向上 (0, +1, 0)
-      const frontLoopPt = new THREE.Vector3(0, -0.08, a);
-      const upDir = new THREE.Vector3(0, 1, 0);
-      rootGroup.add(new THREE.ArrowHelper(upDir, frontLoopPt, 0.30, COLORS.wire, 0.14, 0.09));
-      const labelI = makeLabelSprite('I', '#f8fafc', 36);
-      labelI.position.set(0, 0.04, a + 0.22);
+      // 靠近圆环外侧的一小段弯曲电流指示箭头及 I 标签（不标在电流环上）
+      const aCurved = a + 0.20;
+      const bStart = -0.36; // 弧度范围：沿切向从下至上
+      const bEnd = 0.18;
+      const curvedArrowPts = [];
+      const curvedSteps = 24;
+      for (let i = 0; i <= curvedSteps; i++) {
+        const u = bStart + (i / curvedSteps) * (bEnd - bStart);
+        curvedArrowPts.push(new THREE.Vector3(0, aCurved * Math.sin(u), aCurved * Math.cos(u)));
+      }
+      const curvedCurve = new THREE.CatmullRomCurve3(curvedArrowPts);
+      const curvedTubeGeo = new THREE.TubeGeometry(curvedCurve, 24, 0.013, 10, false);
+      const curvedMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+      rootGroup.add(new THREE.Mesh(curvedTubeGeo, curvedMat));
+
+      // 弯曲箭头的白色圆锥尖端
+      const tipPt = new THREE.Vector3(0, aCurved * Math.sin(bEnd), aCurved * Math.cos(bEnd));
+      const tipDir = new THREE.Vector3(0, Math.cos(bEnd), -Math.sin(bEnd)).normalize();
+      const tipConeGeo = new THREE.ConeGeometry(0.046, 0.14, 20);
+      const tipConeMesh = new THREE.Mesh(tipConeGeo, curvedMat);
+      tipConeMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), tipDir);
+      tipConeMesh.position.copy(tipPt).addScaledVector(tipDir, 0.07);
+      rootGroup.add(tipConeMesh);
+
+      // 电流符号 I 标签放在弯曲箭头外侧旁边
+      const labelI = makeLabelSprite('I', '#ffffff', 38);
+      labelI.position.set(0, aCurved * Math.sin((bStart + bEnd) * 0.5), aCurved * Math.cos((bStart + bEnd) * 0.5) + 0.20);
       rootGroup.add(labelI);
 
       // 3. 空间任一点 P(r, θ_P, z)
@@ -722,20 +579,20 @@
 
       // 所求点 P 标记球
       const pMesh = new THREE.Mesh(
-        new THREE.SphereGeometry(0.06, 20, 20),
+        new THREE.SphereGeometry(0.062, 20, 20),
         new THREE.MeshBasicMaterial({ color: 0xffffff })
       );
       pMesh.position.copy(ptP);
       rootGroup.add(pMesh);
 
       const labelP = makeLabelSprite('P', '#ffffff', 34);
-      labelP.position.copy(ptP).addScaledVector(er, 0.22).add(new THREE.Vector3(-0.14, 0, 0));
+      labelP.position.copy(ptP).addScaledVector(er, 0.22).add(new THREE.Vector3(-0.12, 0, 0));
       rootGroup.add(labelP);
 
-      // 【醒目天蓝色】实线 R (原点 O -> 空间点 P)
-      rootGroup.add(createSolidSegment(origin, ptP, COLORS.R, 0.017));
-      // 【亮银白色】实线 r (轴垂足 O' -> 空间点 P)
-      rootGroup.add(createSolidSegment(ptAxisZ, ptP, COLORS.zr, 0.014));
+      // 【天蓝色粗虚线】R (即 OP 连线：与 r' 同样粗的虚线，OP 线粗细与 r' 完全相同)
+      rootGroup.add(createThickDashedSegment(origin, ptP, COLORS.R, LINE_RADIUS, 0.10, 0.065));
+      // 【亮银白色粗虚线】r (轴垂足 O' -> 空间点 P，改为与 r' 同样粗的虚线)
+      rootGroup.add(createThickDashedSegment(ptAxisZ, ptP, COLORS.zr, LINE_RADIUS, 0.095, 0.06));
 
       // 垂足直角符号 ⊥
       const raSize = 0.14;
@@ -747,74 +604,63 @@
         new THREE.LineBasicMaterial({ color: 0x94a3b8 })
       ));
 
-      if (showMeridian) {
-        // 半透明子午面三角形 (O - O' - P)
-        const triGeo = new THREE.BufferGeometry().setFromPoints([origin, ptAxisZ, ptP]);
-        triGeo.setIndex([0, 1, 2]);
-        rootGroup.add(new THREE.Mesh(triGeo, new THREE.MeshBasicMaterial({
-          color: COLORS.R,
-          transparent: true,
-          opacity: 0.08,
-          side: THREE.DoubleSide,
-          depthWrite: false
-        })));
+      // 半透明子午面三角形 (O - O' - P) 与辅助投影虚线
+      const triGeo = new THREE.BufferGeometry().setFromPoints([origin, ptAxisZ, ptP]);
+      triGeo.setIndex([0, 1, 2]);
+      rootGroup.add(new THREE.Mesh(triGeo, new THREE.MeshBasicMaterial({
+        color: COLORS.R,
+        transparent: true,
+        opacity: 0.07,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      })));
 
-        // P 所在的离轴圆周虚线 (半径 r)
-        const circlePts = [];
-        for (let i = 0; i <= 72; i++) {
-          const ang = (i / 72) * Math.PI * 2;
-          circlePts.push(new THREE.Vector3(z, r * Math.cos(ang), -r * Math.sin(ang)));
-        }
-        const circleLine = new THREE.Line(
-          new THREE.BufferGeometry().setFromPoints(circlePts),
-          new THREE.LineDashedMaterial({ color: 0x475569, dashSize: 0.07, gapSize: 0.06 })
-        );
-        circleLine.computeLineDistances();
-        rootGroup.add(circleLine);
-
-        // P 到线圈平面的平行投影虚线 (P -> ptPProjLoop) 与径向基准虚线 (O -> ptPProjLoop)
-        rootGroup.add(createDashedSegment(ptP, ptPProjLoop, 0x64748b, 0.06, 0.06, 0.65));
-        rootGroup.add(createDashedSegment(origin, ptPProjLoop, 0x94a3b8, 0.06, 0.05, 0.75));
+      const circlePts = [];
+      for (let i = 0; i <= 72; i++) {
+        const ang = (i / 72) * Math.PI * 2;
+        circlePts.push(new THREE.Vector3(z, r * Math.cos(ang), -r * Math.sin(ang)));
       }
+      const circleLine = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(circlePts),
+        new THREE.LineDashedMaterial({ color: 0x475569, dashSize: 0.07, gapSize: 0.06 })
+      );
+      circleLine.computeLineDistances();
+      rootGroup.add(circleLine);
+
+      rootGroup.add(createThinDashedSegment(ptP, ptPProjLoop, 0x64748b, 0.06, 0.06, 0.65));
+      rootGroup.add(createThinDashedSegment(origin, ptPProjLoop, 0x94a3b8, 0.06, 0.05, 0.75));
 
       // 标签 z, r, R（无矩形框）
       const labelZ = makeLabelSprite('z', '#e2e8f0', 36);
-      labelZ.position.set(z * 0.55, -0.20 * Math.cos(thetaP), 0.20 * Math.sin(thetaP));
+      labelZ.position.set(z * 0.55, -0.22 * Math.cos(thetaP), 0.22 * Math.sin(thetaP));
       rootGroup.add(labelZ);
 
       const labelSmallR = makeLabelSprite('r', '#e2e8f0', 36);
-      labelSmallR.position.copy(ptAxisZ).addScaledVector(er, r * 0.5).add(new THREE.Vector3(0.18, 0, 0));
+      labelSmallR.position.copy(ptAxisZ).addScaledVector(er, r * 0.5).add(new THREE.Vector3(0.20, 0, 0));
       rootGroup.add(labelSmallR);
 
       const labelBigR = makeLabelSprite('R', '#38bdf8', 38);
-      labelBigR.position.copy(ptP).multiplyScalar(0.50).addScaledVector(er, -0.18);
+      labelBigR.position.copy(ptP).multiplyScalar(0.50).addScaledVector(er, -0.20);
       rootGroup.add(labelBigR);
 
-      // 4. 环上主电流元源点 Q1（由世界方位角 thetaQ 直接锚定，不随 P 点移动而跳动）
+      // 4. 左图 3D 环上仅显示主电流元 Q1（左图不增加对称电流元）
       const ptQ1 = new THREE.Vector3(0, a * Math.cos(thetaQ), -a * Math.sin(thetaQ));
       const tanQ1 = new THREE.Vector3(0, -Math.sin(thetaQ), -Math.cos(thetaQ)).normalize();
 
       const q1Mesh = new THREE.Mesh(
-        new THREE.SphereGeometry(0.052, 16, 16),
+        new THREE.SphereGeometry(0.055, 16, 16),
         new THREE.MeshBasicMaterial({ color: COLORS.a })
       );
       q1Mesh.position.copy(ptQ1);
       rootGroup.add(q1Mesh);
 
       // Q1 处顺时针切向电流箭头
-      rootGroup.add(createCustomArrow(tanQ1, ptQ1, 0.44, COLORS.wire, 0.13, 0.045, 0.012, 1.0));
+      rootGroup.add(createCustomArrow(tanQ1, ptQ1, 0.44, COLORS.wire, 0.13, 0.045, 0.013, 1.0));
 
-      // 【醒目翠绿色】半径 a (O -> Q1)
-      rootGroup.add(createSolidSegment(origin, ptQ1, COLORS.a, 0.016, 1.0));
-      // 【醒目玫红色】虚线 r' (Q1 -> P)
-      rootGroup.add(createDashedSegment(ptQ1, ptP, COLORS.rprime, 0.09, 0.05, 1.0));
-
-      // 环平面内投影虚线 (a cosφ e_r -> Q1)
-      const ptFootEr = new THREE.Vector3().addScaledVector(er, a * Math.cos(phi));
-      const ptHorizExt = new THREE.Vector3()
-        .copy(ptFootEr)
-        .addScaledVector(ephi, a * (Math.sin(phi) >= 0 ? 1.25 : -1.25));
-      rootGroup.add(createDashedSegment(ptFootEr, ptHorizExt, 0x94a3b8, 0.05, 0.04, 0.8));
+      // 【翠绿色粗虚线】半径 a (O -> Q1，与 r' 同样粗的虚线)
+      rootGroup.add(createThickDashedSegment(origin, ptQ1, COLORS.a, LINE_RADIUS, 0.095, 0.06));
+      // 【醒目红色实线】距离 r' (Q1 -> P，solid 红色实线)
+      rootGroup.add(createSolidSegment(ptQ1, ptP, COLORS.rprime, LINE_RADIUS, 1.0));
 
       // 夹角 φ 圆弧与标签
       if (Math.abs(Math.sin(phi)) > 0.03) {
@@ -841,232 +687,72 @@
       rootGroup.add(labelPhi);
 
       const labelA = makeLabelSprite('a', '#10b981', 38);
-      labelA.position.copy(ptQ1).multiplyScalar(0.54).add(new THREE.Vector3(-0.13, 0.07, 0));
+      labelA.position.copy(ptQ1).multiplyScalar(0.54).add(new THREE.Vector3(-0.14, 0.08, 0));
       rootGroup.add(labelA);
 
       const midRPrime = new THREE.Vector3().lerpVectors(ptQ1, ptP, 0.48);
       const labelRPrime = makeLabelSprite("r'", '#f43f5e', 38);
-      labelRPrime.position.copy(midRPrime).addScaledVector(er, 0.18);
+      labelRPrime.position.copy(midRPrime).addScaledVector(er, 0.19);
       rootGroup.add(labelRPrime);
 
-      // 5. 对称电流元 Q2 (-φ)：使用半透明浅色（opacity ≈ 0.38）渲染
-      const symOpacity = 0.38;
-      const ptQ2 = new THREE.Vector3()
-        .addScaledVector(er, a * Math.cos(-phi))
-        .addScaledVector(ephi, a * Math.sin(-phi));
-      const tanQ2 = new THREE.Vector3()
-        .addScaledVector(er, -Math.sin(-phi))
-        .addScaledVector(ephi, Math.cos(-phi))
-        .normalize();
-
-      if (showSym) {
-        const q2Mesh = new THREE.Mesh(
-          new THREE.SphereGeometry(0.048, 16, 16),
-          new THREE.MeshBasicMaterial({ color: COLORS.a, transparent: true, opacity: symOpacity })
-        );
-        q2Mesh.position.copy(ptQ2);
-        rootGroup.add(q2Mesh);
-
-        // 对称点 Q2 处的半透明切向电流箭头
-        rootGroup.add(createCustomArrow(tanQ2, ptQ2, 0.44, COLORS.wire, 0.13, 0.042, 0.011, symOpacity));
-        // 对称点 Q2 的半透明翠绿色半径 a 与半透明玫红色距离虚线 r'
-        rootGroup.add(createSolidSegment(origin, ptQ2, COLORS.a, 0.013, symOpacity));
-        rootGroup.add(createDashedSegment(ptQ2, ptP, COLORS.rprime, 0.08, 0.06, symOpacity));
-        rootGroup.add(createDashedSegment(ptFootEr, ptQ2, 0x94a3b8, 0.05, 0.05, symOpacity));
-
-        // -φ 半透明对称圆弧与标签
-        if (Math.abs(Math.sin(phi)) > 0.03) {
-          const arcPts2 = [];
-          const arcR2 = a * 0.36;
-          const steps = 28;
-          for (let i = 0; i <= steps; i++) {
-            const u = -(i / steps) * phi;
-            arcPts2.push(
-              new THREE.Vector3()
-                .addScaledVector(er, arcR2 * Math.cos(u))
-                .addScaledVector(ephi, arcR2 * Math.sin(u))
-            );
-          }
-          rootGroup.add(new THREE.Line(
-            new THREE.BufferGeometry().setFromPoints(arcPts2),
-            new THREE.LineBasicMaterial({ color: COLORS.phi, transparent: true, opacity: symOpacity })
-          ));
-          const labelMinusPhi = makeLabelSprite('-φ', '#c084fc', 32, 0.25, 0.52);
-          labelMinusPhi.position
-            .addScaledVector(er, a * 0.48 * Math.cos(-phi * 0.5))
-            .addScaledVector(ephi, a * 0.48 * Math.sin(-phi * 0.5));
-          rootGroup.add(labelMinusPhi);
-        }
-
-        const labelA2 = makeLabelSprite('a', '#10b981', 34, 0.25, 0.48);
-        labelA2.position.copy(ptQ2).multiplyScalar(0.54).add(new THREE.Vector3(-0.12, -0.06, 0));
-        rootGroup.add(labelA2);
-
-        const midRPrime2 = new THREE.Vector3().lerpVectors(ptQ2, ptP, 0.52);
-        const labelRPrime2 = makeLabelSprite("r'", '#f43f5e', 34, 0.25, 0.48);
-        labelRPrime2.position.copy(midRPrime2).addScaledVector(er, -0.15);
-        rootGroup.add(labelRPrime2);
-      }
-
-      // 6. 场点 P 处的矢势 A、对称元矢势 dA1/dA2 及其径向/切向投影分解（随 φ 与 r'(φ) 动态变化！）
+      // 5. 左图 3D 场点 P 处的元矢势箭头（随电流元 φ 与 1/r'(φ) 动态变化，左图不加对称元）
       const rPrimeLen = ptQ1.distanceTo(ptP);
-      const AphiVal = computeVectorPotentialA(r, z, a);
-      const { Br, Bz } = computeMagneticFieldB(r, z, a);
-      const Bmag = Math.hypot(Br, Bz);
-
-      // 元矢势大小反比于距离 r'(φ)：|dA| ∝ 1 / r'(φ)
-      const dALen = Math.min(0.92, Math.max(0.30, 1.50 / rPrimeLen));
-      const compPhiVal = dALen * Math.cos(phi);
-      const compRadVal = dALen * Math.sin(phi);
-
-      // 合成切向矢势 A 随 cos(φ)/r'(φ) 动态变化（近端 φ≈0° 正向最大，φ=90° 过零，远端 φ≈180° 反向且因 r' 更大而幅值较小）
-      const dirA = ephi.clone().multiplyScalar(compPhiVal >= 0 ? 1 : -1);
-      const lenA = Math.abs(compPhiVal) * (showSym ? 1.45 : 1.0);
-      if (lenA > 0.04) {
-        rootGroup.add(createCustomArrow(dirA, ptP, lenA, COLORS.vecA, 0.14, 0.050, 0.015, 1.0));
-      }
+      const dALen = Math.min(0.92, Math.max(0.32, 1.50 / rPrimeLen));
+      rootGroup.add(createCustomArrow(tanQ1, ptP, dALen, COLORS.vecA, 0.14, 0.048, 0.015, 1.0));
 
       const labelVecA = makeLabelSprite('A', '#22d3ee', 36);
-      labelVecA.position.copy(ptP).addScaledVector(dirA, Math.max(0.18, lenA + 0.17));
+      labelVecA.position.copy(ptP).addScaledVector(tanQ1, dALen + 0.17);
       rootGroup.add(labelVecA);
 
-      // 在线圈平面投影点 ptPProjLoop 处同步画出随 φ 动态变化的 A 投影箭头
-      if (showMeridian) {
-        const ptATip = ptP.clone().addScaledVector(dirA, lenA);
-        const ptATipProj = ptPProjLoop.clone().addScaledVector(dirA, lenA);
-        if (lenA > 0.04) {
-          rootGroup.add(createDashedSegment(ptATip, ptATipProj, COLORS.vecA, 0.06, 0.06, 0.40));
-          rootGroup.add(createCustomArrow(dirA, ptPProjLoop, lenA, COLORS.vecA, 0.12, 0.040, 0.011, 0.58));
-        }
-        const pProjMesh = new THREE.Mesh(
-          new THREE.SphereGeometry(0.045, 16, 16),
-          new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.65 })
-        );
-        pProjMesh.position.copy(ptPProjLoop);
-        rootGroup.add(pProjMesh);
-      }
-
-      // 7. 展示电流元 Q1 与对称电流元 Q2 在场点 P 处产生的元矢势 dA1, dA2 及其正交投影分解（直观看到径向分量相抵消）
-      if (showDAProj) {
-        // dA1 平行于 tanQ1 = -sinφ e_r + cosφ e_φ，长度随 1/r'(φ) 动态变化
-        const endDA1 = ptP.clone().addScaledVector(tanQ1, dALen);
-        // dA2 平行于 tanQ2 = +sinφ e_r + cosφ e_φ，长度随 1/r'(φ) 动态变化
-        const endDA2 = ptP.clone().addScaledVector(tanQ2, dALen);
-
-        // 切向公共投影点: ptP + (dALen * cosφ) e_φ
-        const ptProjPhi = ptP.clone().addScaledVector(ephi, compPhiVal);
-        // 径向相反投影端点:
-        // dA1_r = -dALen * sinφ * e_r
-        const ptProjRad1 = ptP.clone().addScaledVector(er, -compRadVal);
-        // dA2_r = +dALen * sinφ * e_r (与 dA1_r 严格等大反向！)
-        const ptProjRad2 = ptP.clone().addScaledVector(er, +compRadVal);
-
-        // 绘制主元矢势 dA1（亮青色实箭头）与对称元矢势 dA2（半透明浅色箭头）
-        rootGroup.add(createCustomArrow(tanQ1, ptP, dALen, COLORS.vecA, 0.12, 0.040, 0.011, 0.92));
-        const labelDA1 = makeLabelSprite('dA₁', '#22d3ee', 28, 0.22, 0.95);
-        labelDA1.position.copy(endDA1).addScaledVector(tanQ1, 0.14);
-        rootGroup.add(labelDA1);
-
-        if (showSym) {
-          rootGroup.add(createCustomArrow(tanQ2, ptP, dALen, COLORS.vecA, 0.12, 0.040, 0.011, 0.42));
-          const labelDA2 = makeLabelSprite('dA₂', '#22d3ee', 28, 0.22, 0.52);
-          labelDA2.position.copy(endDA2).addScaledVector(tanQ2, 0.14);
-          rootGroup.add(labelDA2);
-        }
-
-        // 当 sinφ 不为 0 时，绘制矩形投影虚线与等大反向的径向分量 dA_1r, dA_2r
-        if (Math.abs(compRadVal) > 0.04) {
-          // dA1 的正交分解虚线框
-          rootGroup.add(createDashedSegment(endDA1, ptProjPhi, COLORS.vecA, 0.04, 0.04, 0.70));
-          rootGroup.add(createDashedSegment(endDA1, ptProjRad1, COLORS.radCancel, 0.04, 0.04, 0.75));
-
-          // dA1 的径向分量箭头 dA_1r（醒目珊瑚粉红）
-          const dirRad1 = er.clone().multiplyScalar(compRadVal >= 0 ? -1 : 1);
-          rootGroup.add(createCustomArrow(dirRad1, ptP, Math.abs(compRadVal), COLORS.radCancel, 0.10, 0.036, 0.010, 0.95));
-          const labelRad1 = makeLabelSprite('dA₁ᵣ', '#fb7185', 26, 0.21, 0.95);
-          labelRad1.position.copy(ptProjRad1).addScaledVector(dirRad1, 0.14);
-          rootGroup.add(labelRad1);
-
-          if (showSym) {
-            // dA2 的半透明正交分解虚线框
-            rootGroup.add(createDashedSegment(endDA2, ptProjPhi, COLORS.vecA, 0.04, 0.04, 0.35));
-            rootGroup.add(createDashedSegment(endDA2, ptProjRad2, COLORS.radCancel, 0.04, 0.04, 0.40));
-
-            // dA2 的径向分量箭头 dA_2r（半透明珊瑚粉红，与 dA_1r 严格反向相消！）
-            const dirRad2 = er.clone().multiplyScalar(compRadVal >= 0 ? 1 : -1);
-            rootGroup.add(createCustomArrow(dirRad2, ptP, Math.abs(compRadVal), COLORS.radCancel, 0.10, 0.036, 0.010, 0.48));
-            const labelRad2 = makeLabelSprite('dA₂ᵣ', '#fb7185', 26, 0.21, 0.58);
-            labelRad2.position.copy(ptProjRad2).addScaledVector(dirRad2, 0.14);
-            rootGroup.add(labelRad2);
-          }
-        }
-      }
-
-      if (showVecB && Bmag > 1e-5) {
-        const vecB = new THREE.Vector3()
-          .addScaledVector(ez, -Bz)
-          .addScaledVector(er, -Br)
-          .normalize();
-        const lenB = Math.min(0.9, Math.max(0.38, Bmag * 3.5));
-        rootGroup.add(createCustomArrow(vecB, ptP, lenB, COLORS.vecB, 0.14, 0.046, 0.013, 0.95));
-        const labelVecB = makeLabelSprite('B', '#a78bfa', 34);
-        labelVecB.position.copy(ptP).addScaledVector(vecB, lenB + 0.16);
-        rootGroup.add(labelVecB);
-      }
-
-      // 更新统计数据与左下角 2D 投影图
-      const Rval = Math.hypot(r, z);
-      document.getElementById('stat-a').innerText = `${a.toFixed(2)} m`;
-      document.getElementById('stat-R').innerText = `${Rval.toFixed(2)} m`;
-      document.getElementById('stat-rprime').innerText = `${rPrimeLen.toFixed(2)} m`;
-      document.getElementById('stat-A').innerText = `${AphiVal.toFixed(3)} μ₀I`;
+      // 更新右侧大幅 2D 投影图标题与画布
       const absPhiDeg = Math.round((Math.abs(phi) * 180) / Math.PI);
-      document.getElementById('proj-phi-txt').innerText = `±φ = ±${absPhiDeg}°`;
-      document.getElementById('slider-phi').value = phiDegNorm;
-      document.getElementById('val-phi').innerText = `${phiDegNorm}°`;
+      document.getElementById('proj-phi-txt').innerText = showSymInProjection
+        ? `±φ = ±${absPhiDeg}°`
+        : `φ = ${phiDegNorm}°`;
 
-      drawRightProjectionCanvas(a, r, phi, rPrimeLen, showSym, showDAProj);
+      drawRightProjectionCanvas(a, r, phi, rPrimeLen, showSymInProjection);
     }
 
     /* ==============================================================
-       5. 左下角：绘制在线圈平面上的投影图（含对称电流元及 dA 径向抵消投影）
+       5. 右半屏：与左图等大的 2D 线圈平面投影图
        ============================================================== */
     const projCanvas = document.getElementById('proj-canvas');
     const projCtx = projCanvas.getContext('2d');
 
-    function drawRightProjectionCanvas(a, r, phi, rPrimeLen, showSym, showDAProj) {
+    function drawRightProjectionCanvas(a, r, phi, rPrimeLen, showSym) {
       const W = projCanvas.width;
       const H = projCanvas.height;
       const cx = W * 0.5;
-      const cy = H * 0.62;
-      const scale = 96;
+      const cy = H * 0.60;
+      const scale = 172;
+      const LINE_W = 4.2; // r'、a、OP 统一的醒目线宽
 
       projCtx.clearRect(0, 0, W, H);
 
       // 背景淡坐标格
       projCtx.strokeStyle = 'rgba(148, 163, 184, 0.08)';
       projCtx.lineWidth = 1;
-      for (let x = 0; x <= W; x += 30) {
+      for (let x = 0; x <= W; x += 40) {
         projCtx.beginPath(); projCtx.moveTo(x, 0); projCtx.lineTo(x, H); projCtx.stroke();
       }
-      for (let y = 0; y <= H; y += 30) {
+      for (let y = 0; y <= H; y += 40) {
         projCtx.beginPath(); projCtx.moveTo(0, y); projCtx.lineTo(W, y); projCtx.stroke();
       }
 
       // 十字坐标轴
-      projCtx.strokeStyle = 'rgba(148, 163, 184, 0.45)';
-      projCtx.lineWidth = 1.5;
+      projCtx.strokeStyle = 'rgba(148, 163, 184, 0.42)';
+      projCtx.lineWidth = 1.8;
       projCtx.beginPath();
-      projCtx.moveTo(16, cy); projCtx.lineTo(W - 16, cy);
-      projCtx.moveTo(cx, 16); projCtx.lineTo(cx, H - 16);
+      projCtx.moveTo(28, cy); projCtx.lineTo(W - 28, cy);
+      projCtx.moveTo(cx, 28); projCtx.lineTo(cx, H - 28);
       projCtx.stroke();
 
       const Rpx = a * scale;
-      const rFieldPx = Math.min(cy - 68, Math.max(48, r * scale));
+      const rFieldPx = Math.min(cy - 108, Math.max(80, r * scale));
 
       // 银色圆形导线环 (半径 a)
       projCtx.strokeStyle = '#e2e8f0';
-      projCtx.lineWidth = 3.0;
+      projCtx.lineWidth = 4.4;
       projCtx.beginPath();
       projCtx.arc(cx, cy, Rpx, 0, Math.PI * 2);
       projCtx.stroke();
@@ -1079,188 +765,181 @@
       const q2x = cx - Rpx * Math.sin(phi);
       const q2y = cy - Rpx * Math.cos(phi);
 
-      // 场点投影坐标 (cx, py)
+      // 场点投影坐标 P (cx, py)
       const px = cx;
       const py = cy - rFieldPx;
 
-      // 教材右图中的竖直与水平虚线
-      projCtx.save();
-      projCtx.setLineDash([6, 5]);
-      projCtx.strokeStyle = '#94a3b8';
-      projCtx.lineWidth = 1.8;
-      projCtx.beginPath();
-      projCtx.moveTo(cx, cy);
-      projCtx.lineTo(cx, cy - Rpx);
-      projCtx.moveTo(cx, q1y);
-      projCtx.lineTo(cx + Rpx * 1.35, q1y);
-      projCtx.stroke();
-      projCtx.restore();
+      const tanLen = 74;
 
-      const tanLen = 46;
-
-      // 对称电流元 Q2 (-φ)：半透明浅色渲染
+      // 对称电流元 Q2 (-φ)：仅在投影图中根据按键开关显示（半透明浅色）
       if (showSym) {
         projCtx.save();
         projCtx.globalAlpha = 0.38;
 
-        // Q2 到 P 的 r' 投影虚线
+        // Q2 的翠绿色虚线半径 a（与主半径同粗）
         projCtx.save();
-        projCtx.setLineDash([5, 5]);
-        projCtx.strokeStyle = '#f43f5e';
-        projCtx.lineWidth = 1.8;
-        projCtx.beginPath();
-        projCtx.moveTo(q2x, q2y);
-        projCtx.lineTo(px, py);
-        projCtx.stroke();
-        projCtx.restore();
-
-        // Q2 半径 a
+        projCtx.setLineDash([12, 8]);
         projCtx.strokeStyle = '#10b981';
-        projCtx.lineWidth = 2.8;
+        projCtx.lineWidth = LINE_W;
         projCtx.beginPath();
         projCtx.moveTo(cx, cy);
         projCtx.lineTo(q2x, q2y);
         projCtx.stroke();
+        projCtx.restore();
 
         // -φ 圆弧
         projCtx.strokeStyle = '#c084fc';
-        projCtx.lineWidth = 2.0;
+        projCtx.lineWidth = 2.8;
         projCtx.beginPath();
         projCtx.arc(cx, cy, Rpx * 0.36, -Math.PI / 2, -Math.PI / 2 - phi, phi > 0);
         projCtx.stroke();
         projCtx.fillStyle = '#c084fc';
-        projCtx.font = 'italic bold 19px "Times New Roman", serif';
-        projCtx.fillText('-φ', cx - 32, cy - Rpx * 0.42);
+        projCtx.font = 'italic bold 28px "Times New Roman", serif';
+        projCtx.fillText('-φ', cx - 48, cy - Rpx * 0.42);
 
         // Q2 切向电流箭头
-        drawCanvasArrow(projCtx, q2x, q2y, q2x + tanLen * Math.cos(-phi), q2y + tanLen * Math.sin(-phi), '#e2e8f0', 2.4);
+        drawCanvasArrow(projCtx, q2x, q2y, q2x + tanLen * Math.cos(-phi), q2y + tanLen * Math.sin(-phi), '#e2e8f0', 3.4);
         projCtx.fillStyle = '#10b981';
         projCtx.beginPath();
-        projCtx.arc(q2x, q2y, 4.8, 0, Math.PI * 2);
+        projCtx.arc(q2x, q2y, 7.5, 0, Math.PI * 2);
         projCtx.fill();
 
         projCtx.restore();
       }
 
-      // 主源点 Q1 到 P 的 r' 投影虚线
+      // 【翠绿色粗虚线】主半径 a (O -> Q1)
       projCtx.save();
-      projCtx.setLineDash([5, 5]);
-      projCtx.strokeStyle = 'rgba(244, 63, 94, 0.75)';
-      projCtx.lineWidth = 1.8;
-      projCtx.beginPath();
-      projCtx.moveTo(q1x, q1y);
-      projCtx.lineTo(px, py);
-      projCtx.stroke();
-      projCtx.restore();
-
-      // 【醒目翠绿色】主半径实线 a (O -> Q1)
+      projCtx.setLineDash([12, 8]);
       projCtx.strokeStyle = '#10b981';
-      projCtx.lineWidth = 3.0;
+      projCtx.lineWidth = LINE_W;
       projCtx.beginPath();
       projCtx.moveTo(cx, cy);
       projCtx.lineTo(q1x, q1y);
       projCtx.stroke();
+      projCtx.restore();
 
       // 半径 a 标签
       projCtx.fillStyle = '#10b981';
-      projCtx.font = 'italic bold 20px "Times New Roman", serif';
-      projCtx.fillText('a', cx + Rpx * 0.52 * Math.sin(phi) + 10, cy - Rpx * 0.52 * Math.cos(phi) + 12);
+      projCtx.font = 'italic bold 30px "Times New Roman", serif';
+      projCtx.fillText('a', cx + Rpx * 0.52 * Math.sin(phi) + 16, cy - Rpx * 0.52 * Math.cos(phi) + 18);
 
       // φ 角扇形圆弧与标签
       projCtx.strokeStyle = '#c084fc';
-      projCtx.lineWidth = 2.0;
+      projCtx.lineWidth = 3.0;
       projCtx.beginPath();
       projCtx.arc(cx, cy, Rpx * 0.36, -Math.PI / 2, -Math.PI / 2 + phi, phi < 0);
       projCtx.stroke();
       projCtx.fillStyle = '#c084fc';
-      projCtx.font = 'italic bold 21px "Times New Roman", serif';
-      projCtx.fillText('φ', cx + 10, cy - Rpx * 0.42);
+      projCtx.font = 'italic bold 30px "Times New Roman", serif';
+      projCtx.fillText('φ', cx + 16, cy - Rpx * 0.42);
 
       // Q1 处顺时针切向电流箭头
       const tx = q1x + tanLen * Math.cos(phi);
       const ty = q1y + tanLen * Math.sin(phi);
-      drawCanvasArrow(projCtx, q1x, q1y, tx, ty, '#e2e8f0', 2.6);
+      drawCanvasArrow(projCtx, q1x, q1y, tx, ty, '#e2e8f0', 3.6);
 
       projCtx.fillStyle = '#10b981';
       projCtx.beginPath();
-      projCtx.arc(q1x, q1y, 5, 0, Math.PI * 2);
+      projCtx.arc(q1x, q1y, 7.8, 0, Math.PI * 2);
       projCtx.fill();
 
-      // 顶部场点 P 处：绘制随 φ 与 1/r'(φ) 动态变化的 dA1、对称元 dA2、径向抵消分量与切向合成矢势 A
-      const dApx = Math.min(62, Math.max(24, 110 / rPrimeLen));
-      if (showDAProj) {
-        // 在 2D 画布中：右为 +e_φ (+x)，上为 +e_r (-y)
-        // dA1 平行于 Q1 切向：(cosφ, +sinφ) -> 即水平向右 dApx*cosφ，竖直向下 dApx*sinφ
-        const da1x = px + dApx * Math.cos(phi);
-        const da1y = py + dApx * Math.sin(phi);
-        // dA2 平行于 Q2 切向：(cosφ, -sinφ) -> 即水平向右 dApx*cosφ，竖直向上 dApx*sinφ
-        const da2x = px + dApx * Math.cos(phi);
-        const da2y = py - dApx * Math.sin(phi);
+      // 圆心 O 标签
+      projCtx.fillStyle = '#e2e8f0';
+      projCtx.font = 'italic bold 26px "Times New Roman", serif';
+      projCtx.fillText('O', cx - 28, cy + 28);
 
-        // 投影矩形虚线
-        projCtx.save();
-        projCtx.setLineDash([4, 4]);
-        projCtx.strokeStyle = 'rgba(251, 113, 133, 0.70)';
-        projCtx.lineWidth = 1.4;
-        projCtx.beginPath();
-        projCtx.moveTo(da1x, da1y);
-        projCtx.lineTo(px, da1y);
-        projCtx.moveTo(da1x, da1y);
-        projCtx.lineTo(da1x, py);
-        if (showSym) {
-          projCtx.moveTo(da2x, da2y);
-          projCtx.lineTo(px, da2y);
-          projCtx.moveTo(da2x, da2y);
-          projCtx.lineTo(da2x, py);
-        }
-        projCtx.stroke();
-        projCtx.restore();
+      // 顶部场点 P 处：绘制随 φ 与 1/r'(φ) 动态变化的 dA1、对称元 dA2（若开启）、正交投影虚线与径向抵消分量
+      const dApx = Math.min(100, Math.max(40, 180 / rPrimeLen));
+      // dA1 平行于 Q1 切向：(cosφ, +sinφ)
+      const da1x = px + dApx * Math.cos(phi);
+      const da1y = py + dApx * Math.sin(phi);
+      // dA2 平行于 Q2 切向：(cosφ, -sinφ)
+      const da2x = px + dApx * Math.cos(phi);
+      const da2y = py - dApx * Math.sin(phi);
 
-        // 径向分量 dA_1r (向下) 与对称径向分量 dA_2r (向上，半透明) —— 等大反向相消！
-        if (Math.abs(Math.sin(phi)) > 0.08) {
-          drawCanvasArrow(projCtx, px, py, px, da1y, '#fb7185', 2.4);
-          if (showSym) {
-            projCtx.save();
-            projCtx.globalAlpha = 0.48;
-            drawCanvasArrow(projCtx, px, py, px, da2y, '#fb7185', 2.4);
-            projCtx.restore();
-          }
-        }
+      // 投影矩形虚线：水平虚线（投向径向轴）用珊瑚粉，竖直虚线（投向切向轴）用亮黄色
+      projCtx.save();
+      projCtx.setLineDash([6, 6]);
+      projCtx.lineWidth = 2.0;
+      // 投向径向轴的水平虚线
+      projCtx.strokeStyle = 'rgba(251, 113, 133, 0.72)';
+      projCtx.beginPath();
+      projCtx.moveTo(da1x, da1y);
+      projCtx.lineTo(px, da1y);
+      if (showSym) {
+        projCtx.moveTo(da2x, da2y);
+        projCtx.lineTo(px, da2y);
+      }
+      projCtx.stroke();
 
-        // 对称元 dA2 箭头（半透明浅色）
+      // 投向切向轴的竖直虚线
+      projCtx.strokeStyle = 'rgba(250, 204, 21, 0.78)';
+      projCtx.beginPath();
+      projCtx.moveTo(da1x, da1y);
+      projCtx.lineTo(da1x, py);
+      if (showSym) {
+        projCtx.moveTo(da2x, da2y);
+        projCtx.lineTo(da2x, py);
+      }
+      projCtx.stroke();
+      projCtx.restore();
+
+      // 径向分量 dA_1r (向下) 与对称径向分量 dA_2r (向上，半透明) —— 等大反向相消！
+      if (Math.abs(Math.sin(phi)) > 0.06) {
+        drawCanvasArrow(projCtx, px, py, px, da1y, '#fb7185', 3.4);
+        drawSubscriptLabel(projCtx, 'dA', '1r', px - 52, da1y + (da1y >= py ? 6 : -4), '#fb7185');
+
         if (showSym) {
           projCtx.save();
-          projCtx.globalAlpha = 0.42;
-          drawCanvasArrow(projCtx, px, py, da2x, da2y, '#22d3ee', 2.3);
-          projCtx.fillStyle = '#22d3ee';
-          projCtx.font = 'italic bold 16px "Times New Roman", serif';
-          projCtx.fillText('dA₂', da2x + 5, da2y - 3);
+          projCtx.globalAlpha = 0.45;
+          drawCanvasArrow(projCtx, px, py, px, da2y, '#fb7185', 3.4);
+          drawSubscriptLabel(projCtx, 'dA', '2r', px - 52, da2y + (da2y >= py ? 6 : -4), '#fb7185');
           projCtx.restore();
         }
-
-        // 主元 dA1 箭头
-        drawCanvasArrow(projCtx, px, py, da1x, da1y, '#22d3ee', 2.4);
-        projCtx.fillStyle = '#22d3ee';
-        projCtx.font = 'italic bold 16px "Times New Roman", serif';
-        projCtx.fillText('dA₁', da1x + 5, da1y + 12);
       }
 
-      // 随 cos(φ)/r'(φ) 动态伸缩与反向的切向合成矢势 A 箭头
-      const netAx = px + dApx * (showSym ? 1.4 : 1.0) * Math.cos(phi);
-      if (Math.abs(netAx - px) > 4) {
-        drawCanvasArrow(projCtx, px, py, netAx, py, '#22d3ee', 3.2);
+      // 对称元 dA2 箭头（半透明浅青色 #22d3ee）
+      if (showSym) {
+        projCtx.save();
+        projCtx.globalAlpha = 0.42;
+        drawCanvasArrow(projCtx, px, py, da2x, da2y, '#22d3ee', 3.2);
+        drawSubscriptLabel(projCtx, 'dA', '2', da2x + 10, da2y - 6, '#22d3ee');
+        projCtx.restore();
       }
+
+      // 主元 dA1 箭头（原有的亮青色 #22d3ee 不变）
+      drawCanvasArrow(projCtx, px, py, da1x, da1y, '#22d3ee', 3.4);
+      drawSubscriptLabel(projCtx, 'dA', '1', da1x + 10, da1y + 18, '#22d3ee');
+
+      // 沿切线方向的投影分量 dA_φ（去掉多余的紫红色箭头，仅保留刚好对齐竖直投影虚线的黄色切向分量箭头 #facc15）
+      if (Math.abs(da1x - px) > 5) {
+        drawCanvasArrow(projCtx, px, py, da1x, py, '#facc15', 3.8);
+        drawSubscriptLabel(projCtx, 'dA', 'φ', da1x + (da1x >= px ? 10 : -46), py + 7, '#facc15');
+      }
+
       projCtx.fillStyle = '#ffffff';
       projCtx.beginPath();
-      projCtx.arc(px, py, 5.5, 0, Math.PI * 2);
+      projCtx.arc(px, py, 8, 0, Math.PI * 2);
       projCtx.fill();
-      projCtx.fillStyle = '#22d3ee';
-      projCtx.font = 'italic bold 19px "Times New Roman", serif';
-      projCtx.fillText('A', netAx + (netAx >= px ? 8 : -20), py + 6);
+      projCtx.fillStyle = '#ffffff';
+      projCtx.font = 'italic bold 26px "Times New Roman", serif';
+      projCtx.fillText('P', px - 30, py - 14);
+    }
+
+    // 绘制带紧凑下标的斜体数学符号（避免 Unicode 下标间距断裂或出现下划线 _）
+    function drawSubscriptLabel(ctx, mainText, subText, x, y, color) {
+      ctx.save();
+      ctx.fillStyle = color;
+      ctx.font = 'italic bold 23px "Times New Roman", serif';
+      ctx.fillText(mainText, x, y);
+      const mainW = ctx.measureText(mainText).width;
+      ctx.font = 'italic bold 16px "Times New Roman", serif';
+      ctx.fillText(subText, x + mainW + 1, y + 5);
+      ctx.restore();
     }
 
     function drawCanvasArrow(ctx, x1, y1, x2, y2, color, width) {
-      const headLen = 9;
+      const headLen = 14;
       const ang = Math.atan2(y2 - y1, x2 - x1);
       ctx.strokeStyle = color;
       ctx.lineWidth = width;
@@ -1275,32 +954,47 @@
     }
 
     /* ==============================================================
-       6. 视角切换、「随机变换 P 点位置」与「循环环上电流元 φ」功能
+       6. 视角切换、随机变换 P 点、变换电流元位置、循环电流元 φ、切换对称电流元
        ============================================================== */
-    let currentViewMode = '3D';
+    let currentViewMode = 'SIDE';
     let camAnimId = null;
+
+    function getSideViewState() {
+      // 严格正视侧视图（对应教材左图视角）：
+      // 环平面在 YZ 面，中心对称轴沿 +X 轴水平向右，+Y 轴严格竖直向上，+Z 轴沿视线朝外
+      // 此时交叉参考虚线：X 轴（中心轴线）严格水平，Y 轴严格竖直，Z 轴沿视线方向
+      const target = new THREE.Vector3(params.z * 0.42, params.r * 0.35, 0);
+      const pos = new THREE.Vector3(params.z * 0.42, params.r * 0.35, 7.2);
+      const up = new THREE.Vector3(0, 1, 0);
+      return { pos, target, up };
+    }
+
+    // 页面初始即设为左图（子午面侧视）视角
+    {
+      const initCam = getSideViewState();
+      camera.position.copy(initCam.pos);
+      controls.target.copy(initCam.target);
+      camera.up.copy(initCam.up);
+      controls.update();
+    }
 
     function setCameraPreset(mode) {
       currentViewMode = mode;
       document.getElementById('btn-view-ring').classList.toggle('active', mode === 'RING');
       document.getElementById('btn-view-side').classList.toggle('active', mode === 'SIDE');
 
-      const thetaP = (params.thetaPDeg * Math.PI) / 180;
-      const er = new THREE.Vector3(0, Math.cos(thetaP), -Math.sin(thetaP));
-      const ephi = new THREE.Vector3(0, -Math.sin(thetaP), -Math.cos(thetaP));
-
       let endPos, endTarget, endUp;
       if (mode === 'RING') {
-        // 对着圆环看（沿中轴线 +X 正对圆环中心观察，固定世界竖直向上 +Y，圆环始终静止居中）
+        // 对着圆环看（在左半屏视口中正对圆环中心观察）
         endTarget = new THREE.Vector3(0, 0, 0);
-        endPos = new THREE.Vector3(6.2, 0, 0);
+        endPos = new THREE.Vector3(6.8, 0, 0);
         endUp = new THREE.Vector3(0, 1, 0);
       } else if (mode === 'SIDE') {
-        // 垂直于场点子午面侧视（对应教材左图）
-        const viewDir = new THREE.Vector3(0.26, 0.08 * er.y - 0.96 * ephi.y, 0.08 * er.z - 0.96 * ephi.z).normalize();
-        endTarget = new THREE.Vector3(params.z * 0.50, er.y * params.r * 0.35, er.z * params.r * 0.35);
-        endPos = endTarget.clone().addScaledVector(viewDir, 6.2);
-        endUp = er.clone();
+        // 重置为左图视角（垂直于场点子午面侧视）
+        const sideState = getSideViewState();
+        endPos = sideState.pos;
+        endTarget = sideState.target;
+        endUp = sideState.up;
       }
 
       if (camAnimId) cancelAnimationFrame(camAnimId);
@@ -1321,8 +1015,17 @@
       step();
     }
 
-    // 随机变换空间所求点 P 的位置 (z, r, θ_P)：
-    // 严格保持相机视角、银色圆环、以及环上所取电流元 Q1 (thetaQDeg) 与半径 a 完全不变，只改变由 P 引起的各个矢量！
+    // 重置按键：同时重置相机视角与 P 点初始位置（角度恢复为 20°）
+    function resetAll() {
+      params.z = 2.10;
+      params.r = 1.45;
+      params.thetaPDeg = 20;
+      params.thetaQDeg = 60;
+      updateScene();
+      setCameraPreset('SIDE');
+    }
+
+    // 随机变换空间所求点 P 的位置 (z, r, θ_P)：保持圆环与所取电流元 Q1 完全静止
     function randomizePointP() {
       const randZ = +(1.1 + Math.random() * 1.9).toFixed(2);
       const randR = +(0.65 + Math.random() * 1.35).toFixed(2);
@@ -1334,13 +1037,14 @@
       params.r = randR;
       params.thetaPDeg = randThetaP;
 
-      document.getElementById('slider-z').value = randZ;
-      document.getElementById('val-z').innerText = `${randZ.toFixed(2)} m`;
-      document.getElementById('slider-r').value = randR;
-      document.getElementById('val-r').innerText = `${randR.toFixed(2)} m`;
-      document.getElementById('slider-thetaP').value = randThetaP;
-      document.getElementById('val-thetaP').innerText = `${randThetaP}°`;
+      updateScene();
+    }
 
+    // 随机变换环上所取电流元 Q1 的位置（保持场点 P 与圆环不动）
+    function randomizeCurrentElement() {
+      if (isSweepingPhi) toggleSweepPhi();
+      const delta = 40 + Math.floor(Math.random() * 280);
+      params.thetaQDeg = (params.thetaQDeg + delta) % 360;
       updateScene();
     }
 
@@ -1350,48 +1054,25 @@
       const btn = document.getElementById('btn-sweep-phi');
       btn.classList.toggle('active', isSweepingPhi);
       btn.innerHTML = isSweepingPhi
-        ? '<span>⏸️ 暂停电流元循环</span>'
-        : '<span>🔄 循环环上电流元 φ</span>';
+        ? '<span>暂停循环</span>'
+        : '<span>循环电流元 φ</span>';
     }
 
-    // 绑定滑块事件
-    document.getElementById('slider-phi').addEventListener('input', (e) => {
-      if (isSweepingPhi) toggleSweepPhi();
-      const newPhiDeg = parseInt(e.target.value, 10);
-      params.phiDeg = newPhiDeg;
-      params.thetaQDeg = (params.thetaPDeg + newPhiDeg) % 360;
-      document.getElementById('val-phi').innerText = `${params.phiDeg}°`;
+    // 切换显示/隐藏对称电流元 (-φ)（仅在右侧投影图中显示，左图不增加）
+    function toggleSymmetricElement() {
+      showSymInProjection = !showSymInProjection;
+      const btn = document.getElementById('btn-toggle-sym');
+      btn.classList.toggle('active', showSymInProjection);
+      btn.innerHTML = showSymInProjection
+        ? '<span>隐藏对称电流元 (-φ)</span>'
+        : '<span>显示对称电流元 (-φ)</span>';
       updateScene();
-    });
-
-    document.getElementById('slider-thetaP').addEventListener('input', (e) => {
-      params.thetaPDeg = parseInt(e.target.value, 10);
-      document.getElementById('val-thetaP').innerText = `${params.thetaPDeg}°`;
-      updateScene();
-    });
-
-    document.getElementById('slider-z').addEventListener('input', (e) => {
-      params.z = parseFloat(e.target.value);
-      document.getElementById('val-z').innerText = `${params.z.toFixed(2)} m`;
-      updateScene();
-    });
-
-    document.getElementById('slider-r').addEventListener('input', (e) => {
-      params.r = parseFloat(e.target.value);
-      document.getElementById('val-r').innerText = `${params.r.toFixed(2)} m`;
-      updateScene();
-    });
-
-    document.getElementById('slider-a').addEventListener('input', (e) => {
-      params.a = parseFloat(e.target.value);
-      document.getElementById('val-a').innerText = `${params.a.toFixed(2)} m`;
-      updateScene();
-    });
+    }
 
     window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.aspect = container.clientWidth / container.clientHeight;
       camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setSize(container.clientWidth, container.clientHeight);
     });
 
     /* ==============================================================

@@ -10,7 +10,7 @@
 
 | 序号 | 文件名 | 演示主题 | 核心功能与物理要点 |
 | :---: | :--- | :--- | :--- |
-| 1 | [`vector_potential_loop_symmetry_v2.html`](./vector_potential_loop_symmetry_v2.html) | **环形导线电流的矢势 A 与对称抵消** | 左侧 3D 空间交互展示载流圆线圈、空间任一点 $P$ 与电流元 $I\mathrm{d}\vec{l}_1$ 激发的元矢势 $\mathrm{d}\vec{A}_1$；右侧 2D 投影图对比关于子午面对称的电流元对 $I\mathrm{d}\vec{l}_1$ 与 $I\mathrm{d}\vec{l}_2$，直观揭示其径向分量 $\mathrm{d}A_r$ 大小相等、方向相反成对完全抵消，总矢势 $\vec{A}$ 仅保留切向分量 $A_\varphi$。 |
+| 1 | [`vector_potential_loop_symmetry.html`](./vector_potential_loop_symmetry.html) | **环形导线电流的矢势 A 与对称抵消** | 左侧 3D 空间交互展示载流圆线圈、空间任一点 $P$ 与电流元 $I\mathrm{d}\vec{l}_1$ 激发的元矢势 $\mathrm{d}\vec{A}_1$；右侧 2D 投影图对比关于子午面对称的电流元对 $I\mathrm{d}\vec{l}_1$ 与 $I\mathrm{d}\vec{l}_2$，直观揭示其径向分量 $\mathrm{d}A_r$ 大小相等、方向相反成对完全抵消，总矢势 $\vec{A}$ 仅保留切向分量 $A_\varphi$。 |
 | 2 | [`biot_savart_loop.html`](./biot_savart_loop.html) | **载流圆线圈轴线上的磁场** | 展示圆电流轴线上一点的磁场合成：对称电流元 $\mathrm{d}\vec{B}$ 的垂直分量成对抵消，轴向分量 $\mathrm{d}B_x$ 同向叠加。 |
 | 3 | [`solenoid_magnetic_field.html`](./solenoid_magnetic_field.html) | **载流长直螺线管的截面与空间磁场** | 支持匝数 $N$ 从有限长向无限长平滑过渡、2D 截面与 3D 空间磁感线切换，并提供上下两排相邻导线磁场的微观矢量分解（间隙垂直抵消、管内水平同向增强）。 |
 | 4 | [`magnetic_gauss_law.html`](./magnetic_gauss_law.html) | **磁场高斯定理与任意闭合曲面** | 验证 $\oint_S \vec{B}\cdot\mathrm{d}\vec{A} \equiv 0$：支持**导线外闭合曲面**与**包围部分电流闭合曲面**一键切换、任意随机形状畸变、磁感线分层显示及穿入/穿出交点实时统计。 |
@@ -54,7 +54,7 @@ open charged_particle_magnetic_field.html
 open toroid_solenoid_magnetic_field.html
 
 # 示例：打开圆线圈磁矢势对称抵消演示
-open vector_potential_loop_symmetry_v2.html
+open vector_potential_loop_symmetry.html
 
 # 示例：打开环形电流与相套环面演示
 open current_loop_torus.html
