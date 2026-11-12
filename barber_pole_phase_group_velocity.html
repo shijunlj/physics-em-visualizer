@@ -6,6 +6,8 @@
   <title>理发灯与相速</title>
   <style>
     :root {
+      --home-bottom: max(12px, env(safe-area-inset-bottom));
+      --home-height: 36px;
       color-scheme: dark;
       --text: #f2f6ff;
       --muted: #b9cbe3;
@@ -26,14 +28,21 @@
     main {
       width: min(760px, calc(100% - 32px));
       margin: auto;
-      padding: clamp(24px, 6vh, 68px) 0 28px;
+      padding: clamp(24px, 6vh, 68px) 0 calc(var(--home-bottom) + var(--home-height) + 16px);
     }
 
     .home-link {
+      position: fixed;
+      right: max(18px, env(safe-area-inset-right));
+      bottom: var(--home-bottom);
+      z-index: 30;
       display: inline-flex;
       align-items: center;
-      min-height: 24px;
-      margin-bottom: 6px;
+      min-height: var(--home-height);
+      padding: 0 12px;
+      border: 1px solid #526582;
+      border-radius: 8px;
+      background: #22304a;
       color: var(--accent);
       font-size: 13px;
       text-decoration: none;
@@ -103,7 +112,6 @@
 <body>
   <main>
     <header>
-      <a class="home-link" href="./index.html">← 返回主页</a>
       <h1>理发灯与相速</h1>
       <p id="mode-hint">点击播放，观察红纹交点沿轴上移。拖动可调整视角。</p>
     </header>
@@ -126,6 +134,7 @@
       <p>蓝点标出红纹与固定观察线的交点。</p>
     </section>
   </main>
+  <a class="home-link" href="./index.html">← 返回主页</a>
 
   <script>
     const canvas = document.getElementById('lamp');
