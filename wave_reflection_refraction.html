@@ -24,7 +24,6 @@
       --cyan: #38bdf8;
       --amber: #fbbf24;
       --rose: #f43f5e;
-      --emerald: #34d399;
       --indigo: #818cf8;
       --orange: #fb923c;
     }
@@ -342,10 +341,6 @@
         <div class="data-row">
           <span class="data-label">布儒斯特角 $\theta_B$</span>
           <span class="data-num" style="color:var(--indigo);" id="txt-brewster">33.8°</span>
-        </div>
-        <div class="data-row">
-          <span class="data-label">切向波矢 $k_x / k$ ($\sin\theta$)</span>
-          <span class="data-num" style="color:var(--emerald);" id="txt-kx">0.6157</span>
         </div>
         <div id="badge-container" style="margin-top:4px; display:none;">
           <span class="badge-tir">★ 发生全反射 · 出现倏逝波 (Evanescent Wave)</span>
@@ -907,7 +902,7 @@
           };
         }
       }
-      ghGroup.visible = tirGroup.visible || (timeGroup.visible && decay > 0);
+      ghGroup.visible = isTotalInternalReflection;
       if (ghGroup.visible) {
         ghRay.geometry.setFromPoints([pO, pRefl]);
         ghRay.geometry.computeBoundingSphere();
@@ -946,7 +941,7 @@
       if (polarizationGroup.visible) {
         const fieldDistance = posK.distanceTo(pO);
         setPolarizationDirections(polarizationFields[0], posK, dirK);
-        const reflectedFieldOrigin = pO.clone().addScaledVector(dirKPrime, fieldDistance);
+        const reflectedFieldOrigin = reflectedStart.clone().addScaledVector(dirKPrime, fieldDistance);
         setPolarizationDirections(polarizationFields[1], reflectedFieldOrigin, dirKPrime);
         polarizationFields[2].group.visible = !isTotalInternalReflection;
         if (!isTotalInternalReflection) {
@@ -965,7 +960,7 @@
         const ts = isTotalInternalReflection ? 0 : 2 * cosTheta / (cosTheta + transmittedCos);
         const tp = isTotalInternalReflection ? 0 : 2 * cosTheta / (incidentCos + cosThetaDoublePrime);
         const fieldDistance = posK.distanceTo(pO);
-        const reflectedOrigin = pO.clone().addScaledVector(dirKPrime, fieldDistance);
+        const reflectedOrigin = reflectedStart.clone().addScaledVector(dirKPrime, fieldDistance);
         const refractedOrigin = pO.clone().addScaledVector(dirKDoublePrime, fieldDistance);
         setBrewsterField(brewsterFields[0], posK, outward, 1);
         setBrewsterField(brewsterFields[1], posK, new THREE.Vector3().crossVectors(inward, dirK), showPhase ? 0 : 1);
@@ -1051,7 +1046,6 @@
       // 6. 更新 UI 文本读数
       document.getElementById('txt-theta').innerText = STATE.thetaDeg.toFixed(1) + '°';
       document.getElementById('txt-theta-refl').innerText = STATE.thetaDeg.toFixed(1) + '°';
-      document.getElementById('txt-kx').innerText = sinTheta.toFixed(4);
 
       const rowCrit = document.getElementById('row-critical');
       const badgeTir = document.getElementById('badge-container');
