@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>波的相速与群速</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --text: #f2f6ff;
+      --muted: #b9cbe3;
+      --phase: #79bbff;
+      --group: #76e8cf;
+      --wave: #e5edff;
+      --border: rgba(151, 178, 218, 0.28);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(ellipse 760px 440px at 8% 0%, #302c55, transparent 80%),
+        #16243b;
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    main {
+      width: min(1040px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: clamp(32px, 7vh, 82px) 0 32px;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(28px, 5vw, 42px);
+      line-height: 1.2;
+    }
+
+    header p {
+      margin: 0 0 25px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .demo {
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: #192942;
+      box-shadow: 0 20px 56px rgba(7, 14, 29, 0.36);
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 18px;
+    }
+
+    .controls { display: flex; gap: 8px; }
+
+    button {
+      min-width: 68px;
+      min-height: 38px;
+      padding: 7px 13px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #263b58;
+      color: var(--text);
+      cursor: pointer;
+      font: inherit;
+      font-size: 14px;
+    }
+
+    button:hover { background: #334e70; }
+    button:focus-visible { outline: 2px solid var(--phase); outline-offset: 3px; }
+
+    #play {
+      background: var(--group);
+      color: #102b2b;
+      font-weight: 650;
+    }
+
+    #play:hover { background: #a0f1df; }
+
+    .time {
+      color: var(--muted);
+      font-size: 14px;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: clamp(230px, 42vh, 390px);
+      border-block: 1px solid var(--border);
+      background: #101c31;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 22px;
+      padding: 11px 18px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .legend span { display: inline-flex; align-items: center; gap: 8px; }
+    .legend span::before { content: ""; width: 22px; border-top: 2px solid var(--wave); }
+    .legend .envelope::before { border-top: 2px dashed var(--group); }
+
+    .speeds {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .speed {
+      padding: 13px 16px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(34, 48, 73, 0.72);
+    }
+
+    .phase { color: var(--phase); }
+    .group { color: var(--group); }
+
+    .speed h2 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 5px;
+      font-size: 15px;
+    }
+
+    .speed h2::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border: 2px solid currentColor;
+      border-radius: 50%;
+    }
+
+    .phase h2::before { background: currentColor; }
+    .speed p { margin: 0; color: var(--muted); line-height: 1.6; font-size: 14px; }
+    .speed .formula { color: var(--text); font-size: 17px; }
+    .formula var { font-family: Georgia, serif; }
+
+    .frequency-label {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 2px 8px;
+      margin-top: 12px;
+      color: var(--text);
+      font-size: 14px;
+    }
+
+    .frequency-label output { font-variant-numeric: tabular-nums; }
+    .frequency-slider { width: 100%; margin: 6px 0 0; accent-color: var(--phase); }
+    .group .frequency-slider { accent-color: var(--group); }
+    .frequency-note { margin: 8px 0 0; color: var(--muted); font-size: 13px; }
+
+    @media (max-width: 450px) {
+      main { width: calc(100% - 24px); }
+      .toolbar, .legend { padding-inline: 12px; }
+      .speeds { gap: 8px; }
+      .speed { padding-inline: 10px; }
+      .speed .formula { font-size: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>波的相速与群速</h1>
+      <p>两列等振幅、波数和频率相近的正弦波叠加。</p>
+    </header>
+
+    <section class="demo" aria-label="波形动画">
+      <div class="toolbar">
+        <div class="controls">
+          <button id="play" type="button">播放</button>
+          <button id="reset" type="button">重置</button>
+        </div>
+        <span class="time"><var>t</var> = <span id="time">0.00</span> s</span>
+      </div>
+      <canvas id="plot" role="img" aria-label="合成波和上下包络。蓝点跟踪固定相位，绿圈跟踪包络峰顶。"></canvas>
+      <div class="legend">
+        <span>合成波</span>
+        <span class="envelope">包络</span>
+      </div>
+    </section>
+
+    <div class="speeds">
+      <section class="speed phase">
+        <h2>相速</h2>
+        <p class="formula"><var>v</var><sub>p</sub> = <var>ω̄</var>/<var>k̄</var> = <span id="phase-speed"></span> m/s</p>
+        <p>固定相位的移动速度</p>
+        <div class="frequency-label">
+          <label for="mean-frequency">平均频率</label>
+          <output id="mean-frequency-value" for="mean-frequency"></output>
+        </div>
+        <input class="frequency-slider" id="mean-frequency" type="range" min="1" max="3" step="0.1" value="2">
+      </section>
+      <section class="speed group">
+        <h2>群速</h2>
+        <p class="formula"><var>v</var><sub>g</sub> = Δ<var>ω</var>/Δ<var>k</var> = <span id="group-speed"></span> m/s</p>
+        <p>包络峰顶的移动速度</p>
+        <div class="frequency-label">
+          <label for="frequency-difference">频率差</label>
+          <output id="frequency-difference-value" for="frequency-difference"></output>
+        </div>
+        <input class="frequency-slider" id="frequency-difference" type="range" min="0" max="0.25" step="0.025" value="0.125">
+      </section>
+    </div>
+    <p class="frequency-note">波数固定。调节频率后，动画回到起点。</p>
+  </main>
+
+  <script>
+    const plot = document.getElementById('plot');
+    const ctx = plot.getContext('2d');
+    const playButton = document.getElementById('play');
+    const timeDisplay = document.getElementById('time');
+    const meanFrequencyInput = document.getElementById('mean-frequency');
+    const frequencyDifferenceInput = document.getElementById('frequency-difference');
+    const colors = getComputedStyle(document.documentElement);
+    const phaseColor = colors.getPropertyValue('--phase').trim();
+    const groupColor = colors.getPropertyValue('--group').trim();
+    const waveColor = colors.getPropertyValue('--wave').trim();
+
+    const meanK = 2 * Math.PI;
+    const deltaK = Math.PI / 4;
+    const minX = -5;
+    const maxX = 11;
+    const phaseOffset = 3 * (2 * Math.PI / meanK);
+
+    let meanOmega;
+    let deltaOmega;
+    let phaseSpeed;
+    let groupSpeed;
+    let phaseStart;
+    let duration;
+    let time = 0;
+    let frame = null;
+    let lastFrameTime = null;
+    let width = 0;
+    let height = 0;
+
+    function updateFrequencies() {
+      const meanFrequency = meanFrequencyInput.valueAsNumber;
+      const frequencyDifference = frequencyDifferenceInput.valueAsNumber;
+      meanOmega = 2 * Math.PI * meanFrequency;
+      deltaOmega = 2 * Math.PI * frequencyDifference;
+      phaseSpeed = meanOmega / meanK;
+      groupSpeed = deltaOmega / deltaK;
+
+      // Start on the side from which the fixed phase approaches the envelope peak.
+      const relativeSpeed = phaseSpeed - groupSpeed;
+      phaseStart = relativeSpeed < 0 ? phaseOffset : -phaseOffset;
+      const rightLimit = maxX - 0.5;
+      duration = Math.min(
+        6,
+        2 * phaseOffset / Math.abs(relativeSpeed),
+        (rightLimit - phaseStart) / phaseSpeed,
+        rightLimit / groupSpeed
+      );
+
+      document.getElementById('mean-frequency-value').value = meanFrequency.toFixed(1) + ' Hz';
+      document.getElementById('frequency-difference-value').value = frequencyDifference.toFixed(3) + ' Hz';
+      document.getElementById('phase-speed').textContent = phaseSpeed.toFixed(1);
+      document.getElementById('group-speed').textContent = groupSpeed.toFixed(1);
+      time = 0;
+      stop();
+      renderTime();
+    }
+
+    function envelope(x) {
+      return Math.cos((deltaK * x - deltaOmega * time) / 2);
+    }
+
+    function wave(x) {
+      // Each component has amplitude 1/2, so their sum has unit peak amplitude.
+      return envelope(x) * Math.cos(meanK * x - meanOmega * time);
+    }
+
+    function draw() {
+      if (!width || !height) return;
+      const left = 46;
+      const right = width - 18;
+      const top = 22;
+      const bottom = height - 44;
+      const xPixel = x => left + (x - minX) * (right - left) / (maxX - minX);
+      const yPixel = y => top + (1.24 - y) * (bottom - top) / 2.48;
+
+      ctx.clearRect(0, 0, width, height);
+      ctx.font = '12px system-ui, sans-serif';
+      ctx.fillStyle = '#a8bcd8';
+      ctx.strokeStyle = '#2b3d57';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      for (const y of [1, 0, -1]) {
+        ctx.moveTo(left, yPixel(y));
+        ctx.lineTo(right, yPixel(y));
+        ctx.fillText(y, left - 9, yPixel(y));
+      }
+
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      const tickStep = width < 480 ? 4 : 2;
+      for (let x = -4; x <= 10; x += tickStep) {
+        ctx.moveTo(xPixel(x), top);
+        ctx.lineTo(xPixel(x), bottom);
+        ctx.fillText(x, xPixel(x), bottom + 8);
+      }
+      ctx.stroke();
+      ctx.textAlign = 'left';
+      ctx.fillText('振幅', 10, 5);
+      ctx.textAlign = 'right';
+      ctx.fillText('x（m）', right, height - 17);
+
+      const samples = Math.ceil(right - left);
+      function trace(valueAt) {
+        ctx.beginPath();
+        for (let i = 0; i <= samples; i++) {
+          const x = minX + (maxX - minX) * i / samples;
+          ctx.lineTo(xPixel(x), yPixel(valueAt(x)));
+        }
+        ctx.stroke();
+      }
+
+      ctx.setLineDash([5, 5]);
+      ctx.strokeStyle = groupColor;
+      ctx.globalAlpha = 0.65;
+      trace(x => Math.abs(envelope(x)));
+      trace(x => -Math.abs(envelope(x)));
+      ctx.globalAlpha = 1;
+      ctx.setLineDash([]);
+      ctx.strokeStyle = waveColor;
+      ctx.lineWidth = 1.8;
+      trace(wave);
+
+      const phaseX = phaseStart + phaseSpeed * time;
+      const groupX = groupSpeed * time;
+      function guide(x, color) {
+        ctx.strokeStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(xPixel(x), top);
+        ctx.lineTo(xPixel(x), bottom);
+        ctx.stroke();
+      }
+
+      ctx.globalAlpha = 0.72;
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([3, 4]);
+      guide(groupX, groupColor);
+      guide(phaseX, phaseColor);
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(xPixel(groupX), yPixel(1), 10, 0, 2 * Math.PI);
+      ctx.strokeStyle = '#101c31';
+      ctx.lineWidth = 6;
+      ctx.stroke();
+      ctx.strokeStyle = groupColor;
+      ctx.lineWidth = 3;
+      ctx.shadowColor = groupColor;
+      ctx.shadowBlur = 12;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(xPixel(phaseX), yPixel(wave(phaseX)), 6, 0, 2 * Math.PI);
+      ctx.shadowColor = phaseColor;
+      ctx.fillStyle = phaseColor;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = '#101c31';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function resize() {
+      width = plot.clientWidth;
+      height = plot.clientHeight;
+      const scale = Math.min(window.devicePixelRatio || 1, 2);
+      plot.width = Math.round(width * scale);
+      plot.height = Math.round(height * scale);
+      ctx.setTransform(scale, 0, 0, scale, 0, 0);
+      draw();
+    }
+
+    function renderTime() {
+      timeDisplay.textContent = time.toFixed(2);
+      draw();
+    }
+
+    function stop() {
+      cancelAnimationFrame(frame);
+      frame = null;
+      lastFrameTime = null;
+      playButton.textContent = time === duration ? '重播' : '播放';
+    }
+
+    function animate(timestamp) {
+      if (lastFrameTime !== null) {
+        time = Math.min(time + (timestamp - lastFrameTime) / 1000, duration);
+      }
+      lastFrameTime = timestamp;
+      renderTime();
+      if (time < duration) {
+        frame = requestAnimationFrame(animate);
+      } else {
+        stop();
+      }
+    }
+
+    playButton.addEventListener('click', () => {
+      if (frame !== null) {
+        stop();
+        return;
+      }
+      if (time === duration) time = 0;
+      playButton.textContent = '暂停';
+      renderTime();
+      frame = requestAnimationFrame(animate);
+    });
+
+    meanFrequencyInput.addEventListener('input', updateFrequencies);
+    frequencyDifferenceInput.addEventListener('input', updateFrequencies);
+    document.getElementById('reset').addEventListener('click', () => {
+      meanFrequencyInput.value = meanFrequencyInput.defaultValue;
+      frequencyDifferenceInput.value = frequencyDifferenceInput.defaultValue;
+      updateFrequencies();
+    });
+
+    updateFrequencies();
+    new ResizeObserver(resize).observe(plot);
+    resize();
+  </script>
+</body>
+</html>

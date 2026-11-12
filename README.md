@@ -2,7 +2,7 @@
 
 🌐 **在线演示网站（GitHub Pages）**：[**https://shijunlj.github.io/physics-em-visualizer/**](https://shijunlj.github.io/physics-em-visualizer/)
 
-本项目包含 14 个基于 **Three.js / HTML5 Canvas (WebGL)** 的独立单文件 HTML 交互式物理演示页面（及 `index.html` 极简导航主页），用于直观展示电磁学与电动力学（稳恒磁场与空间拓扑）的核心概念、实验现象与场分布规律。所有页面均可直接在浏览器中打开运行，支持 360° 自由旋转、缩放与实时参数调节。
+本项目包含 15 个基于 **Three.js 或 HTML5 Canvas** 的独立单文件 HTML 交互式物理演示页面（及 `index.html` 导航主页），涵盖稳恒磁场、空间拓扑和波动等主题。各演示均可直接在浏览器中打开，交互方式包括三维视角旋转、缩放、动画播放和参数调节。
 
 ---
 
@@ -24,6 +24,7 @@
 | 12 | [`cylindrical_shell_magnetic_field.html`](./cylindrical_shell_magnetic_field.html) | **无限长载流圆柱壳 · 磁场矢量叠加** | 3D/截面交互演示无限长薄壁圆柱壳轴向电流的微观磁场叠加机理：将圆柱壳离散为 $N$ 根对称长直导线，以关于径向对称的镜像导线对为切入点，直观展示径向分量成对严格抵消、切向分量成对相加；生动揭示壳内（$r < R$）各对切向分量相互代数相消导致 $B \equiv 0$，以及壳外（$r > R$）所有切向分量同向累加趋近理论值 $\mu_0 I/(2\pi r)$ 的微观本质；支持 $N$ 档位调节、观察距离 $r/R$ 滑块、逐对叠加动画与理论极限实时对比。 |
 | 13 | [`cylindrical_shell_current_comparison.html`](./cylindrical_shell_current_comparison.html) | **圆柱壳上的两种表面电流与磁场对偶性** | 左右双栏独立 3D 联动对比：直观呈现无限长圆柱薄壳“竖直圆柱·轴向电流 $j$”与“水平圆柱·环向电流 $j'$（理想螺线管）”所激发磁场的完美内外对偶性；直观展现轴向电流在壳内 $B \equiv 0$、壳外 $B \propto 1/r$ 环形分布，与环向电流在壳内 $B \equiv \mu_0 j'$ 匀强直线、壳外 $B \equiv 0$ 的互补规律；支持双栏独立 360° 拖拽缩放、探针 $P$ 在 $r/R \in [0, 2.40]$ 自由探测/一键进出壳，并动态显示壳面内外极限跳变。 |
 | 14 | [`wave_reflection_refraction.html`](./wave_reflection_refraction.html) | **电磁波在介质界面的反射与折射** | 调节入射角和相对折射率，观察反射与折射角、s／p 偏振方向、布儒斯特角和半波损。全反射模式展示相位滞后、倏逝场和古斯–汉欣位移示意，s 偏振时域模式展示电场与磁场的变化。 |
+| 15 | [`wave_phase_group_velocity.html`](./wave_phase_group_velocity.html) | **波的相速与群速** | 播放两列正弦波的叠加动画，对比固定相位和包络峰顶的移动。波数固定时，调节平均频率改变相速，调节频率差改变群速。 |
 
 ---
 
@@ -63,4 +64,4 @@ open current_loop_torus.html
 open magnetic_gauss_law.html
 ```
 
-> **提示**：页面通过 CDN 加载 `Three.js (r128)`、`OrbitControls` 与 `KaTeX`，首次打开需保持网络连接。
+> **提示**：使用 CDN 加载 `Three.js (r128)`、`OrbitControls` 或 `KaTeX` 的演示需要联网加载这些依赖。
