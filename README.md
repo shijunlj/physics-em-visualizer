@@ -2,10 +2,10 @@
 
 🌐 **在线演示（GitHub Pages）**
 
-- [电磁学主页](https://shijunlj.github.io/physics-em-visualizer/) · 11 项演示
+- [电磁学主页](https://shijunlj.github.io/physics-em-visualizer/) · 12 项演示
 - [电动力学主页](https://shijunlj.github.io/physics-em-visualizer/ed_index.html) · 6 项演示
 
-本项目包含 17 个基于 **Three.js 或 HTML5 Canvas** 的 HTML 交互式物理演示，涵盖稳恒磁场、空间拓扑和波动等主题。各演示均可直接在浏览器中打开，交互方式包括三维视角旋转、缩放、动画播放和参数调节。
+本项目包含 18 个基于 **Three.js 或 HTML5 Canvas** 的 HTML 交互式物理演示，涵盖稳恒磁场、电磁感应、空间拓扑和波动等主题。各演示均可直接在浏览器中打开，交互方式包括三维视角旋转、缩放、动画播放和参数调节。
 
 ---
 
@@ -26,6 +26,7 @@
 | 09 | [`hall_effect.html`](./hall_effect.html) | **霍尔效应 · 载流子与横向平衡** | 3D 动态演示金属/半导体薄片在垂直磁场与纵向电流下的霍尔效应全过程：支持负电荷（电子）与正电荷一键切换，直观呈现载流子在洛伦兹磁场力 $\vec{F}_m = q\vec{v}\times\vec{B}$ 作用下的横向偏转与表面电荷积累、霍尔内建电场 $\vec{E}$ 与电场力 $\vec{F}_e$ 的建立过程，动态过渡至横向平衡（$\vec{F}_e = -\vec{F}_m$）；配备霍尔电压 $U_{ab}$ 实时正负极性读数、电场力与磁场力百分比动态量规条、正视/3D 自由旋转及无级变速控制。 |
 | 10 | [`cylindrical_shell_magnetic_field.html`](./cylindrical_shell_magnetic_field.html) | **无限长载流圆柱壳 · 磁场矢量叠加** | 3D/截面交互演示无限长薄壁圆柱壳轴向电流的微观磁场叠加机理：将圆柱壳离散为 $N$ 根对称长直导线，以关于径向对称的镜像导线对为切入点，直观展示径向分量成对严格抵消、切向分量成对相加；生动揭示壳内（$r < R$）各对切向分量相互代数相消导致 $B \equiv 0$，以及壳外（$r > R$）所有切向分量同向累加趋近理论值 $\mu_0 I/(2\pi r)$ 的微观本质；支持 $N$ 档位调节、观察距离 $r/R$ 滑块、逐对叠加动画与理论极限实时对比。 |
 | 11 | [`cylindrical_shell_current_comparison.html`](./cylindrical_shell_current_comparison.html) | **圆柱壳上的两种表面电流与磁场对偶性** | 左右双栏独立 3D 联动对比：直观呈现无限长圆柱薄壳“竖直圆柱·轴向电流 $j$”与“水平圆柱·环向电流 $j'$（理想螺线管）”所激发磁场的完美内外对偶性；直观展现轴向电流在壳内 $B \equiv 0$、壳外 $B \propto 1/r$ 环形分布，与环向电流在壳内 $B \equiv \mu_0 j'$ 匀强直线、壳外 $B \equiv 0$ 的互补规律；支持双栏独立 360° 拖拽缩放、探针 $P$ 在 $r/R \in [0, 2.40]$ 自由探测/一键进出壳，并动态显示壳面内外极限跳变。 |
+| 12 | [`faraday_iron_ring.html`](./faraday_iron_ring.html) | **法拉第的双线圈软铁环实验** | 分段观察合闸、保持闭合和断开时铁环内的相对磁场，以及检流计指针的正偏、归零和反偏。 |
 
 ### 电动力学
 

@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>法拉第的双线圈软铁环实验</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --text: #f1f6ff;
+      --muted: #b5c7de;
+      --primary: #ffba83;
+      --secondary: #82ccff;
+      --field: #76e8cf;
+      --border: #3b5071;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(ellipse 760px 450px at 8% 0%, #302c55, transparent 80%), #16243b;
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    main { width: min(1080px, calc(100% - 32px)); margin: auto; padding: clamp(24px, 5vh, 56px) 0 68px; }
+    h1 { margin: 0 0 8px; font-size: clamp(24px, 4.5vw, 39px); }
+    p { margin: 0; color: var(--muted); line-height: 1.6; }
+
+    .demo {
+      margin-top: 22px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: #192942;
+      box-shadow: 0 20px 50px #08132366;
+    }
+
+    .toolbar, .diagram-key, .timeline, .stages { padding: 12px clamp(12px, 2.5vw, 22px); }
+    .toolbar, .buttons, .diagram-key { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+    .toolbar { justify-content: space-between; }
+
+    button {
+      min-height: 38px;
+      padding: 5px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #263b58;
+      color: var(--text);
+      font: inherit;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    button:hover { background: #344e70; }
+    #play { min-width: 112px; background: var(--field); color: #102b2b; font-weight: 650; }
+    #play:hover { background: #a3f3e2; }
+    :focus-visible { outline: 2px solid var(--field); outline-offset: 3px; }
+
+    canvas { display: block; width: 100%; }
+    #circuit { height: clamp(186px, 52vw, 388px); background: radial-gradient(ellipse, #1a314b, #101c31 76%); }
+    #plot { height: 152px; background: #101c31; }
+    .diagram-key { padding-block: 8px; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .primary { color: var(--primary); }
+    .secondary { color: var(--secondary); }
+    .field { color: var(--field); }
+
+    .timeline { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: center; }
+    .timeline label, #status { color: var(--muted); font-size: 14px; }
+    input[type="range"] { width: 100%; margin: 0; accent-color: var(--field); }
+
+    .stages { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding-top: 0; }
+    .stages button { text-align: left; }
+    .stages button[aria-current="step"] { border-color: var(--field); background: #21443f; }
+    .stages small { display: block; margin-top: 3px; color: var(--muted); line-height: 1.35; }
+    .model { margin-top: 12px; font-size: 13px; }
+
+    .home-link {
+      position: fixed;
+      right: max(18px, env(safe-area-inset-right));
+      bottom: max(12px, env(safe-area-inset-bottom));
+      display: inline-flex;
+      align-items: center;
+      min-height: 36px;
+      padding: 0 12px;
+      border: 1px solid #526582;
+      border-radius: 8px;
+      background: #22304a;
+      color: var(--field);
+      font-size: 13px;
+      text-decoration: none;
+    }
+
+    .home-link:hover { text-decoration: underline; }
+
+    @media (max-width: 460px) {
+      .stages button { padding-inline: 7px; }
+      .stages small { font-size: 11px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>法拉第的双线圈软铁环实验</h1>
+      <p>A 线圈接电池和开关，B 线圈接检流计。观察合闸、保持闭合和断开时的指针变化。</p>
+    </header>
+
+    <section class="demo" aria-label="软铁环实验动画">
+      <div class="toolbar">
+        <div class="buttons">
+          <button id="play" type="button">播放全过程</button>
+          <button id="reset" type="button">重置</button>
+        </div>
+        <output id="status" aria-live="polite">开关断开 · 指针归零</output>
+      </div>
+
+      <canvas id="circuit" role="img" aria-label="电池与开关接左侧 A 线圈，检流计接右侧 B 线圈，绿色箭头表示软铁环内的磁场"></canvas>
+      <div class="diagram-key">
+        <span class="primary">A 线圈 · 电池回路</span>
+        <span class="secondary">B 线圈 · 检流计回路</span>
+        <span class="field">绿色箭头 · 铁环内磁场</span>
+      </div>
+      <canvas id="plot" role="img" aria-label="铁环磁场与检流计指针的时间曲线，磁场增强时指针正偏，磁场稳定时归零，磁场减弱时反偏"></canvas>
+      <div class="timeline">
+        <label for="progress">演示进度</label>
+        <input id="progress" type="range" min="0" max="7.2" value="0" step="any" aria-valuetext="开关断开 · 指针归零">
+      </div>
+      <div class="stages" aria-label="分段播放">
+        <button type="button" data-stage="close">合闸<small>磁场增强 · 指针正偏</small></button>
+        <button type="button" data-stage="hold">保持闭合<small>磁场稳定 · 指针归零</small></button>
+        <button type="button" data-stage="open">断开<small>磁场减弱 · 指针反偏</small></button>
+      </div>
+    </section>
+
+    <p class="model">相对磁场的 100% 对应开关闭合后的稳态磁场。B 线圈的感应电动势满足 ε = −N dΦ/dt。磁场稳定时即使磁通量不为零，指针也会归零。动画放慢了暂态过程，曲线采用相对刻度，忽略铁芯剩磁。</p>
+  </main>
+
+  <a class="home-link" href="./index.html">← 返回主页</a>
+
+  <script>
+    const circuit = document.getElementById('circuit');
+    const plot = document.getElementById('plot');
+    const play = document.getElementById('play');
+    const reset = document.getElementById('reset');
+    const progress = document.getElementById('progress');
+    const status = document.getElementById('status');
+    const stageButtons = [...document.querySelectorAll('[data-stage]')];
+
+    const primaryColor = '#ffba83';
+    const secondaryColor = '#82ccff';
+    const fieldColor = '#76e8cf';
+    const mutedColor = '#b5c7de';
+
+    const closing = 0.7;
+    const holding = 3.0;
+    const opening = 4.4;
+    const duration = Number(progress.max);
+    const fieldTime = 0.42;
+    const meterTime = 0.16;
+
+    let time = 0;
+    let playUntil = duration;
+    let playing = false;
+    let previousFrame = null;
+    let frame = 0;
+
+    // Exponential response of a damped meter to the changing flux.
+    function meterPulse(elapsed) {
+      if (elapsed <= 0) return 0;
+      return (Math.exp(-elapsed / fieldTime) - Math.exp(-elapsed / meterTime)) *
+        fieldTime / (fieldTime - meterTime);
+    }
+
+    const peakTime = Math.log(fieldTime / meterTime) / (1 / meterTime - 1 / fieldTime);
+    const meterPeak = meterPulse(peakTime);
+    const fieldAtOpening = 1 - Math.exp(-(opening - closing) / fieldTime);
+
+    function sample(at) {
+      const sinceClosing = Math.max(0, at - closing);
+      const sinceOpening = Math.max(0, at - opening);
+      const closed = at >= closing && at < opening;
+      const field = at < opening
+        ? 1 - Math.exp(-sinceClosing / fieldTime)
+        : fieldAtOpening * Math.exp(-sinceOpening / fieldTime);
+      const needle = (meterPulse(sinceClosing) - meterPulse(sinceOpening)) / meterPeak;
+      return { closed, field, needle };
+    }
+
+    function prepare(canvas) {
+      const width = canvas.clientWidth;
+      const height = canvas.clientHeight;
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      const backingWidth = Math.round(width * ratio);
+      const backingHeight = Math.round(height * ratio);
+      if (canvas.width !== backingWidth || canvas.height !== backingHeight) {
+        canvas.width = backingWidth;
+        canvas.height = backingHeight;
+      }
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      ctx.clearRect(0, 0, width, height);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      return { ctx, width, height };
+    }
+
+    function line(ctx, points, color, width) {
+      ctx.beginPath();
+      ctx.moveTo(...points[0]);
+      for (const point of points.slice(1)) ctx.lineTo(...point);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.stroke();
+    }
+
+    function label(ctx, text, x, y, color = mutedColor, size = 17, align = 'center') {
+      ctx.font = `600 ${size}px -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif`;
+      ctx.textAlign = align;
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = color;
+      ctx.fillText(text, x, y);
+    }
+
+    function disk(ctx, x, y, radius, fill, stroke) {
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, 2 * Math.PI);
+      ctx.fillStyle = fill;
+      ctx.fill();
+      if (stroke) {
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+    }
+
+    const core = { x: 332, y: 153, radius: 87 };
+    const halfSweep = 0.81;
+
+    function ringPoint(angle, offset = 0) {
+      return [
+        core.x + (core.radius + offset) * Math.cos(angle),
+        core.y + (core.radius + offset) * Math.sin(angle),
+      ];
+    }
+
+    function makeCoil(center, sweep) {
+      const turns = 7;
+      const steps = turns * 36;
+      return Array.from({ length: steps + 1 }, (_, index) => {
+        const u = index / steps;
+        const winding = u * turns * 2 * Math.PI;
+        return ringPoint(center + (2 * u - 1) * sweep + 0.088 * Math.sin(winding), 26 * Math.cos(winding));
+      });
+    }
+
+    const coilA = makeCoil(Math.PI, -halfSweep);
+    const coilB = makeCoil(0, halfSweep);
+
+    function drawCoil(ctx, coil, color, front) {
+      const halfTurn = 18;
+      for (let i = front ? 0 : halfTurn; i < coil.length - 1; i += 2 * halfTurn) {
+        const points = coil.slice(i, i + halfTurn + 1);
+        line(ctx, points, '#101c31', front ? 5.8 : 4.6);
+        line(ctx, points, color, front ? 3.1 : 2.4);
+      }
+    }
+
+    function drawField(ctx, strength) {
+      if (strength < 0.005) return;
+      ctx.save();
+      ctx.globalAlpha = Math.sqrt(strength) * 0.85;
+      ctx.beginPath();
+      ctx.arc(core.x, core.y, core.radius, 0, 2 * Math.PI);
+      ctx.strokeStyle = '#76e8cf35';
+      ctx.lineWidth = 9;
+      ctx.stroke();
+      for (const angle of [-2.30, -1.88, -1.46, -1.04, 0.89, 1.31, 1.73, 2.15]) {
+        const [x, y] = ringPoint(angle);
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(angle + Math.PI / 2);
+        const length = 8 + 12 * strength;
+        line(ctx, [[-length / 2, 0], [length / 2, 0]], fieldColor, 2.5);
+        line(ctx, [[length / 2 - 5, -4], [length / 2, 0], [length / 2 - 5, 4]], fieldColor, 2.5);
+        ctx.restore();
+      }
+      ctx.restore();
+    }
+
+    function drawMeter(ctx, x, y, needle) {
+      disk(ctx, x, y, 53, '#162940', secondaryColor);
+      ctx.save();
+      ctx.translate(x, y + 19);
+      ctx.beginPath();
+      ctx.arc(0, 0, 38, -2.62, -0.52);
+      ctx.strokeStyle = '#5785a5';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      for (let i = -3; i <= 3; i++) {
+        const angle = i * 0.35;
+        const inner = i % 3 === 0 ? 30 : 34;
+        line(ctx, [[Math.sin(angle) * inner, -Math.cos(angle) * inner],
+          [Math.sin(angle) * 38, -Math.cos(angle) * 38]], mutedColor, 1.4);
+      }
+      label(ctx, '−', -34, -9, secondaryColor, 15);
+      label(ctx, '+', 34, -9, secondaryColor, 15);
+      label(ctx, '0', 0, -45, mutedColor, 13);
+      const angle = needle * 0.88;
+      line(ctx, [[0, 0], [Math.sin(angle) * 32, -Math.cos(angle) * 32]], secondaryColor, 3);
+      disk(ctx, 0, 0, 4, secondaryColor);
+      label(ctx, 'G', 0, 17, mutedColor, 15);
+      ctx.restore();
+    }
+
+    function drawCircuit({ closed, field, needle }) {
+      const { ctx, width, height } = prepare(circuit);
+      const scale = Math.min(width / 664, height / 300);
+      ctx.translate((width - 664 * scale) / 2, (height - 300 * scale) / 2);
+      ctx.scale(scale, scale);
+
+      const aTop = coilA[0];
+      const aBottom = coilA.at(-1);
+      const bTop = coilB[0];
+      const bBottom = coilB.at(-1);
+      const aWire = closed ? primaryColor : '#bc937e';
+      line(ctx, [aTop, [67, aTop[1]], [67, 143]], aWire, 3);
+      line(ctx, [[67, 162], [67, aBottom[1]], [123, aBottom[1]]], aWire, 3);
+      line(ctx, [[174, aBottom[1]], aBottom], aWire, 3);
+      line(ctx, [[52, 143], [82, 143]], primaryColor, 3);
+      line(ctx, [[58, 162], [76, 162]], primaryColor, 3);
+      label(ctx, '+', 38, 141, primaryColor, 17);
+      label(ctx, '−', 38, 162, primaryColor, 17);
+      label(ctx, '电池', 81, 184, mutedColor, 17);
+      line(ctx, [[123, aBottom[1]], [174, aBottom[1] - (closed ? 0 : 24)]], primaryColor, 3.5);
+      disk(ctx, 123, aBottom[1], 4, '#192942', primaryColor);
+      disk(ctx, 174, aBottom[1], 4, '#192942', primaryColor);
+      label(ctx, '开关 K', 149, aBottom[1] + 24, primaryColor, 17);
+
+      line(ctx, [bTop, [574, bTop[1]], [574, 100]], secondaryColor, 3);
+      line(ctx, [[574, 206], [574, bBottom[1]], bBottom], secondaryColor, 3);
+      drawCoil(ctx, coilA, '#b18475', false);
+      drawCoil(ctx, coilB, '#5d94bb', false);
+
+      const steel = ctx.createLinearGradient(230, 48, 425, 255);
+      steel.addColorStop(0, '#a1b1ca');
+      steel.addColorStop(0.5, '#607491');
+      steel.addColorStop(1, '#3a4d66');
+      ctx.beginPath();
+      ctx.arc(core.x, core.y, core.radius, 0, 2 * Math.PI);
+      ctx.strokeStyle = '#24344c';
+      ctx.lineWidth = 48;
+      ctx.stroke();
+      ctx.strokeStyle = steel;
+      ctx.lineWidth = 43;
+      ctx.stroke();
+
+      drawField(ctx, field);
+      drawCoil(ctx, coilA, aWire, true);
+      drawCoil(ctx, coilB, secondaryColor, true);
+      label(ctx, 'A 线圈', 156, 48, primaryColor);
+      label(ctx, 'B 线圈', 507, 48, secondaryColor);
+      label(ctx, '软铁环', core.x, core.y - 10, '#eef5ff', 19);
+      label(ctx, `相对磁场 ${Math.round(field * 100)}%`, core.x, core.y + 15, fieldColor, 16);
+      drawMeter(ctx, 574, 153, needle);
+      label(ctx, '检流计', 574, 221, secondaryColor, 17);
+    }
+
+    function drawPlot() {
+      const { ctx, width, height } = prepare(plot);
+      const left = width < 460 ? 80 : 104;
+      const x = t => left + (width - left - 14) * t / duration;
+      const fieldY = value => 63 - value * 38;
+      const meterY = value => 113 - value * 25;
+
+      ctx.fillStyle = '#76e8cf0e';
+      ctx.fillRect(x(closing), 21, x(opening) - x(closing), height - 28);
+      label(ctx, '合闸', x(closing) + 5, 12, mutedColor, 11, 'left');
+      label(ctx, '断开', x(opening) + 5, 12, mutedColor, 11, 'left');
+      label(ctx, '铁环磁场', 12, 45, fieldColor, 13, 'left');
+      label(ctx, '指针偏转', 12, 113, secondaryColor, 13, 'left');
+      for (const zero of [fieldY(0), meterY(0)]) {
+        line(ctx, [[x(0), zero], [x(duration), zero]], '#486080', 1);
+      }
+      for (const event of [closing, opening]) {
+        line(ctx, [[x(event), 21], [x(event), height - 7]], '#486080', 1);
+      }
+
+      const points = Array.from({ length: 241 }, (_, i) => {
+        const t = i * duration / 240;
+        return { x: x(t), ...sample(t) };
+      });
+      line(ctx, points.map(point => [point.x, fieldY(point.field)]), fieldColor, 2.2);
+      line(ctx, points.map(point => [point.x, meterY(point.needle)]), secondaryColor, 2.2);
+      const now = sample(time);
+      line(ctx, [[x(time), 21], [x(time), height - 7]], '#dfeaffb0', 1);
+      disk(ctx, x(time), fieldY(now.field), 4.5, fieldColor, '#101c31');
+      disk(ctx, x(time), meterY(now.needle), 4.5, secondaryColor, '#101c31');
+    }
+
+    function render() {
+      const stage = time < closing ? '' : time < holding ? 'close' : time < opening ? 'hold' : 'open';
+      const model = sample(time);
+      progress.value = time;
+      const message = {
+        '': '开关断开 · 指针归零',
+        close: '开关闭合 · 磁场增强',
+        hold: '保持闭合 · 磁场稳定',
+        open: Math.abs(model.needle) < 0.02 && model.field < 0.02
+          ? '开关断开 · 指针归零'
+          : '开关断开 · 磁场减弱',
+      }[stage];
+      if (status.value !== message) {
+        status.value = message;
+        progress.setAttribute('aria-valuetext', message);
+        for (const button of stageButtons) {
+          button.setAttribute('aria-current', button.dataset.stage === stage ? 'step' : 'false');
+        }
+      }
+      drawCircuit(model);
+      drawPlot();
+    }
+
+    function stop() {
+      playing = false;
+      cancelAnimationFrame(frame);
+      previousFrame = null;
+      play.textContent = time === 0 || time >= duration ? '播放全过程' : '继续播放';
+    }
+
+    function animate(timestamp) {
+      if (previousFrame !== null) {
+        time = Math.min(playUntil, time + (timestamp - previousFrame) / 1000);
+      }
+      previousFrame = timestamp;
+      render();
+      if (time >= playUntil) stop();
+      else frame = requestAnimationFrame(animate);
+    }
+
+    function start(end = duration) {
+      playUntil = end;
+      playing = true;
+      play.textContent = '暂停';
+      frame = requestAnimationFrame(animate);
+    }
+
+    play.addEventListener('click', () => {
+      if (playing) {
+        stop();
+        return;
+      }
+      if (time >= duration) time = 0;
+      start();
+    });
+
+    reset.addEventListener('click', () => {
+      time = 0;
+      stop();
+      render();
+    });
+
+    progress.addEventListener('input', () => {
+      time = Number(progress.value);
+      stop();
+      render();
+    });
+
+    const clips = {
+      close: [closing - 0.28, closing + 1.4],
+      hold: [holding, opening - 0.01],
+      open: [opening - 0.28, duration],
+    };
+
+    for (const button of stageButtons) {
+      button.addEventListener('click', () => {
+        const [begin, end] = clips[button.dataset.stage];
+        time = begin;
+        stop();
+        render();
+        start(end);
+      });
+    }
+
+    new ResizeObserver(render).observe(circuit);
+    new ResizeObserver(render).observe(plot);
+    render();
+  </script>
+</body>
+</html>
