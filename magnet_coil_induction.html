@@ -1,0 +1,764 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>磁铁与线圈的相对运动</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --text: #f2f6ff;
+      --muted: #b6c8e1;
+      --edge: #3b5271;
+      --panel: #1a2a44;
+      --magnet: #c7a7ff;
+      --coil: #83f0d3;
+      --copper: #ffbf88;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(ellipse 760px 450px at 8% 0%, #302c55, transparent 80%), #16243b;
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    main { width: min(1152px, calc(100% - 32px)); margin: auto; padding: clamp(24px, 5vh, 58px) 0 72px; }
+    h1 { margin: 0 0 8px; font-size: clamp(25px, 5vw, 42px); }
+    p { margin: 0; line-height: 1.6; color: var(--muted); }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(250px, 31%);
+      gap: 14px;
+      margin-top: 22px;
+    }
+
+    .panel { min-width: 0; overflow: hidden; border: 1px solid var(--edge); border-radius: 17px; background: var(--panel); }
+    .controls { display: grid; gap: 11px; padding: 14px 16px; }
+    .button-row, .modes, .legend { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+    .button-row { justify-content: space-between; }
+
+    button {
+      min-height: 36px;
+      border-radius: 8px;
+      border: 1px solid var(--edge);
+      background: #273c5b;
+      color: var(--text);
+      padding: 6px 10px;
+      font: inherit;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    button:hover { background: #345174; }
+    button[aria-pressed="true"] { border-color: #a6c2ea; background: #344b6d; }
+    #play { min-width: 85px; background: var(--coil); color: #102a27; font-weight: 700; }
+    #play:hover { background: #aff7e5; }
+    :focus-visible { outline: 2px solid var(--coil); outline-offset: 3px; }
+
+    .speed {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) 4.2ch;
+      gap: 10px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    input { width: 100%; margin: 0; accent-color: var(--coil); }
+    output { font-variant-numeric: tabular-nums; }
+    #speed-value { text-align: right; }
+
+    canvas { display: block; width: 100%; }
+    #scene {
+      height: clamp(235px, 48vw, 412px);
+      background: radial-gradient(ellipse at 55% 43%, #213955, #111d32 82%);
+      touch-action: none;
+      cursor: grab;
+    }
+    #scene:active { cursor: grabbing; }
+    #scene:focus-visible { outline-offset: -3px; }
+    #meter { height: 190px; }
+    #loop-view { height: 172px; }
+    .legend { gap: 8px 18px; padding: 11px 16px; font-size: 13px; }
+    .legend span { display: inline-flex; align-items: center; gap: 7px; }
+    .legend span::before { content: ""; width: 18px; border-top: 2px solid currentColor; }
+    .magnet-key { color: var(--magnet); }
+    .coil-key { color: var(--coil); }
+    .legend .view-hint { margin-left: auto; color: var(--muted); }
+    .legend .view-hint::before { content: none; }
+
+    .meter-panel { padding: 16px; }
+    .meter-panel h2 { margin: 0; font-size: 20px; }
+    .loop-panel { margin-top: 13px; padding-top: 12px; border-top: 1px solid var(--edge); }
+    .loop-panel h3 { margin: 0 0 3px; font-size: 15px; }
+    .loop-panel p { font-size: 12px; }
+    #loop-direction { text-align: center; }
+    .reading { display: flex; align-items: baseline; gap: 8px; color: var(--muted); font-size: 13px; }
+    #current { color: var(--coil); font-size: 30px; font-weight: 650; }
+    #stage { margin-top: 8px; font-size: 14px; }
+    .note { margin-top: 12px; font-size: 13px; }
+
+    .home-link {
+      position: fixed;
+      right: max(18px, env(safe-area-inset-right));
+      bottom: max(12px, env(safe-area-inset-bottom));
+      z-index: 30;
+      display: inline-flex;
+      align-items: center;
+      min-height: 36px;
+      padding: 0 12px;
+      border: 1px solid #526582;
+      border-radius: 8px;
+      background: #22304a;
+      color: var(--coil);
+      font-size: 13px;
+      text-decoration: none;
+    }
+
+    .home-link:hover { text-decoration: underline; }
+
+    @media (max-width: 730px) {
+      .layout { grid-template-columns: 1fr; }
+      #meter { height: 184px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>磁铁与线圈的相对运动</h1>
+    <p>让 N 极靠近或离开线圈，观察感应电流和两组磁感应线。</p>
+
+    <div class="layout">
+      <section class="panel" aria-label="运动演示">
+        <div class="controls">
+          <div class="button-row">
+            <div class="modes" role="group" aria-label="运动方式">
+              <button type="button" data-mode="magnet" aria-pressed="true">磁铁运动</button>
+              <button type="button" data-mode="coil" aria-pressed="false">线圈运动</button>
+            </div>
+            <div class="modes">
+              <button type="button" id="play">开始运动</button>
+              <button type="button" id="reset">重置</button>
+            </div>
+          </div>
+          <label class="speed">
+            相对运动速度
+            <input id="speed" type="range" min="0.25" max="2" step="0.25" value="1">
+            <output id="speed-value" for="speed">1.00×</output>
+          </label>
+        </div>
+        <canvas id="scene" tabindex="0" role="img" aria-label="三维磁铁和线圈，拖动或使用方向键旋转整个模型。紫线表示磁铁的磁场，绿线表示线圈的磁场，线圈上的箭头表示电流方向。"></canvas>
+        <div class="legend">
+          <span class="magnet-key">磁铁的磁感应线</span>
+          <span class="coil-key">线圈的磁感应线</span>
+          <span class="view-hint">拖动旋转</span>
+        </div>
+      </section>
+
+      <aside class="panel meter-panel">
+        <h2>检流计 G</h2>
+        <canvas id="meter" role="img" aria-label="检流计表盘，左偏为负，右偏为正"></canvas>
+        <div class="reading"><output id="current" aria-live="off">0.00</output><span>相对电流</span></div>
+        <p id="stage" aria-live="polite">静止 · 指针归零</p>
+        <div class="loop-panel">
+          <h3>单匝线圈</h3>
+          <p>从磁铁侧看向线圈</p>
+          <canvas id="loop-view" aria-hidden="true"></canvas>
+          <p id="loop-direction">无感应电流</p>
+        </div>
+      </aside>
+    </div>
+
+    <p class="note">感应电流由矩形磁铁穿过各匝的磁通变化率计算，忽略线圈自感。绿线的深浅和单匝图中的点叉数量都表示感应磁场的相对强弱。磁场指向纸内时，检流计读数为正。</p>
+  </main>
+  <a class="home-link" href="./index.html">← 返回主页</a>
+
+  <script>
+    const scene = document.querySelector('#scene');
+    const meter = document.querySelector('#meter');
+    const loopView = document.querySelector('#loop-view');
+    const loopDirection = document.querySelector('#loop-direction');
+    const play = document.querySelector('#play');
+    const speed = document.querySelector('#speed');
+    const speedValue = document.querySelector('#speed-value');
+    const currentOutput = document.querySelector('#current');
+    const stageOutput = document.querySelector('#stage');
+    const modeButtons = [...document.querySelectorAll('[data-mode]')];
+
+    const magnetColor = '#c7a7ff';
+    const coilColor = '#83f0d3';
+    const copper = '#ffbf88';
+    const currentColor = '#e9fff7';
+    const muted = '#b6c8e1';
+    const magnetHalf = 1.1;
+    const magnetHeight = 0.34;
+    const magnetDepth = 0.32;
+    const coilHalf = 0.91;
+    const coilRadius = 0.83;
+    const turns = 8;
+    const far = 3.55;
+    const near = 1.18;
+    const travelTime = 3;
+    const holdUntil = travelTime + 1.05;
+    const endTime = holdUntil + travelTime;
+
+    let mode = 'magnet';
+    let rate = Number(speed.value);
+    let time = 0;
+    let playing = false;
+    let previousFrame = null;
+    let frame = 0;
+
+    function motion(at) {
+      if (at >= travelTime && at <= holdUntil) return { distance: near, velocity: 0 };
+      const inserting = at < travelTime;
+      const progress = (inserting ? at : endTime - at) / travelTime;
+      const distance = far - (far - near) * (1 - Math.cos(Math.PI * progress)) / 2;
+      const magnitude = (far - near) * Math.PI / (2 * travelTime) * Math.sin(Math.PI * progress);
+      return { distance, velocity: inserting ? -magnitude : magnitude };
+    }
+
+    const turnOffsets = Array.from({ length: turns }, (_, i) => coilHalf * (2 * (i + 0.5) / turns - 1));
+    const poleFaceSamples = [];
+    const rimSamples = 12;
+    const faceSamplesPerSide = 6;
+    // A uniformly magnetized prism has opposite, uniform pole densities on its end faces.
+    // Sample one quadrant of each turn by symmetry. Common quadrature factors cancel at normalization.
+    for (let angleIndex = 0; angleIndex < rimSamples; angleIndex++) {
+      const angle = (angleIndex + 0.5) * Math.PI / (2 * rimSamples);
+      const radialY = Math.cos(angle);
+      const radialZ = Math.sin(angle);
+      for (let row = 0; row < faceSamplesPerSide; row++) {
+        const y = coilRadius * radialY - magnetHeight * (2 * (row + 0.5) / faceSamplesPerSide - 1);
+        for (let column = 0; column < faceSamplesPerSide; column++) {
+          const z = coilRadius * radialZ - magnetDepth * (2 * (column + 0.5) / faceSamplesPerSide - 1);
+          poleFaceSamples.push({ radial: y * radialY + z * radialZ, square: y * y + z * z });
+        }
+      }
+    }
+
+    function fluxDerivative(distance) {
+      // div B = 0 converts the axial flux derivative into minus the radial field integral along the rim.
+      let radialIntegral = 0;
+      for (const offset of turnOffsets) {
+        const x = distance + offset;
+        const toNorth = (x - magnetHalf) ** 2;
+        const toSouth = (x + magnetHalf) ** 2;
+        for (const { radial, square } of poleFaceSamples) {
+          const north = square + toNorth;
+          const south = square + toSouth;
+          radialIntegral += radial * (1 / (north * Math.sqrt(north)) - 1 / (south * Math.sqrt(south)));
+        }
+      }
+      return -radialIntegral;
+    }
+
+    const fullScale = Number(speed.max) * Math.max(...Array.from({ length: 301 }, (_, i) => {
+      const { distance, velocity } = motion(travelTime * i / 300);
+      return Math.abs(fluxDerivative(distance) * velocity);
+    }));
+
+    function sample(at, running, playbackRate) {
+      const { distance, velocity } = motion(at);
+      const relativeVelocity = running ? velocity * playbackRate : 0;
+      const current = -fluxDerivative(distance) * relativeVelocity / fullScale;
+      return { distance, current };
+    }
+
+    function currentDirection(current) {
+      return Math.abs(current) < 0.005 ? 0 : Math.sign(current);
+    }
+
+    function fieldStrength(current) {
+      // At fixed coil geometry the axial field is proportional to current by Biot–Savart.
+      return Math.min(1, Math.abs(current));
+    }
+
+    function canvasFrame(canvas) {
+      const width = canvas.clientWidth;
+      const height = canvas.clientHeight;
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      if (canvas.width !== Math.round(width * ratio) || canvas.height !== Math.round(height * ratio)) {
+        canvas.width = Math.round(width * ratio);
+        canvas.height = Math.round(height * ratio);
+      }
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      ctx.clearRect(0, 0, width, height);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      return { ctx, width, height };
+    }
+
+    function stroke(ctx, a, b, color, width) {
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.stroke();
+    }
+
+    function text(ctx, value, x, y, color, size, weight = 600) {
+      ctx.font = `${weight} ${size}px -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = color;
+      ctx.fillText(value, x, y);
+    }
+
+    function disk(ctx, x, y, radius, color) {
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, 2 * Math.PI);
+      ctx.fillStyle = color;
+      ctx.fill();
+    }
+
+    // Trace the exterior field in a meridional plane, then rotate it around the axis.
+    function fieldDirection(x, r, half) {
+      const north = x - half;
+      const south = x + half;
+      const dN = (north ** 2 + r ** 2) ** 1.5;
+      const dS = (south ** 2 + r ** 2) ** 1.5;
+      const dx = north / dN - south / dS;
+      const dr = r / dN - r / dS;
+      const length = Math.hypot(dx, dr);
+      return [dx / length, dr / length];
+    }
+
+    function fieldLine(half, radius, latitude, azimuth) {
+      let x = half + radius * Math.cos(latitude);
+      let r = radius * Math.sin(latitude);
+      const path = [];
+      for (let i = 0; i < 800; i++) {
+        path.push([x, r * Math.cos(azimuth), r * Math.sin(azimuth)]);
+        if (x < 0 && Math.hypot(x + half, r) <= radius) break;
+        const step = Math.max(0.055, Math.min(0.22, Math.hypot(x, r) * 0.045));
+        const [dx, dr] = fieldDirection(x, r, half);
+        const [midX, midR] = fieldDirection(x + dx * step / 2, r + dr * step / 2, half);
+        x += midX * step;
+        r += midR * step;
+      }
+      return path;
+    }
+
+    const magnetLines = [];
+    const coilLines = [];
+    const outerMagnetLines = [];
+    const outerCoilLines = [];
+    for (let plane = 0; plane < 4; plane++) {
+      const azimuth = Math.PI / 4 + plane * Math.PI / 2;
+      const outerAzimuth = 0.20 + plane * Math.PI / 2;
+      magnetLines.push(fieldLine(magnetHalf, 0.42, 1.37, azimuth));
+      magnetLines.push(fieldLine(magnetHalf, 0.42, 1.68, azimuth));
+      coilLines.push(fieldLine(coilHalf, coilRadius, 1.36, azimuth + 0.19));
+      outerMagnetLines.push(fieldLine(magnetHalf, 0.42, 0.55, outerAzimuth));
+      outerCoilLines.push(fieldLine(coilHalf, coilRadius, 0.58, outerAzimuth + 0.19));
+    }
+
+    const wire = Array.from({ length: turns * 36 + 1 }, (_, i) => {
+      const angle = Math.PI + i * 2 * Math.PI / 36;
+      return [coilHalf * (i / (turns * 18) - 1), coilRadius * Math.cos(angle), coilRadius * Math.sin(angle)];
+    });
+
+    const magnetSides = [
+      { normal: [0, 1, 0], edge: [[magnetHeight, -magnetDepth], [magnetHeight, magnetDepth]] },
+      { normal: [0, -1, 0], edge: [[-magnetHeight, -magnetDepth], [-magnetHeight, magnetDepth]] },
+      { normal: [0, 0, 1], edge: [[-magnetHeight, magnetDepth], [magnetHeight, magnetDepth]] },
+      { normal: [0, 0, -1], edge: [[-magnetHeight, -magnetDepth], [magnetHeight, -magnetDepth]] },
+    ];
+
+    function boxFaces() {
+      const faces = [];
+      const bands = 8;
+      for (const pole of [-1, 1]) {
+        for (const { normal, edge } of magnetSides) {
+          for (let band = 0; band < bands; band++) {
+            const start = pole * magnetHalf * band / bands;
+            const end = pole * magnetHalf * (band + 1) / bands;
+            const [a, b] = edge;
+            faces.push({ points: [[start, ...a], [start, ...b], [end, ...b], [end, ...a]], normal, pole });
+          }
+        }
+        const points = [
+          [-magnetHeight, -magnetDepth], [magnetHeight, -magnetDepth],
+          [magnetHeight, magnetDepth], [-magnetHeight, magnetDepth],
+        ].map(corner => [pole * magnetHalf, ...corner]);
+        faces.push({ points, normal: [pole, 0, 0], pole });
+      }
+      return faces;
+    }
+
+    const faces = boxFaces();
+    const defaultYaw = -0.36;
+    const defaultTilt = 0.23;
+    let yaw = defaultYaw;
+    let tilt = defaultTilt;
+    let drag = null;
+
+    function arrowHead(point, angle, length) {
+      const wing = side => ({
+        x: point.x - length * Math.cos(angle + side * 0.54),
+        y: point.y - length * Math.sin(angle + side * 0.54),
+      });
+      return [wing(-1), point, wing(1)];
+    }
+
+    function trace(ctx, points) {
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      for (const point of points.slice(1)) ctx.lineTo(point.x, point.y);
+    }
+
+    function drawScene(model) {
+      const { ctx, width, height } = canvasFrame(scene);
+      const center = mode === 'magnet' ? -1.35 : 1.35;
+      const magnetX = mode === 'magnet' ? -model.distance : 0;
+      const coilX = mode === 'magnet' ? 0 : model.distance;
+      const sinYaw = Math.sin(yaw);
+      const cosYaw = Math.cos(yaw);
+      const sinTilt = Math.sin(tilt);
+      const cosTilt = Math.cos(tilt);
+      const verticalExtent = Math.max(2.75, 3.5 * Math.abs(sinTilt * sinYaw) + 1.5);
+      const scale = Math.min(width / 9.3, height / (verticalExtent * 2));
+      const drawables = [];
+      ctx.translate(width / 2, height / 2 - 2);
+      ctx.scale(scale, scale);
+
+      // Apply one view transform to the entire experiment; larger depth is nearer.
+      function project([x, y, z], offset = -center) {
+        const along = x + offset;
+        const depth = -sinYaw * along + cosYaw * z;
+        return {
+          x: cosYaw * along + sinYaw * z,
+          y: -cosTilt * y + sinTilt * depth,
+          depth: sinTilt * y + cosTilt * depth,
+        };
+      }
+
+      const axisA = project([mode === 'magnet' ? -6.6 : -3.0, 0, 0]);
+      const axisB = project([mode === 'magnet' ? 3.35 : 6.6, 0, 0]);
+      ctx.setLineDash([0.1, 0.13]);
+      stroke(ctx, axisA, axisB, '#6d88aa75', 1 / scale);
+      ctx.setLineDash([]);
+
+      function addLine(points, offset, color, opacity, size, stride) {
+        const projected = points.map(point => project(point, offset - center));
+        for (let i = 0; i < projected.length - 1; i += stride) {
+          const part = projected.slice(i, i + stride + 1);
+          drawables.push({ points: part, depth: (part[0].depth + part.at(-1).depth) / 2, color, opacity, size });
+        }
+        return projected;
+      }
+
+      function addField(lines, offset, color, opacity, direction, arrows = [0.24, 0.66]) {
+        for (const points of lines) {
+          const projected = addLine(points, offset, color, opacity, 1.25, 6);
+          for (const fraction of arrows) {
+            const i = Math.round((projected.length - 1) * fraction);
+            const point = projected[i];
+            const next = projected[i + direction];
+            const angle = Math.atan2(next.y - point.y, next.x - point.x);
+            drawables.push({ points: arrowHead(point, angle, 5.5 / scale), depth: point.depth, color, opacity, size: 1.45 });
+          }
+        }
+      }
+
+      const outerArrows = [0.13, 0.87];
+      addField(outerMagnetLines, magnetX, magnetColor, 0.38, 1, outerArrows);
+      addField(magnetLines, magnetX, magnetColor, 0.68, 1);
+      const strength = fieldStrength(model.current);
+      if (strength > 0) {
+        const fieldDirection = Math.sign(model.current);
+        addField(outerCoilLines, coilX, coilColor, strength * 0.57, fieldDirection, outerArrows);
+        addField(coilLines, coilX, coilColor, strength, fieldDirection);
+      }
+
+      for (const face of faces) {
+        const normal = project(face.normal, 0);
+        if (normal.depth <= 0) continue;
+        const points = face.points.map(point => project(point, magnetX - center));
+        const light = Math.max(0, -0.32 * normal.x - 0.52 * normal.y + 0.53 * normal.depth);
+        drawables.push({
+          points,
+          depth: points.reduce((sum, point) => sum + point.depth, 0) / points.length,
+          fill: face.pole > 0 ? `hsl(8 70% ${36 + 24 * light}%)` : `hsl(213 60% ${34 + 24 * light}%)`,
+        });
+      }
+
+      const labelFaces = [...magnetSides, { normal: [-1, 0, 0] }, { normal: [1, 0, 0] }];
+      const faceTowardViewer = labelFaces.reduce((best, face) =>
+        project(face.normal, 0).depth > project(best.normal, 0).depth ? face : best);
+      const [nx, ny, nz] = faceTowardViewer.normal;
+      for (const [letter, pole] of [['S', -1], ['N', 1]]) {
+        if (nx && nx !== pole) continue;
+        const point = project([
+          nx ? pole * (magnetHalf + 0.02) : pole * 0.55,
+          ny * (magnetHeight + 0.02),
+          nz * (magnetDepth + 0.02),
+        ], magnetX - center);
+        // Keep the screen-facing glyph clear of the neighboring face strips.
+        drawables.push({ point, depth: point.depth + 0.18, letter });
+      }
+
+      const circuitY = -1.36;
+      const meterWire = [
+        [-coilHalf, -coilRadius, 0], [-coilHalf, circuitY, 0],
+        [coilHalf, circuitY, 0], [coilHalf, -coilRadius, 0],
+      ];
+      addLine(meterWire, coilX, copper, 0.77, 2, 1);
+      const projectedWire = addLine(wire, coilX, copper, 1, 2.55, 4);
+      const direction = currentDirection(model.current);
+      if (direction) {
+        // Increasing the winding angle gives a field along +x by the right-hand rule.
+        const frontAngle = Math.atan2(cosTilt * cosYaw, sinTilt);
+        const frontIndex = (Math.round((frontAngle - Math.PI) * 36 / (2 * Math.PI)) + 36) % 36;
+        for (const turn of [1, 3, 5, 7]) {
+          const index = turn * 36 + frontIndex;
+          const point = projectedWire[index];
+          const next = projectedWire[index + direction];
+          const angle = Math.atan2(next.y - point.y, next.x - point.x);
+          const points = arrowHead(point, angle, 8 / scale);
+          drawables.push({ points, depth: point.depth + 0.04, color: currentColor, opacity: 1, size: 2.5 });
+        }
+      }
+      drawables.sort((a, b) => a.depth - b.depth);
+      for (const item of drawables) {
+        if (item.letter) {
+          text(ctx, item.letter, item.point.x, item.point.y, '#fff6f5', Math.max(11 / scale, 0.31), 750);
+          continue;
+        }
+        trace(ctx, item.points);
+        if (item.fill) {
+          ctx.closePath();
+          ctx.fillStyle = item.fill;
+          ctx.fill();
+          ctx.strokeStyle = item.fill;
+          ctx.lineWidth = 0.45 / scale;
+          ctx.stroke();
+        } else {
+          ctx.globalAlpha = item.opacity;
+          ctx.strokeStyle = item.color;
+          ctx.lineWidth = item.size / scale;
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+        }
+      }
+
+      const contact = project([0, circuitY, 0], coilX - center);
+      disk(ctx, contact.x, contact.y, 0.24, copper);
+      disk(ctx, contact.x, contact.y, 0.21, '#182944');
+      text(ctx, 'G', contact.x, contact.y, '#fff3e4', Math.max(9 / scale, 0.23));
+      const magnetLabel = project([0, 0, 0], magnetX - center);
+      const coilLabel = project([0, 0, 0], coilX - center);
+      const font = Math.max(11 / scale, 0.23);
+      text(ctx, mode === 'magnet' ? '运动磁铁' : '固定磁铁', magnetLabel.x, magnetLabel.y + 0.70, '#f2e9ff', font);
+      text(ctx, mode === 'coil' ? '运动线圈' : '固定线圈', coilLabel.x, coilLabel.y - 1.22, copper, font);
+    }
+
+    function drawMeter(current) {
+      const { ctx, width, height } = canvasFrame(meter);
+      const x = width / 2;
+      const radius = Math.min(width * 0.36, height * 0.56, 118);
+      const y = height * 0.73;
+      const span = 1.05;
+      const point = (value, r) => ({
+        x: x + Math.sin(value * span) * r,
+        y: y - Math.cos(value * span) * r,
+      });
+
+      ctx.beginPath();
+      ctx.arc(x, y, radius, -Math.PI / 2 - span, -Math.PI / 2 + span);
+      ctx.strokeStyle = '#617c9d';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      for (let i = -10; i <= 10; i++) {
+        const major = i % 5 === 0;
+        stroke(ctx, point(i / 10, radius - (major ? 9 : 5)), point(i / 10, radius),
+          major ? '#d9e6f8' : '#839ab8', major ? 1.6 : 1);
+      }
+
+      for (const [number, label] of [[-1, '−1'], [-0.5, '−0.5'], [0, '0'], [0.5, '+0.5'], [1, '+1']]) {
+        const tick = point(number, radius + 14);
+        text(ctx, label, tick.x, tick.y, muted, 12);
+      }
+
+      const value = Math.max(-1, Math.min(1, current));
+      stroke(ctx, { x, y }, point(value, radius - 12), coilColor, 3.4);
+      disk(ctx, x, y, 7, '#405c78');
+      disk(ctx, x, y, 3.8, coilColor);
+    }
+
+    const loopMarkers = [[0, 0]];
+    for (const [count, radius, rotation] of [[6, 0.32, 0], [12, 0.64, Math.PI / 12]]) {
+      for (let i = 0; i < count / 2; i++) {
+        const angle = rotation + 2 * Math.PI * i / count;
+        const x = radius * Math.cos(angle);
+        const y = radius * Math.sin(angle);
+        loopMarkers.push([x, y], [-x, -y]);
+      }
+    }
+
+    function drawLoop(current) {
+      const { ctx, width, height } = canvasFrame(loopView);
+      const x = width / 2;
+      const y = height / 2;
+      const radius = Math.min(width * 0.33, 67);
+      const direction = currentDirection(current);
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, 2 * Math.PI);
+      ctx.strokeStyle = copper;
+      ctx.lineWidth = 2.4;
+      ctx.stroke();
+
+      let message = '无感应电流';
+      if (direction) {
+        // From the magnet side, +x points into the page and clockwise current produces it.
+        for (const angle of [-Math.PI / 3, Math.PI / 3, 2 * Math.PI / 3, 4 * Math.PI / 3]) {
+          const point = { x: x + radius * Math.cos(angle), y: y + radius * Math.sin(angle) };
+          trace(ctx, arrowHead(point, angle + direction * Math.PI / 2, 9));
+          ctx.strokeStyle = currentColor;
+          ctx.lineWidth = 2.4;
+          ctx.stroke();
+        }
+
+        const count = fieldStrength(current) * loopMarkers.length;
+        const crossHalf = Math.min(3.6, radius * 0.055);
+        for (let index = 0; index < count; index++) {
+          const [dx, dy] = loopMarkers[index];
+          const mx = x + radius * dx;
+          const my = y + radius * dy;
+          ctx.globalAlpha = Math.min(1, count - index) ** 2;
+          if (direction < 0) {
+            disk(ctx, mx, my, crossHalf, coilColor);
+          } else {
+            stroke(ctx, { x: mx - crossHalf, y: my - crossHalf }, { x: mx + crossHalf, y: my + crossHalf }, coilColor, 2);
+            stroke(ctx, { x: mx + crossHalf, y: my - crossHalf }, { x: mx - crossHalf, y: my + crossHalf }, coilColor, 2);
+          }
+        }
+        ctx.globalAlpha = 1;
+        message = direction < 0 ? '逆时针电流 · 感应磁场出纸面' : '顺时针电流 · 感应磁场进纸面';
+      }
+      if (loopDirection.textContent !== message) loopDirection.textContent = message;
+    }
+
+    function render() {
+      const model = sample(time, playing, rate);
+      drawScene(model);
+      drawMeter(model.current);
+      drawLoop(model.current);
+      const magnitude = Math.abs(model.current);
+      const sign = model.current < 0 ? '−' : '+';
+      currentOutput.value = magnitude < 0.005 ? '0.00' : sign + magnitude.toFixed(2);
+      let status = '静止 · 指针归零';
+      if (playing && time < travelTime) status = 'N 极相对插入';
+      else if (playing && time < holdUntil) status = '暂时停留 · 指针归零';
+      else if (playing && time < endTime) status = 'N 极相对拔出';
+      if (magnitude >= 0.005) status += model.current < 0 ? ' · 指针左偏' : ' · 指针右偏';
+      if (stageOutput.textContent !== status) stageOutput.textContent = status;
+    }
+
+    function stop() {
+      playing = false;
+      cancelAnimationFrame(frame);
+      previousFrame = null;
+      play.textContent = time > 0 && time < endTime ? '继续运动' : '开始运动';
+      render();
+    }
+
+    function animate(timestamp) {
+      if (previousFrame !== null) {
+        time = Math.min(endTime, time + Math.min(0.05, (timestamp - previousFrame) / 1000) * rate);
+      }
+      previousFrame = timestamp;
+      if (time >= endTime) {
+        stop();
+      } else {
+        render();
+        frame = requestAnimationFrame(animate);
+      }
+    }
+
+    play.addEventListener('click', () => {
+      if (playing) {
+        stop();
+        return;
+      }
+      if (time >= endTime) time = 0;
+      playing = true;
+      play.textContent = '暂停运动';
+      frame = requestAnimationFrame(animate);
+    });
+
+    function reset() {
+      time = 0;
+      stop();
+    }
+
+    function rotateView(dx, dy) {
+      yaw = (yaw + dx) % (2 * Math.PI);
+      tilt = Math.max(-1.35, Math.min(1.35, tilt + dy));
+      drawScene(sample(time, playing, rate));
+    }
+
+    scene.addEventListener('pointerdown', event => {
+      if (event.button !== 0 || drag) return;
+      drag = { id: event.pointerId, x: event.clientX, y: event.clientY };
+      scene.setPointerCapture(event.pointerId);
+    });
+
+    scene.addEventListener('pointermove', event => {
+      if (drag?.id !== event.pointerId) return;
+      rotateView((event.clientX - drag.x) * 0.008, (event.clientY - drag.y) * 0.008);
+      drag.x = event.clientX;
+      drag.y = event.clientY;
+    });
+
+    scene.addEventListener('lostpointercapture', event => {
+      if (drag?.id === event.pointerId) drag = null;
+    });
+
+    scene.addEventListener('keydown', event => {
+      const directions = { ArrowLeft: [-0.12, 0], ArrowRight: [0.12, 0], ArrowUp: [0, -0.12], ArrowDown: [0, 0.12] };
+      const change = directions[event.key];
+      if (!change) return;
+      event.preventDefault();
+      rotateView(...change);
+    });
+
+    document.querySelector('#reset').addEventListener('click', () => {
+      yaw = defaultYaw;
+      tilt = defaultTilt;
+      reset();
+    });
+    speed.addEventListener('input', () => {
+      rate = Number(speed.value);
+      speedValue.value = rate.toFixed(2) + '×';
+      render();
+    });
+
+    for (const button of modeButtons) {
+      button.addEventListener('click', () => {
+        if (mode === button.dataset.mode) return;
+        mode = button.dataset.mode;
+        for (const control of modeButtons) {
+          control.setAttribute('aria-pressed', String(control === button));
+        }
+        reset();
+      });
+    }
+
+    const observer = new ResizeObserver(render);
+    observer.observe(scene);
+    observer.observe(meter);
+    observer.observe(loopView);
+    render();
+  </script>
+</body>
+</html>
