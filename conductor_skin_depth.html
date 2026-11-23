@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>良导体的表面电阻</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --text: #f2f6ff;
+      --muted: #bacbe2;
+      --electric: #78b9ff;
+      --current: #ff9b9e;
+      --accent: #76e8cf;
+      --depth: #ffd071;
+      --border: rgba(151, 178, 218, 0.23);
+      --home-bottom: max(12px, env(safe-area-inset-bottom));
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(ellipse 760px 480px at 8% 0%, #342e58, transparent 78%),
+        radial-gradient(ellipse 680px 520px at 100% 22%, #1b3d4e, transparent 82%),
+        #152239;
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    main {
+      width: min(1000px, calc(100% - 40px));
+      margin: auto;
+      padding: clamp(26px, 6vh, 68px) 0 calc(var(--home-bottom) + 52px);
+    }
+
+    header { margin-bottom: 25px; }
+    h1 { margin: 0; font-size: clamp(28px, 5vw, 44px); line-height: 1.2; }
+    .scene {
+      min-width: 0;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: linear-gradient(155deg, #223450, #18283e 75%);
+      box-shadow: 0 16px 38px rgba(7, 14, 29, 0.24);
+    }
+
+    .toolbar, .legend { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 13px 16px; }
+    button {
+      min-height: 36px;
+      padding: 0 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #20314b;
+      color: var(--text);
+      font: inherit;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    button:hover { background: #334e70; }
+    button:disabled { opacity: 0.45; cursor: default; }
+    .zoom-controls { display: flex; gap: 6px; margin-left: auto; }
+    .zoom-controls button { width: 36px; padding: 0; font-size: 19px; }
+    #play { min-width: 62px; color: #132d2c; background: var(--accent); font-weight: 650; }
+    #play:hover { background: #a0f1df; }
+    :is(button, a, canvas):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    #model:focus-visible { outline-offset: -3px; }
+    #model {
+      display: block;
+      width: 100%;
+      height: clamp(310px, 62vh, 600px);
+      border-block: 1px solid var(--border);
+      background:
+        radial-gradient(circle, rgba(143, 178, 227, 0.18) 0.8px, transparent 1px) center / 24px 24px,
+        radial-gradient(ellipse at 45% 48%, #1b3453, #0e192d 80%);
+      cursor: grab;
+      touch-action: none;
+    }
+
+    #model:active { cursor: grabbing; }
+    .legend { gap: 7px 18px; font-size: 13px; }
+    .legend span { display: inline-flex; align-items: center; gap: 7px; }
+    .legend span::before { content: ""; width: 15px; border-top: 2px solid currentColor; border-radius: 2px; }
+    .electric { color: var(--electric); }
+    .current { color: var(--current); }
+    .legend .hint { margin-left: auto; color: var(--muted); }
+    .legend .hint::before { content: none; }
+
+    .home-link {
+      position: fixed;
+      right: max(18px, env(safe-area-inset-right));
+      bottom: var(--home-bottom);
+      z-index: 30;
+      display: inline-flex;
+      align-items: center;
+      min-height: 36px;
+      padding: 0 12px;
+      border: 1px solid #526582;
+      border-radius: 8px;
+      background: #22304a;
+      color: var(--accent);
+      font-size: 13px;
+      text-decoration: none;
+    }
+
+    .home-link:hover { text-decoration: underline; }
+    @media (max-width: 760px) {
+      main { width: calc(100% - 24px); padding-bottom: 16px; }
+      #model { height: clamp(280px, 80vw, 420px); }
+      .legend .hint { margin-left: 0; }
+      .home-link { position: static; display: flex; width: max-content; margin: 0 12px 16px auto; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>良导体的表面电阻</h1>
+    </header>
+
+    <section class="scene" aria-label="良导体的表面电阻三维演示">
+      <div class="toolbar">
+        <button id="play" type="button">播放</button>
+        <button id="reset" type="button">重置</button>
+        <div class="zoom-controls" role="group" aria-label="模型缩放">
+          <button id="zoom-out" type="button" aria-label="缩小模型" title="缩小模型">−</button>
+          <button id="zoom-in" type="button" aria-label="放大模型" title="放大模型">+</button>
+        </div>
+      </div>
+      <canvas id="model" tabindex="0" aria-label="铜导体三维图。蓝色电场和红色电流密度箭头在导体内部沿 x 轴振荡。y 轴沿宽度，z 轴向导体内部。金色虚线面标记趋肤深度。拖动或按方向键旋转，用滚轮、双指捏合或加减键缩放。"></canvas>
+      <div class="legend">
+        <span class="electric">电场 E</span>
+        <span class="current">电流密度 J</span>
+        <span class="hint">拖动旋转 · 滚轮或双指缩放</span>
+      </div>
+    </section>
+  </main>
+  <a class="home-link" href="./ed_index.html">← 返回电动力学主页</a>
+
+  <script>
+    const model = document.getElementById('model');
+    const modelContext = model.getContext('2d');
+    const play = document.getElementById('play');
+    const zoomIn = document.getElementById('zoom-in');
+    const zoomOut = document.getElementById('zoom-out');
+    const styles = getComputedStyle(document.documentElement);
+    const electric = styles.getPropertyValue('--electric').trim();
+    const current = styles.getPropertyValue('--current').trim();
+    const accent = styles.getPropertyValue('--accent').trim();
+    const gold = styles.getPropertyValue('--depth').trim();
+    const muted = styles.getPropertyValue('--muted').trim();
+    const text = styles.getPropertyValue('--text').trim();
+
+    const conductivity = 5.8e7;
+    const permeability = 4 * Math.PI * 1e-7;
+    const frequency = 100e3;
+    const skinDepth = 1000 / Math.sqrt(Math.PI * frequency * permeability * conductivity);
+    const tau = 2 * Math.PI;
+    const maxDepth = 0.9;
+    const drawnDepth = 2.55;
+    const depthZ = skinDepth / maxDepth * drawnDepth;
+    const halfLength = 3.15;
+    const halfWidth = 1.58;
+    const defaultYaw = 0.52;
+    const defaultElevation = 0.61;
+    const minZoom = 0.6;
+    const maxZoom = 2;
+    const zoomStep = 1.18;
+    const fieldSamples = [];
+    for (const ratio of [0, 0.55, 1, 1.5, 2.1, 3, 4]) {
+      for (const x of [-1.5, 1.5]) {
+        for (const y of [-1.12, 0, 1.12]) {
+          const z = ratio * depthZ;
+          fieldSamples.push({ position: [x, y, z], ratio, envelope: Math.exp(-ratio) });
+        }
+      }
+    }
+    let yaw = defaultYaw;
+    let elevation = defaultElevation;
+    let zoom = 1;
+    let viewWidth = 0;
+    let viewHeight = 0;
+    let phase = 0;
+    let animation = null;
+    let previousTime = null;
+    const pointers = new Map();
+    let pinch = null;
+    let trackpadZoom = null;
+
+    function polyline(ctx, points) {
+      ctx.beginPath();
+      ctx.moveTo(...points[0]);
+      for (const point of points.slice(1)) ctx.lineTo(...point);
+    }
+
+    function arrow(ctx, from, to, color, width, head) {
+      const [x, y] = to;
+      const angle = Math.atan2(y - from[1], x - from[0]);
+      const size = Math.min(head, Math.hypot(x - from[0], y - from[1]) * 0.55);
+      if (size < 0.8) return;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      polyline(ctx, [from, to]);
+      ctx.moveTo(x - size * Math.cos(angle - 0.55), y - size * Math.sin(angle - 0.55));
+      ctx.lineTo(x, y);
+      ctx.lineTo(x - size * Math.cos(angle + 0.55), y - size * Math.sin(angle + 0.55));
+      ctx.stroke();
+    }
+
+    function drawModel() {
+      if (!viewWidth || !viewHeight) return;
+      const ctx = modelContext;
+      const sin = Math.sin(yaw);
+      const cos = Math.cos(yaw);
+      const tilt = Math.sin(elevation);
+      const vertical = Math.cos(elevation);
+      const scale = Math.min(viewWidth / 10.6, viewHeight / 7.3) * zoom;
+      const centerX = viewWidth * 0.49;
+      const centerY = viewHeight * 0.53;
+      const frontY = cos >= 0 ? -halfWidth : halfWidth;
+      const sideX = sin >= 0 ? halfLength : -halfLength;
+      ctx.clearRect(0, 0, viewWidth, viewHeight);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      function project([x, y, z]) {
+        return [
+          centerX + scale * (cos * x + sin * y),
+          centerY + scale * (tilt * (sin * x - cos * y) + vertical * (z - drawnDepth / 2))
+        ];
+      }
+
+      function plane(z) {
+        return [[-halfLength, -halfWidth, z], [halfLength, -halfWidth, z],
+          [halfLength, halfWidth, z], [-halfLength, halfWidth, z]];
+      }
+
+      function face(a, b, top, bottom) {
+        return [[...a, top], [...b, top], [...b, bottom], [...a, bottom]];
+      }
+
+      function polygon(points, fill, stroke) {
+        polyline(ctx, points.map(project));
+        ctx.closePath();
+        ctx.fillStyle = fill;
+        ctx.fill();
+        if (stroke) {
+          ctx.strokeStyle = stroke;
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+      }
+
+      function label(value, x, y, color = text, align = 'center') {
+        ctx.font = '600 14px system-ui, sans-serif';
+        ctx.textAlign = align;
+        ctx.textBaseline = 'middle';
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = '#122139';
+        ctx.strokeText(value, x, y);
+        ctx.fillStyle = color;
+        ctx.fillText(value, x, y);
+      }
+
+      function dimension(from, to, value, color, labelX, labelY) {
+        const a = project(from);
+        const b = project(to);
+        const length = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        if (length < 2) return;
+        const dx = 4 * (b[1] - a[1]) / length;
+        const dy = 4 * (a[0] - b[0]) / length;
+        polyline(ctx, [a, b]);
+        for (const [x, y] of [a, b]) {
+          ctx.moveTo(x - dx, y - dy);
+          ctx.lineTo(x + dx, y + dy);
+        }
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+        label(value, (a[0] + b[0]) / 2 + labelX, (a[1] + b[1]) / 2 + labelY, color);
+      }
+
+      const backEdge = 'rgba(155, 182, 217, 0.23)';
+      polygon(plane(drawnDepth), 'transparent', backEdge);
+      for (const [x, y] of plane(0)) {
+        polyline(ctx, [project([x, y, 0]), project([x, y, drawnDepth])]);
+        ctx.strokeStyle = backEdge;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+
+      const longFace = [[-halfLength, frontY], [halfLength, frontY]];
+      const endFace = [[sideX, -halfWidth], [sideX, halfWidth]];
+      for (const [edge, color] of [[longFace, 'rgba(28, 49, 76, 0.82)'], [endFace, 'rgba(22, 41, 65, 0.82)']]) {
+        polygon(face(...edge, 0, drawnDepth), color);
+        const [a, b] = edge.map(point => project([...point, 0]));
+        ctx.save();
+        // Draw the attenuation in face coordinates, where the vertical axis measures z.
+        ctx.transform(b[0] - a[0], b[1] - a[1], 0, scale * vertical, a[0], a[1]);
+        const shade = ctx.createLinearGradient(0, 0, 0, 4 * depthZ);
+        for (let i = 0; i <= 8; i++) {
+          shade.addColorStop(i / 8, `rgba(124, 177, 222, ${Math.exp(-i / 2) * 0.36})`);
+        }
+        ctx.fillStyle = shade;
+        ctx.fillRect(0, 0, 1, drawnDepth);
+        ctx.restore();
+        polygon(face(...edge, 0, drawnDepth), 'transparent', '#5c7698');
+      }
+
+      polygon(plane(0), 'rgba(58, 85, 119, 0.58)', '#9bb6d9');
+      ctx.setLineDash([5, 4]);
+      polygon(plane(depthZ), 'rgba(255, 208, 113, 0.08)', gold);
+      ctx.setLineDash([]);
+
+      // Render the sample pairs from back to front as the view rotates.
+      function viewingDepth({ position: [x, y, z] }) {
+        return vertical * (sin * x - cos * y) - tilt * z;
+      }
+
+      const orderedSamples = fieldSamples.toSorted((a, b) => viewingDepth(a) - viewingDepth(b));
+      for (const { position: [x, y, z], ratio, envelope } of orderedSamples) {
+        const field = envelope * Math.cos(ratio - phase * tau);
+        const tipX = x + 1.42 * field;
+        const width = 1.45 + 0.85 * envelope;
+        // Offset the two arrows sideways for readability. Both represent the same sample point.
+        ctx.globalAlpha = 0.48 + 0.52 * envelope;
+        arrow(ctx, project([x, y - 0.14, z]), project([tipX, y - 0.14, z]), electric, width, 7);
+        arrow(ctx, project([x, y + 0.14, z]), project([tipX, y + 0.14, z]), current, width, 7);
+      }
+      ctx.globalAlpha = 1;
+
+      const [entryX, entryY] = project([0, 0, 0]);
+      ctx.fillStyle = accent;
+      ctx.beginPath();
+      ctx.arc(entryX, entryY, 3.2, 0, tau);
+      ctx.fill();
+      const incidenceStart = project([0, 0, -1.42]);
+      arrow(ctx, incidenceStart, [entryX, entryY - 5], accent, 2.1, 10);
+      label('入射 +z', incidenceStart[0], incidenceStart[1] - 14, accent);
+      label('导体表面  z = 0', entryX + 12, entryY + 9, text, 'left');
+
+      // Keep each dimension attached to the same edge through a full rotation.
+      const depthX = -halfLength;
+      const depthY = -halfWidth - 0.37;
+      for (const z of [0, depthZ]) {
+        polyline(ctx, [project([depthX, -halfWidth, z]), project([depthX, depthY, z])]);
+        ctx.strokeStyle = gold;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+      dimension([depthX, depthY, 0], [depthX, depthY, depthZ], 'δ', gold, -13, 0);
+      dimension([-halfLength, depthY, drawnDepth + 0.19], [halfLength, depthY, drawnDepth + 0.19], 'L', muted, 0, 12);
+      const outerX = halfLength + 0.27;
+      dimension([outerX, -halfWidth, 0], [outerX, halfWidth, 0], 'd', muted, 12, -8);
+
+      const triadX = viewWidth - 52;
+      const triadY = 48;
+      const triad = [[cos, tilt * sin, 'x'], [sin, -tilt * cos, 'y'], [0, vertical, 'z']];
+      for (const [dx, dy, name] of triad) {
+        const length = Math.hypot(dx, dy);
+        if (length < 0.12) continue;
+        arrow(ctx, [triadX, triadY], [triadX + 29 * dx, triadY + 29 * dy], muted, 1.25, 6);
+        label(name, triadX + (29 + 9 / length) * dx, triadY + (29 + 9 / length) * dy, muted);
+      }
+    }
+
+    function pause() {
+      if (animation !== null) cancelAnimationFrame(animation);
+      animation = null;
+      previousTime = null;
+      play.textContent = '播放';
+    }
+
+    function animate(timestamp) {
+      if (previousTime !== null) phase = (phase + Math.min(50, timestamp - previousTime) / 3200) % 1;
+      previousTime = timestamp;
+      drawModel();
+      animation = requestAnimationFrame(animate);
+    }
+
+    play.addEventListener('click', () => {
+      if (animation !== null) {
+        pause();
+      } else {
+        play.textContent = '暂停';
+        animation = requestAnimationFrame(animate);
+      }
+    });
+
+    document.getElementById('reset').addEventListener('click', () => {
+      pause();
+      phase = 0;
+      yaw = defaultYaw;
+      elevation = defaultElevation;
+      pointers.clear();
+      pinch = null;
+      trackpadZoom = null;
+      setZoom(1);
+    });
+
+    function rotate(horizontal, vertical) {
+      yaw = (yaw - horizontal) % tau;
+      elevation = Math.max(0.15, Math.min(1.3, elevation + vertical));
+      drawModel();
+    }
+
+    function setZoom(value) {
+      zoom = Math.max(minZoom, Math.min(maxZoom, value));
+      zoomIn.disabled = zoom === maxZoom;
+      zoomOut.disabled = zoom === minZoom;
+      drawModel();
+    }
+
+    zoomIn.addEventListener('click', () => setZoom(zoom * zoomStep));
+    zoomOut.addEventListener('click', () => setZoom(zoom / zoomStep));
+
+    function pointerDistance() {
+      const [first, second] = pointers.values();
+      return Math.hypot(first.clientX - second.clientX, first.clientY - second.clientY);
+    }
+
+    model.addEventListener('pointerdown', event => {
+      if (event.button !== 0 || pointers.size >= 2) return;
+      if (pointers.size > 0 &&
+          (event.pointerType !== 'touch' || pointers.values().next().value.pointerType !== 'touch')) return;
+      pointers.set(event.pointerId, event);
+      model.setPointerCapture(event.pointerId);
+      if (pointers.size === 2) pinch = { distance: Math.max(1, pointerDistance()), zoom };
+    });
+    model.addEventListener('pointermove', event => {
+      const previous = pointers.get(event.pointerId);
+      if (!previous) return;
+      pointers.set(event.pointerId, event);
+      if (pinch) {
+        setZoom(pinch.zoom * pointerDistance() / pinch.distance);
+        return;
+      }
+      const radiansPerPixel = Math.PI / Math.max(1, Math.min(viewWidth, viewHeight));
+      rotate((event.clientX - previous.clientX) * radiansPerPixel,
+        (event.clientY - previous.clientY) * radiansPerPixel);
+    });
+
+    function endPointer(event) {
+      if (pointers.delete(event.pointerId)) pinch = null;
+    }
+    model.addEventListener('pointerup', endPointer);
+    model.addEventListener('pointercancel', endPointer);
+    model.addEventListener('lostpointercapture', endPointer);
+
+    model.addEventListener('wheel', event => {
+      const deltaMode = event.deltaMode;
+      if (!event.deltaY) return;
+      event.preventDefault();
+      if (pinch || trackpadZoom !== null) return;
+      const unit = deltaMode === 1 ? 16 : deltaMode === 2 ? viewHeight : 1;
+      const sensitivity = event.ctrlKey ? 0.01 : 0.002;
+      setZoom(zoom * Math.exp(-event.deltaY * unit * sensitivity));
+    }, { passive: false });
+
+    // Safari can send separate gesture events for trackpad pinches.
+    model.addEventListener('gesturestart', event => {
+      event.preventDefault();
+      if (pointers.size === 0) trackpadZoom = zoom;
+    }, { passive: false });
+    model.addEventListener('gesturechange', event => {
+      event.preventDefault();
+      if (trackpadZoom !== null && pointers.size === 0) setZoom(trackpadZoom * event.scale);
+    }, { passive: false });
+    model.addEventListener('gestureend', event => {
+      event.preventDefault();
+      trackpadZoom = null;
+    }, { passive: false });
+
+    model.addEventListener('keydown', event => {
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.key === '+' || event.key === '=' || event.key === '-') {
+        event.preventDefault();
+        setZoom(event.key === '-' ? zoom / zoomStep : zoom * zoomStep);
+        return;
+      }
+      const rotation = { ArrowLeft: [-0.12, 0], ArrowRight: [0.12, 0],
+        ArrowUp: [0, -0.12], ArrowDown: [0, 0.12] }[event.key];
+      if (!Array.isArray(rotation)) return;
+      event.preventDefault();
+      rotate(...rotation);
+    });
+
+    const resize = new ResizeObserver(([{ contentRect: { width, height } }]) => {
+      const ratio = Math.min(devicePixelRatio || 1, 2);
+      viewWidth = width;
+      viewHeight = height;
+      model.width = Math.round(width * ratio);
+      model.height = Math.round(height * ratio);
+      modelContext.setTransform(ratio, 0, 0, ratio, 0, 0);
+      drawModel();
+    });
+    resize.observe(model);
+  </script>
+</body>
+</html>
