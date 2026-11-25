@@ -2,10 +2,10 @@
 
 🌐 **在线演示（GitHub Pages）**
 
-- [电磁学主页](https://shijunlj.github.io/physics-em-visualizer/) · 13 项演示
-- [电动力学主页](https://shijunlj.github.io/physics-em-visualizer/ed_index.html) · 6 项演示
+- [电磁学主页](https://shijunlj.github.io/physics-em-visualizer/) · 14 项演示
+- [电动力学主页](https://shijunlj.github.io/physics-em-visualizer/ed_index.html) · 7 项演示
 
-本项目包含 19 个基于 **Three.js 或 HTML5 Canvas** 的 HTML 交互式物理演示，涵盖稳恒磁场、电磁感应、空间拓扑和波动等主题。各演示均可直接在浏览器中打开，交互方式包括三维视角旋转、缩放、动画播放和参数调节。
+本项目包含 21 个基于 **Three.js 或 HTML5 Canvas** 的 HTML 交互式物理演示，涵盖稳恒磁场、电磁感应、空间拓扑和波动等主题。各演示均可直接在浏览器中打开，交互方式包括三维视角旋转、缩放、动画播放和参数调节。
 
 ---
 
@@ -28,6 +28,7 @@
 | 11 | [`cylindrical_shell_current_comparison.html`](./cylindrical_shell_current_comparison.html) | **圆柱壳上的两种表面电流与磁场对偶性** | 左右双栏独立 3D 联动对比：直观呈现无限长圆柱薄壳“竖直圆柱·轴向电流 $j$”与“水平圆柱·环向电流 $j'$（理想螺线管）”所激发磁场的完美内外对偶性；直观展现轴向电流在壳内 $B \equiv 0$、壳外 $B \propto 1/r$ 环形分布，与环向电流在壳内 $B \equiv \mu_0 j'$ 匀强直线、壳外 $B \equiv 0$ 的互补规律；支持双栏独立 360° 拖拽缩放、探针 $P$ 在 $r/R \in [0, 2.40]$ 自由探测/一键进出壳，并动态显示壳面内外极限跳变。 |
 | 12 | [`faraday_iron_ring.html`](./faraday_iron_ring.html) | **法拉第的双线圈软铁环实验** | 分段观察合闸、保持闭合和断开时铁环内的相对磁场，以及检流计指针的正偏、归零和反偏。 |
 | 13 | [`magnet_coil_induction.html`](./magnet_coil_induction.html) | **磁铁与线圈的相对运动** | 切换磁铁运动或线圈运动，调节相对速度，在可旋转的三维图中观察两组磁感应线、感应电流方向和检流计偏转。单匝图用点叉显示感应磁场的方向和相对强弱。 |
+| 14 | [`self_induction_circuit.html`](./self_induction_circuit.html) | **线圈的自感与灯泡亮灭** | 闭合、断开开关，对比电阻支路与线圈支路的灯泡亮灭。磁链时间曲线、当前磁链和自感电动势同步更新，箭头显示电流与自感电动势方向。 |
 
 ### 电动力学
 
@@ -39,6 +40,7 @@
 | 04 | [`wave_phase_group_velocity.html`](./wave_phase_group_velocity.html) | **波的相速与群速** | 播放两列正弦波的叠加动画，对比固定相位和包络峰顶的移动。波数固定时，调节平均频率改变相速，调节频率差改变群速。 |
 | 05 | [`electromagnetic_wave_propagation.html`](./electromagnetic_wave_propagation.html) | **电磁波传播** | 三维展示真空中的线偏振平面波。跟踪同相的电场与磁场波峰沿波矢方向移动，并在可调位置的观察点读取两场的瞬时值。 |
 | 06 | [`wave_reflection_refraction.html`](./wave_reflection_refraction.html) | **电磁波在介质界面的反射与折射** | 调节入射角和相对折射率，观察反射与折射角、s／p 偏振方向、布儒斯特角和半波损。全反射模式展示相位滞后、倏逝场和古斯–汉欣位移示意，s 偏振时域模式展示电场与磁场的变化。 |
+| 07 | [`conductor_skin_depth.html`](./conductor_skin_depth.html) | **良导体的表面电阻** | 三维展示导体内部振荡的电场与电流密度，并标出趋肤深度；支持播放、旋转和缩放。 |
 
 ---
 

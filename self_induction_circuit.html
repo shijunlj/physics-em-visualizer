@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>线圈的自感与灯泡亮灭</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --text: #f1f6ff;
+      --muted: #b6c8e1;
+      --border: #3b5271;
+      --current: #83efd3;
+      --emf: #c7a7ff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: radial-gradient(ellipse 760px 450px at 8% 0%, #302c55, transparent 80%), #16243b;
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    main { width: min(1170px, calc(100% - 32px)); margin: auto; padding: clamp(26px, 5vh, 58px) 0 76px; }
+    h1 { margin: 0 0 8px; font-size: clamp(26px, 4.5vw, 40px); }
+    p { margin: 0; color: var(--muted); line-height: 1.65; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(290px, 1fr); gap: 14px; margin-top: 22px; }
+    .panel { min-width: 0; overflow: hidden; border: 1px solid var(--border); border-radius: 18px; background: #1a2b44; box-shadow: 0 18px 50px #08132340; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px 16px; }
+    button {
+      min-height: 38px; padding: 6px 13px; border: 1px solid #526582;
+      border-radius: 8px; background: #283d5b; color: var(--text); cursor: pointer; font: inherit; font-size: 14px;
+    }
+    button:hover { background: #345274; }
+    button[aria-pressed="true"] { border-color: var(--current); background: #254940; }
+    :focus-visible { outline: 2px solid var(--current); outline-offset: 3px; }
+    #reset { margin-left: auto; }
+    canvas { display: block; width: 100%; }
+    #circuit { height: clamp(235px, 49vw, 405px); background: radial-gradient(ellipse at 45% 50%, #203750, #111e33 85%); }
+    .legend { display: flex; flex-wrap: wrap; gap: 8px 22px; padding: 11px 16px; font-size: 13px; }
+    .legend span { display: inline-flex; align-items: center; gap: 7px; }
+    .legend span::before { content: ""; width: 18px; border-top: 2px solid; }
+    .current { color: var(--current); }
+    .emf { color: var(--emf); }
+    .graph-panel { padding: 17px 16px; }
+    h2 { margin: 0 0 3px; font-size: 19px; }
+    .equation { color: var(--current); font-size: 15px; }
+    .flux-plot { position: relative; margin: 10px 0 15px; }
+    #plot { height: 208px; }
+    .flux-value {
+      position: absolute; display: flex; align-items: baseline; gap: 5px; width: 154px;
+      padding: 7px 9px; border: 1px solid #52998c; border-radius: 7px;
+      background: #172d40; color: var(--current); white-space: nowrap; pointer-events: none;
+      font-size: 12px;
+    }
+    .flux-value output { font-size: 17px; font-weight: 650; }
+    .reading { padding: 10px; border: 1px solid var(--border); border-radius: 9px; background: #16263d; }
+    .reading span { display: block; font-size: 12px; color: var(--muted); }
+    output { font-variant-numeric: tabular-nums; }
+    .reading output { display: block; margin-top: 5px; font-size: 23px; }
+    #status { margin-top: 13px; font-size: 14px; min-height: 46px; }
+    .model { margin-top: 13px; font-size: 13px; }
+    .home-link {
+      position: fixed; right: max(18px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom));
+      z-index: 30; display: inline-flex; align-items: center; min-height: 36px; padding: 0 12px;
+      border: 1px solid #526582; border-radius: 8px; background: #22304a; color: var(--current); font-size: 13px; text-decoration: none;
+    }
+    .home-link:hover { text-decoration: underline; }
+    @media (max-width: 760px) {
+      .layout { grid-template-columns: 1fr; }
+      #plot { height: 200px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>线圈的自感与灯泡亮灭</h1>
+    <p>闭合或断开开关，对照两只灯泡的亮灭、线圈磁链和自感电动势方向。</p>
+    <div class="layout">
+      <section class="panel" aria-label="自感电路">
+        <div class="toolbar">
+          <button id="close" type="button" aria-pressed="false">闭合开关</button>
+          <button id="open" type="button" aria-pressed="true">断开开关</button>
+          <button id="reset" type="button">重置</button>
+        </div>
+        <canvas id="circuit" role="img" aria-label="电池与开关接两条并联支路。A 支路为电阻与灯泡，B 支路为线圈与灯泡。箭头显示电流和自感电动势的方向。"></canvas>
+        <div class="legend">
+          <span class="current">电流方向</span>
+          <span class="emf">自感电动势方向</span>
+        </div>
+      </section>
+      <aside class="panel graph-panel">
+        <h2>线圈中的磁链 Ψ</h2>
+        <p class="equation">Ψ = LI　　ε = −dΨ/dt</p>
+        <div class="flux-plot">
+          <canvas id="plot" role="img" aria-label="与开关联动的磁链时间曲线，闭合时磁链连续上升，断开后连续下降。曲线端点旁显示当前磁链数值。"></canvas>
+          <div class="flux-value"><span>当前 Ψ =</span><output id="flux" aria-label="当前磁链">0.00</output><span>Wb</span></div>
+        </div>
+        <div class="reading"><span>自感电动势 ε / V</span><output class="emf" id="emf">0.00</output></div>
+        <p id="status" aria-live="polite">开关断开，电路中无电流。</p>
+      </aside>
+    </div>
+    <p class="model">示例取电源 6 V，L = 120 H，R = r = 20 Ω，两灯均按恒定电阻 10 Ω 计算，亮度随功率变化。闭合、断开的电流时间常数分别为 4 s 和 2 s。闭合时 A 立即亮，B 渐亮。断开后 A、B 两支路构成回路，B 支路电流保持原方向，A 支路电流反向，两灯逐渐熄灭。磁链及电动势以 B 支路从右向左为正。</p>
+  </main>
+  <a class="home-link" href="./index.html">← 返回主页</a>
+
+  <script>
+    const circuit = document.getElementById('circuit');
+    const plot = document.getElementById('plot');
+    const closeButton = document.getElementById('close');
+    const openButton = document.getElementById('open');
+    const fluxOutput = document.getElementById('flux');
+    const fluxValue = document.querySelector('.flux-value');
+    const emfOutput = document.getElementById('emf');
+    const statusOutput = document.getElementById('status');
+
+    const currentColor = '#83efd3';
+    const emfColor = '#c7a7ff';
+    const muted = '#b6c8e1';
+    const copper = '#ffbf88';
+    const supply = 6;
+    const inductance = 120;
+    const resistor = 20;
+    const windingResistance = 20;
+    const lampResistance = 10;
+    const resistanceA = resistor + lampResistance;
+    const resistanceB = windingResistance + lampResistance;
+    const steadyCurrent = supply / resistanceB;
+    const maximumFlux = inductance * steadyCurrent;
+    const plotDuration = 24;
+
+    let time = 0;
+    let events = [{ time: 0, closed: false, initial: 0 }];
+    let started = false;
+    let previousFrame = null;
+    let frame = 0;
+
+    function stateAt(at) {
+      let segment = events[0];
+      for (const event of events) {
+        if (event.time > at) break;
+        segment = event;
+      }
+      const elapsed = Math.max(0, at - segment.time);
+      const target = segment.closed ? steadyCurrent : 0;
+      const resistance = segment.closed ? resistanceB : resistanceA + resistanceB;
+      const tau = inductance / resistance;
+      const currentB = target + (segment.initial - target) * Math.exp(-elapsed / tau);
+      const derivative = (target - currentB) / tau;
+      const currentA = segment.closed ? supply / resistanceA : -currentB;
+      return {
+        closed: segment.closed,
+        currentA,
+        currentB,
+        flux: inductance * currentB,
+        emf: -inductance * derivative,
+      };
+    }
+
+    function prepare(canvas) {
+      const width = canvas.clientWidth;
+      const height = canvas.clientHeight;
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      if (canvas.width !== Math.round(width * ratio) || canvas.height !== Math.round(height * ratio)) {
+        canvas.width = Math.round(width * ratio);
+        canvas.height = Math.round(height * ratio);
+      }
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      ctx.clearRect(0, 0, width, height);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      return { ctx, width, height };
+    }
+
+    function path(ctx, points, color, width = 2.5) {
+      ctx.beginPath();
+      ctx.moveTo(...points[0]);
+      for (const point of points.slice(1)) ctx.lineTo(...point);
+      ctx.lineWidth = width;
+      ctx.strokeStyle = color;
+      ctx.stroke();
+    }
+
+    function text(ctx, value, x, y, color = muted, size = 16, align = 'center') {
+      ctx.fillStyle = color;
+      ctx.font = `600 ${size}px -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif`;
+      ctx.textAlign = align;
+      ctx.textBaseline = 'middle';
+      ctx.fillText(value, x, y);
+    }
+
+    function disk(ctx, x, y, radius, color) {
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, 2 * Math.PI);
+      ctx.fillStyle = color;
+      ctx.fill();
+    }
+
+    function arrow(ctx, x, y, direction, color, label) {
+      const start = x - direction * 23;
+      const end = x + direction * 23;
+      path(ctx, [[start, y], [end, y]], color, 2.7);
+      path(ctx, [[end - direction * 7, y - 4.5], [end, y], [end - direction * 7, y + 4.5]], color, 2.7);
+      text(ctx, label, x, y - 15, color, 15);
+    }
+
+    function drawBulb(ctx, x, y, current, name) {
+      const power = current * current / (steadyCurrent * steadyCurrent);
+      const brightness = Math.min(1, power) ** 0.55;
+      ctx.save();
+      ctx.translate(x, y);
+      if (brightness > 0.001) {
+        const glow = ctx.createRadialGradient(0, -12, 5, 0, -12, 67);
+        glow.addColorStop(0, `rgba(255,211,111,${0.33 * brightness})`);
+        glow.addColorStop(0.45, `rgba(255,180,75,${0.16 * brightness})`);
+        glow.addColorStop(1, 'rgba(255,180,75,0)');
+        ctx.fillStyle = glow;
+        ctx.fillRect(-67, -79, 134, 134);
+      }
+      path(ctx, [[-31, 0], [-10, 0], [-7, -11]], '#a1b8cc', 2);
+      path(ctx, [[31, 0], [10, 0], [7, -11]], '#a1b8cc', 2);
+      ctx.beginPath();
+      ctx.moveTo(-10, 20);
+      ctx.bezierCurveTo(-10, 5, -28, 1, -26, -20);
+      ctx.bezierCurveTo(-24, -52, 24, -52, 26, -20);
+      ctx.bezierCurveTo(28, 1, 10, 5, 10, 20);
+      ctx.closePath();
+      ctx.fillStyle = `rgba(255,218,149,${0.025 + 0.10 * brightness})`;
+      ctx.fill();
+      ctx.strokeStyle = brightness > 0.02 ? `rgba(255,223,165,${0.48 + brightness * 0.45})` : '#8ba9c3';
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-16, -24);
+      ctx.bezierCurveTo(-16, -32, -10, -36, -5, -36);
+      ctx.strokeStyle = '#d4e9ff65';
+      ctx.lineWidth = 2.8;
+      ctx.stroke();
+      ctx.shadowColor = '#ffe7a5';
+      ctx.shadowBlur = 12 * brightness;
+      path(ctx, [[-7, -11], [-4, -4], [0, -11], [4, -4], [7, -11]],
+        brightness > 0.005 ? `rgba(255,236,177,${0.3 + 0.7 * brightness})` : '#7a8da4', 2.2);
+      ctx.shadowBlur = 0;
+      const base = ctx.createLinearGradient(-11, 0, 11, 0);
+      base.addColorStop(0, '#465e77');
+      base.addColorStop(0.4, '#b4c8db');
+      base.addColorStop(1, '#405870');
+      ctx.fillStyle = base;
+      ctx.fillRect(-11, 19, 22, 14);
+      for (const offset of [22, 26, 30]) path(ctx, [[-10, offset], [10, offset]], '#344a63', 1);
+      path(ctx, [[-5, 35], [5, 35]], '#9cb4c8', 2);
+      text(ctx, name, 48, -15, '#eef5ff', 24);
+      ctx.restore();
+    }
+
+    function drawCircuit(model) {
+      const { ctx, width, height } = prepare(circuit);
+      const scale = Math.min(width / 680, height / 390);
+      ctx.translate((width - scale * 680) / 2, (height - scale * 390) / 2);
+      ctx.scale(scale, scale);
+      const wireColor = '#718da9';
+      const left = 54;
+      const right = 620;
+      const top = 54;
+      const middle = 182;
+      const bottom = 326;
+      path(ctx, [[left, middle], [left, top], [230, top]], wireColor, 3);
+      path(ctx, [[258, top], [414, top]], wireColor, 3);
+      path(ctx, [[472, top], [right, top], [right, bottom]], wireColor, 3);
+      path(ctx, [[left, middle], [left, bottom], [142, bottom]], wireColor, 3);
+      path(ctx, [[left, middle], [143, middle]], wireColor, 3);
+      path(ctx, [[266, middle], [474, middle]], wireColor, 3);
+      path(ctx, [[536, middle], [right, middle]], wireColor, 3);
+      path(ctx, [[337, bottom], [474, bottom]], wireColor, 3);
+      path(ctx, [[536, bottom], [right, bottom]], wireColor, 3);
+      for (const x of [left, right]) disk(ctx, x, middle, 4, '#b7cce0');
+
+      path(ctx, [[230, top - 15], [230, top + 15]], '#a7bfff', 3.5);
+      path(ctx, [[258, top - 26], [258, top + 26]], '#ffb591', 4);
+      text(ctx, '−', 214, top - 27, muted, 18);
+      text(ctx, '+', 278, top - 27, copper, 18);
+      text(ctx, '6 V', 244, top + 42, muted, 16);
+
+      path(ctx, [[414, top], [model.closed ? 472 : 464, model.closed ? top : top - 25]], currentColor, 3.5);
+      for (const x of [414, 472]) {
+        disk(ctx, x, top, 5, '#111e33');
+        ctx.beginPath();
+        ctx.arc(x, top, 5, 0, Math.PI * 2);
+        ctx.strokeStyle = currentColor;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+      text(ctx, 'K', 444, top + 27, currentColor, 17);
+
+      const resistorFill = ctx.createLinearGradient(0, middle - 13, 0, middle + 13);
+      resistorFill.addColorStop(0, '#73c7c0');
+      resistorFill.addColorStop(0.5, '#3d7b83');
+      resistorFill.addColorStop(1, '#294e68');
+      ctx.fillStyle = resistorFill;
+      ctx.fillRect(143, middle - 13, 123, 26);
+      ctx.strokeStyle = '#aacdd2';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(143, middle - 13, 123, 26);
+      text(ctx, 'R', 204, middle + 37, muted, 17);
+
+      const coilPoints = [[142, bottom], [153, bottom]];
+      for (let i = 0; i <= 216; i++) {
+        const u = i / 216;
+        coilPoints.push([153 + 173 * u, bottom - 17 * Math.sin(u * 6 * Math.PI * 2)]);
+      }
+      coilPoints.push([337, bottom]);
+      ctx.shadowColor = currentColor;
+      ctx.shadowBlur = 8 * model.currentB / steadyCurrent;
+      path(ctx, coilPoints, copper, 3.2);
+      ctx.shadowBlur = 0;
+      text(ctx, 'L，r', 239, bottom + 34, copper, 17);
+      drawBulb(ctx, 505, middle, model.currentA, 'A');
+      drawBulb(ctx, 505, bottom, model.currentB, 'B');
+      const visibleCurrent = 0.003 * steadyCurrent;
+      if (Math.abs(model.currentA) > visibleCurrent) {
+        arrow(ctx, 386, middle - 27, -Math.sign(model.currentA), currentColor, 'Iₐ');
+      }
+      if (model.currentB > visibleCurrent) arrow(ctx, 389, bottom - 26, -1, currentColor, 'Iᵦ');
+      if (Math.abs(model.emf) > 0.02) {
+        arrow(ctx, 240, bottom - 42, -Math.sign(model.emf), emfColor, '自感电动势 ε');
+      }
+    }
+
+    function drawPlot() {
+      const { ctx, width, height } = prepare(plot);
+      const left = 37;
+      const right = width - 12;
+      const top = 25;
+      const bottom = height - 31;
+      const start = Math.max(0, time - plotDuration);
+      const end = start + plotDuration;
+      const x = t => left + (right - left) * (t - start) / plotDuration;
+      const y = flux => bottom - (bottom - top) * flux / (maximumFlux * 1.14);
+      text(ctx, 'Ψ / Wb', left - 7, 9, muted, 11, 'left');
+      text(ctx, 't / s', right, height - 6, muted, 11, 'right');
+      for (const value of [0, maximumFlux / 2, maximumFlux]) {
+        path(ctx, [[left, y(value)], [right, y(value)]], '#354b65', 1);
+        text(ctx, String(value), left - 9, y(value), muted, 11, 'right');
+      }
+      for (let second = Math.ceil(start / 4) * 4; second <= end; second += 4) {
+        text(ctx, String(second), x(second), bottom + 15, muted, 11);
+      }
+      for (const event of events.slice(1)) {
+        if (event.time < start || event.time > time) continue;
+        ctx.setLineDash([3, 4]);
+        path(ctx, [[x(event.time), top], [x(event.time), bottom]], event.closed ? '#8ae5c56b' : '#c7a7ff7a', 1);
+        ctx.setLineDash([]);
+        text(ctx, event.closed ? '合' : '断', x(event.time) + 3, top - 7, muted, 11, 'left');
+      }
+      const points = [];
+      const count = Math.max(1, Math.ceil((Math.min(time, end) - start) / plotDuration * 360));
+      for (let i = 0; i <= count; i++) {
+        const t = start + (Math.min(time, end) - start) * i / count;
+        points.push([x(t), y(stateAt(t).flux)]);
+      }
+      path(ctx, points, currentColor, 2.4);
+      const flux = stateAt(time).flux;
+      path(ctx, [[x(time), top], [x(time), bottom]], '#c5daf14d', 1);
+      disk(ctx, x(time), y(flux), 4.3, currentColor);
+      const labelWidth = 154;
+      const labelX = x(time) + labelWidth + 12 <= right ? x(time) + 12 : x(time) - labelWidth - 12;
+      const labelY = y(flux) < top + 44 ? y(flux) + 12 : y(flux) - 44;
+      fluxValue.style.left = Math.max(left, Math.min(width - labelWidth, labelX)) + 'px';
+      fluxValue.style.top = Math.max(top, Math.min(bottom - 37, labelY)) + 'px';
+    }
+
+    function render() {
+      const model = stateAt(time);
+      drawCircuit(model);
+      drawPlot();
+      fluxOutput.value = model.flux.toFixed(2);
+      emfOutput.value = Math.abs(model.emf) < 0.005 ? '0.00' : (model.emf > 0 ? '+' : '−') + Math.abs(model.emf).toFixed(2);
+      let message;
+      if (model.closed) {
+        message = Math.abs(model.emf) > 0.02
+          ? '闭合开关，B 灯渐亮，磁链增大。自感电动势阻碍电流增大。'
+          : '保持闭合，两灯稳定发光，磁链恒定，自感电动势趋于零。';
+      } else {
+        message = model.currentB > 0.003 * steadyCurrent
+          ? '断开开关，B 支路电流方向保持，A 支路电流反向，两灯渐灭。'
+          : '开关断开，电路中无可见电流。';
+      }
+      if (statusOutput.textContent !== message) statusOutput.textContent = message;
+    }
+
+    function animate(timestamp) {
+      if (previousFrame !== null) time += Math.min((timestamp - previousFrame) / 1000, 0.1);
+      previousFrame = timestamp;
+      render();
+      frame = requestAnimationFrame(animate);
+    }
+
+    function setSwitch(closed) {
+      const model = stateAt(time);
+      if (model.closed === closed) return;
+      events.push({ time, closed, initial: model.currentB });
+      closeButton.setAttribute('aria-pressed', String(closed));
+      openButton.setAttribute('aria-pressed', String(!closed));
+      render();
+      if (!started) {
+        started = true;
+        frame = requestAnimationFrame(animate);
+      }
+    }
+
+    closeButton.addEventListener('click', () => setSwitch(true));
+    openButton.addEventListener('click', () => setSwitch(false));
+    document.getElementById('reset').addEventListener('click', () => {
+      cancelAnimationFrame(frame);
+      time = 0;
+      previousFrame = null;
+      started = false;
+      events = [{ time: 0, closed: false, initial: 0 }];
+      closeButton.setAttribute('aria-pressed', 'false');
+      openButton.setAttribute('aria-pressed', 'true');
+      render();
+    });
+    const observer = new ResizeObserver(render);
+    observer.observe(circuit);
+    observer.observe(plot);
+    render();
+  </script>
+</body>
+</html>
